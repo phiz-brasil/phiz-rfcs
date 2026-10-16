@@ -1,0 +1,4 @@
+{
+  "example_request": ["bash", "# Shared by the three languages: keep comments in English\ncurl -X GET \"https://api.example.com/v1/items\" \\\n  -H \"Authorization: Bearer $TOKEN\""],
+  "example_response": ["json", {"id": "item_123", "status": "active"}]
+}

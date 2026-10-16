@@ -29,11 +29,17 @@ Static site for the PHIZ Open Platform RFCs, published on GitHub Pages.
 ## Add a new RFC
 
 ```bash
-cp -r rfcs/_template rfcs/PHZ-0002
-# edit rfcs/PHZ-0002/rfc.json  (id, titles, summary, status, authors, reviewers)
-# edit rfcs/PHZ-0002/source.html  (each <h2 id="..."> gets a comment button)
-git add . && git commit -m "RFC PHZ-0002" && git push
+python3 tools/new_rfc.py --pt "Título" --en "Title" --zh "标题" --short "Short title" --author "Gleison"
 ```
+
+This takes the next free `PHZ-NNNN`, copies `sources/_template/` (10 standard sections in PT-BR, EN-US and 中文, with examples of every component) to `sources/<ID>/`, creates `rfcs/<ID>/rfc.json` and builds `rfcs/<ID>/source.html`. Then:
+
+1. Write `sources/<ID>/content_pt.html`, then translate to `content_en.html` and `content_zh.html` (same section ids and the same number of diagrams; the build refuses otherwise). Code samples shared by the three languages go in `code.json` and are placed with `{CODE:name}`.
+2. Fill `summary`, `reviewers` and `status` in `rfcs/<ID>/rfc.json`.
+3. Build: `cd sources/<ID> && python3 build_rfc.py && cd ../.. && python3 tools/build.py`.
+4. `git add sources/<ID> rfcs/<ID> && git commit -m "<ID>: …" && git push`.
+
+With Claude Code, the `phiz-rfc` skill follows this workflow, including research in the PHIZ repos, diagrams, translation and checking the published page.
 
 Open it as a pull request if you want review before it appears in the index.
 
