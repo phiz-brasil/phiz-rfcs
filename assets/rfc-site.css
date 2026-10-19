@@ -85,3 +85,5 @@ mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transpar
 .cmt-d-end { border-top: 1px solid var(--line); padding: 10px 16px 14px; }
 .cmt-d-end .cmt-note { margin-bottom: 4px; }
 .cmt-d-end a { color: var(--accent-ink); font-weight: 600; font-size: .86rem; }
+.cmt-tr { margin: 2px 0 4px; font-size: .76rem; color: var(--muted); }
+.cmt-tr .cmt-link { font-size: .76rem; }

@@ -10,19 +10,22 @@
           open: "Abrir na RFC e responder", replies: n => n === 1 ? "1 resposta" : `${n} respostas`,
           noReply: "Sem resposta", none: "Nenhum comentário ainda.", noneF: "Nada neste filtro.",
           load: "Não foi possível carregar os comentários.", off: "Os comentários na página não estão configurados.",
-          newTag: "novo", search: "Buscar por texto ou autor", loading: "Carregando…" },
+          newTag: "novo", search: "Buscar por texto ou autor", loading: "Carregando…",
+          auto: "Tradução automática", from: "de", orig: "Ver original", showTr: "Ver tradução" },
     en: { all: "All", fAll: "All", fOpen: "Unanswered", fNew: "New",
           sum: (n, o, f) => `${n} comments · ${o} unanswered · ${f} new since your last visit`,
           open: "Open in the RFC and reply", replies: n => n === 1 ? "1 reply" : `${n} replies`,
           noReply: "No reply yet", none: "No comments yet.", noneF: "Nothing in this filter.",
           load: "Could not load comments.", off: "On-page comments are not configured.",
-          newTag: "new", search: "Search text or author", loading: "Loading…" },
+          newTag: "new", search: "Search text or author", loading: "Loading…",
+          auto: "Machine translation", from: "from", orig: "Show original", showTr: "Show translation" },
     zh: { all: "全部", fAll: "全部", fOpen: "未回复", fNew: "新评论",
           sum: (n, o, f) => `共 ${n} 条评论 · ${o} 条未回复 · 自上次访问以来 ${f} 条新评论`,
           open: "在 RFC 中打开并回复", replies: n => `${n} 条回复`,
           noReply: "尚无回复", none: "还没有评论。", noneF: "此筛选下没有内容。",
           load: "无法加载评论。", off: "尚未配置页面评论。",
-          newTag: "新", search: "按内容或作者搜索", loading: "加载中…" }
+          newTag: "新", search: "按内容或作者搜索", loading: "加载中…",
+          auto: "机器翻译", from: "原文", orig: "查看原文", showTr: "查看译文" }
   };
   const LANG_TAG = { pt: "PT", en: "EN", zh: "中文" };
   const LOC = { pt: "pt-BR", en: "en-US", zh: "zh-CN" };
@@ -52,7 +55,10 @@
   async function load() {
     if (!sb) { rows = []; render(); return; }
     try {
-      const r = await fetch(sb.url + "?select=id,rfc_id,section,parent_id,author,body,quote,lang,created_at&order=created_at.desc&limit=5000", { headers: sb.headers });
+      const base = "id,rfc_id,section,parent_id,author,body,quote,lang,created_at";
+      const q = c => `?select=${c}&order=created_at.desc&limit=5000`;
+      let r = await fetch(sb.url + q(base + ",translations,src_lang"), { headers: sb.headers });
+      if (r.status === 400) r = await fetch(sb.url + q(base), { headers: sb.headers });   // translation columns not created yet
       if (!r.ok) throw new Error("HTTP " + r.status);
       const data = await r.json();
       const tops = new Set(data.filter(c => !c.parent_id).map(c => c.id));
@@ -64,6 +70,15 @@
       console.warn("comments", e); rows = []; failed = true;
     }
     render();
+  }
+
+  const showOrig = new Set();
+  const srcOf = c => c.src_lang || c.lang;
+  function txt(c) {
+    const t = c.translations && c.translations[lang()];
+    const can = !!t && srcOf(c) !== lang() && t.body !== c.body;
+    if (!can || showOrig.has(c.id)) return { body: c.body, quote: c.quote, translated: false, can };
+    return { body: t.body, quote: c.quote ? (t.quote || c.quote) : null, translated: true, can };
   }
 
   function sectionTitle(c) {
@@ -82,8 +97,8 @@
     const fresh = c => newIds.has(c.id) || repliesOf(c.id).some(r => newIds.has(r.id));
     const inRfc = tops.filter(c => fRfc === "all" || c.rfc_id === fRfc);
     const needle = q.trim().toLowerCase();
-    const match = c => !needle || [c.author, c.body, c.quote || "", ...repliesOf(c.id).flatMap(r => [r.author, r.body])]
-      .some(s => s.toLowerCase().includes(needle));
+    const texts = c => [c.author, c.body, c.quote || "", ...Object.values(c.translations || {}).flatMap(t => [t.body || "", t.quote || ""])];
+    const match = c => !needle || [...texts(c), ...repliesOf(c.id).flatMap(texts)].some(s => s.toLowerCase().includes(needle));
 
     // filters
     const bar = el("div", "cbar");
@@ -152,11 +167,19 @@
     const box = el("div", "citem" + (isReply ? " crep" : "") + (newIds.has(c.id) ? " is-new" : ""));
     const meta = el("div", "cmeta");
     meta.append(el("strong", null, c.author), el("time", null, when(c.created_at)));
-    if (c.lang) meta.append(el("span", "clang", LANG_TAG[c.lang] || c.lang));
+    const x = txt(c);
+    if (srcOf(c)) meta.append(el("span", "clang", LANG_TAG[srcOf(c)] || srcOf(c)));
     if (isReply && newIds.has(c.id)) meta.append(el("span", "cnew", L().newTag));
     box.append(meta);
-    if (c.quote) box.append(el("blockquote", "cquote", c.quote));
-    box.append(el("p", "cbody", c.body));
+    if (x.quote) box.append(el("blockquote", "cquote", x.quote));
+    box.append(el("p", "cbody", x.body));
+    if (x.can) {
+      const p = el("p", "ctr");
+      p.append(document.createTextNode(x.translated ? `🌐 ${L().auto} · ${L().from} ${LANG_TAG[srcOf(c)] || srcOf(c)} · ` : "🌐 "));
+      const b = el("button", "clink", x.translated ? L().orig : L().showTr); b.type = "button";
+      b.onclick = () => { showOrig.has(c.id) ? showOrig.delete(c.id) : showOrig.add(c.id); render(); };
+      p.append(b); box.append(p);
+    }
     return box;
   }
 

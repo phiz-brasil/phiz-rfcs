@@ -17,7 +17,8 @@
           open: "Abrir e responder", replies: n => n === 1 ? "1 resposta" : `${n} respostas`,
           noReplies: "Sem resposta", none: "Nenhum comentário nesta RFC ainda.", noneF: "Nada neste filtro.",
           central: "Ver comentários de todas as RFCs →", close: "Fechar",
-          newHint: "“Novos” = desde a última vez que você abriu esta lista." },
+          newHint: "“Novos” = desde a última vez que você abriu esta lista.",
+          auto: "Tradução automática", from: "de", orig: "Ver original", showTr: "Ver tradução" },
     en: { btn: "Comment", fallback: "Open on GitHub", need: "Comments use your GitHub account.",
           name: "Your name", body: "Write a comment", send: "Comment", sending: "Sending…", reply: "Reply",
           replyTo: "Replying to", cancel: "Cancel", empty: "No comments on this section yet.", quote: "Comment on selection",
@@ -29,7 +30,8 @@
           open: "Open and reply", replies: n => n === 1 ? "1 reply" : `${n} replies`,
           noReplies: "No reply yet", none: "No comments on this RFC yet.", noneF: "Nothing in this filter.",
           central: "See comments on all RFCs →", close: "Close",
-          newHint: "“New” = since you last opened this list." },
+          newHint: "“New” = since you last opened this list.",
+          auto: "Machine translation", from: "from", orig: "Show original", showTr: "Show translation" },
     zh: { btn: "评论", fallback: "在 GitHub 打开", need: "评论需要使用 GitHub 账号。",
           name: "你的名字", body: "写下评论", send: "评论", sending: "发送中…", reply: "回复",
           replyTo: "回复", cancel: "取消", empty: "本节还没有评论。", quote: "评论所选内容",
@@ -41,7 +43,8 @@
           open: "打开并回复", replies: n => `${n} 条回复`,
           noReplies: "尚无回复", none: "本 RFC 还没有评论。", noneF: "此筛选下没有内容。",
           central: "查看所有 RFC 的评论 →", close: "关闭",
-          newHint: "“新评论”指自你上次打开此列表以来的评论。" }
+          newHint: "“新评论”指自你上次打开此列表以来的评论。",
+          auto: "机器翻译", from: "原文", orig: "查看原文", showTr: "查看译文" }
   };
   const LANG_TAG = { pt: "PT", en: "EN", zh: "中文" };
   const lang = () => document.documentElement.dataset.lang || "pt";
@@ -85,14 +88,16 @@
     headers: Object.assign({ apikey: cfg.comments.supabaseKey },
       /^eyJ/.test(cfg.comments.supabaseKey) ? { Authorization: "Bearer " + cfg.comments.supabaseKey } : {})
   } : null;
-  const COLS = "id,rfc_id,section,parent_id,author,body,quote,lang,created_at";
+  const BASE_COLS = "id,rfc_id,section,parent_id,author,body,quote,lang,created_at";
+  let COLS = BASE_COLS + ",translations,src_lang";   // falls back to BASE_COLS if the columns do not exist yet
   let all = null;          // comments of this RFC; null while loading
   let loadFailed = false;
 
   async function loadAll() {
     try {
-      const q = `?select=${COLS}&rfc_id=eq.${encodeURIComponent(rfcId)}&order=created_at.asc&limit=2000`;
-      const r = await fetch(sb.url + q, { headers: sb.headers });
+      const q = c => `?select=${c}&rfc_id=eq.${encodeURIComponent(rfcId)}&order=created_at.asc&limit=2000`;
+      let r = await fetch(sb.url + q(COLS), { headers: sb.headers });
+      if (r.status === 400 && COLS !== BASE_COLS) { COLS = BASE_COLS; r = await fetch(sb.url + q(COLS), { headers: sb.headers }); }
       if (!r.ok) throw new Error("HTTP " + r.status);
       all = await r.json();
       loadFailed = false;
@@ -106,7 +111,7 @@
   }
 
   async function addComment(row) {
-    const r = await fetch(sb.url + "?select=" + COLS, {
+    const r = await fetch(sb.url + "?select=" + BASE_COLS, {
       method: "POST",
       headers: Object.assign({ "Content-Type": "application/json", Prefer: "return=representation" }, sb.headers),
       body: JSON.stringify(row)
@@ -115,6 +120,25 @@
     if (!r.ok) throw new Error("HTTP " + r.status);
     const rows = await r.json();
     return rows[0];
+  }
+
+  /* Machine translation (stored by the translate-comment function): show the comment in the page language */
+  const showOrig = new Set();
+  const srcOf = c => c.src_lang || c.lang;
+  function txt(c) {
+    const t = c.translations && c.translations[lang()];
+    const translated = !!t && srcOf(c) !== lang() && t.body !== c.body;
+    if (!translated || showOrig.has(c.id)) return { body: c.body, quote: c.quote, translated: false, can: translated };
+    return { body: t.body, quote: c.quote ? (t.quote || c.quote) : null, translated: true, can: true };
+  }
+  function trNote(c, x, rerender) {
+    if (!x.can) return null;
+    const p = el("p", "cmt-tr");
+    p.append(el("span", null, x.translated ? `🌐 ${L().auto} · ${L().from} ${LANG_TAG[srcOf(c)] || srcOf(c)} · ` : `🌐 ${LANG_TAG[srcOf(c)] || ""} · `));
+    const b = el("button", "cmt-link", x.translated ? L().orig : L().showTr); b.type = "button";
+    b.addEventListener("click", () => { showOrig.has(c.id) ? showOrig.delete(c.id) : showOrig.add(c.id); rerender(); });
+    p.append(b);
+    return p;
   }
 
   // replies whose parent was hidden by a moderator are not shown or counted
@@ -183,10 +207,13 @@
     box.dataset.id = c.id;
     const meta = el("div", "cmt-meta");
     meta.append(el("strong", null, c.author), el("time", null, when(c.created_at)));
-    if (c.lang && c.lang !== lang()) meta.append(el("span", "cmt-lang", LANG_TAG[c.lang] || c.lang));
+    const x = txt(c);
+    if (srcOf(c) && srcOf(c) !== lang() && !x.can) meta.append(el("span", "cmt-lang", LANG_TAG[srcOf(c)] || srcOf(c)));
     box.append(meta);
-    if (c.quote) box.append(el("blockquote", "cmt-quote", c.quote));
-    box.append(el("p", "cmt-body", c.body));
+    if (x.quote) box.append(el("blockquote", "cmt-quote", x.quote));
+    box.append(el("p", "cmt-body", x.body));
+    const note = trNote(c, x, () => renderThreads(panel));
+    if (note) box.append(note);
     if (!isReply) {
       const rb = el("button", "cmt-link", L().reply);
       rb.type = "button";
@@ -403,15 +430,18 @@
       const it = el("article", "cmt-d-item" + (fresh(c) ? " is-new" : ""));
       const meta = el("div", "cmt-meta");
       meta.append(el("strong", null, c.author), el("time", null, when(c.created_at)));
-      if (c.lang && c.lang !== lang()) meta.append(el("span", "cmt-lang", LANG_TAG[c.lang] || c.lang));
+      const x = txt(c);
+      if (srcOf(c) && srcOf(c) !== lang() && !x.can) meta.append(el("span", "cmt-lang", LANG_TAG[srcOf(c)] || srcOf(c)));
       if (fresh(c)) meta.append(el("span", "cmt-newtag", L().newTag));
       it.append(meta);
-      if (c.quote) it.append(el("blockquote", "cmt-quote", c.quote));
-      it.append(el("p", "cmt-body cmt-clamp", c.body));
+      if (x.quote) it.append(el("blockquote", "cmt-quote", x.quote));
+      it.append(el("p", "cmt-body cmt-clamp", x.body));
+      const note = trNote(c, x, renderDrawer);
+      if (note) it.append(note);
       if (reps.length) {
         const last = reps[reps.length - 1];
         const r = el("p", "cmt-d-rep");
-        r.append(el("b", null, L().replies(reps.length) + " · "), document.createTextNode(`${last.author}: ${last.body.slice(0, 140)}`));
+        r.append(el("b", null, L().replies(reps.length) + " · "), document.createTextNode(`${last.author}: ${txt(last).body.slice(0, 140)}`));
         it.append(r);
       }
       const foot = el("div", "cmt-d-foot");
@@ -491,7 +521,30 @@
   function refresh() {
     if (!frozen) decorate();
     renderMermaid();
-    if (sb) { paintMarks(); paintAllBtn(); if (drawer) renderDrawer(); }
+    if (sb) {
+      // open panels live under one language's copy of the section: move them (with any draft) to the active language
+      const cur = lang();
+      document.querySelectorAll(".cmt-panel[data-key]").forEach(p => {
+        const h = p.previousElementSibling;
+        if (!h || h.id.startsWith(cur + "-")) return;
+        const f = p.querySelector("form");
+        const draft = f ? { parent: f.dataset.parent, quote: f.dataset.quote, body: f.querySelector("textarea").value } : null;
+        p.remove();
+        const ob = h.querySelector(".cmt-btn"); if (ob) ob.setAttribute("aria-expanded", "false");
+        const nh = document.getElementById(`${cur}-${p.dataset.key}`);
+        if (!nh || (nh.nextElementSibling && nh.nextElementSibling.classList.contains("cmt-panel"))) return;
+        openPanel(nh, nh.querySelector(".cmt-btn"));
+        const np = nh.nextElementSibling;
+        if (draft && np && np.querySelector("form")) {
+          np.querySelector("textarea").value = draft.body;
+          if (draft.quote) setQuote(np, draft.quote);
+          const parent = draft.parent && (all || []).find(c => c.id === draft.parent);
+          if (parent) setReply(np, parent);
+        }
+      });
+      paintMarks(); paintAllBtn(); if (drawer) renderDrawer();
+      document.querySelectorAll(".cmt-panel[data-key]").forEach(renderThreads);   // comments follow the page language
+    }
   }
 
   // close the version history when clicking elsewhere

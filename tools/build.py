@@ -259,6 +259,7 @@ COMMENTS_CSS = """
 .cgo{display:inline-block;margin-top:8px;font-weight:600;font-size:.86rem;color:var(--accent-ink)}
 .back{color:var(--muted);text-decoration:none;font-size:.82rem;margin-left:6px}.back:hover{color:var(--accent-ink)}
 .err{color:#b3261e}
+.ctr{margin:2px 0 4px;font-size:.78rem;color:var(--muted)}.clink{background:none;border:0;padding:0;color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}.clink:hover{text-decoration:underline}
 """
 
 
