@@ -147,12 +147,12 @@ INDEX_CSS = """
 header{border-bottom:1px solid var(--line)}header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700}.logo{width:26px;height:26px;border-radius:7px;background:var(--accent);color:#052e16;display:grid;place-items:center;font-size:.85rem}
 .langs{display:inline-flex;border:1px solid var(--line);border-radius:9px;padding:3px;background:var(--surface);gap:2px}
-.langs button{font:600 .78rem inherit;font-family:inherit;border:0;background:transparent;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer}
+.langs button{font-weight:600;font-size:.78rem;border:0;background:transparent;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer}
 .langs button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
 h1{font:800 clamp(1.8rem,5vw,2.6rem)/1.1 "Schibsted Grotesk",system-ui,sans-serif;letter-spacing:-.02em;margin:40px 0 8px}
 .lead{color:var(--muted);margin:0 0 24px;max-width:60ch}
 .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-.filters button{font:500 .82rem inherit;font-family:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 13px;cursor:pointer}
+.filters button{font-weight:500;font-size:.82rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 13px;cursor:pointer}
 .filters button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#052e16}
 .list{display:grid;gap:12px;padding:0;margin:0 0 60px;list-style:none}
 .card{display:block;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:16px 18px;color:inherit;text-decoration:none}
@@ -160,7 +160,7 @@ h1{font:800 clamp(1.8rem,5vw,2.6rem)/1.1 "Schibsted Grotesk",system-ui,sans-seri
 .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .id{font:600 .78rem "JetBrains Mono",ui-monospace,monospace;color:var(--muted)}
 .ver{font:600 .72rem "JetBrains Mono",ui-monospace,monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
-.badge{font:600 .7rem inherit;font-family:inherit;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
+.badge{font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
 [data-st=draft]{color:var(--muted)}[data-st=in-review]{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
 [data-st=approved]{background:#dff3e4;color:#17692f;border-color:transparent}[data-st=implemented]{background:#dbeafe;color:#1d4ed8;border-color:transparent}
 [data-st=rejected]{background:#fde2e2;color:#a61b1b;border-color:transparent}[data-st=superseded]{color:var(--muted);text-decoration:line-through}
@@ -170,6 +170,13 @@ h1{font:800 clamp(1.8rem,5vw,2.6rem)/1.1 "Schibsted Grotesk",system-ui,sans-seri
 [data-l]{display:none}html[data-lang=pt] [data-l=pt],html[data-lang=en] [data-l=en],html[data-lang=zh] [data-l=zh]{display:inline}
 html[data-lang=pt] .card p [data-l=pt],html[data-lang=en] .card p [data-l=en],html[data-lang=zh] .card p [data-l=zh]{display:inline}
 .empty{color:var(--muted)}
+.hright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.navc{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.82rem;color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px}
+.navc:hover{border-color:var(--accent);color:var(--accent-ink)}
+.ccount,.cc b{background:var(--accent-soft);color:var(--accent-ink);border-radius:999px;padding:0 7px;font-weight:600}
+.cnewb,.cc .n{background:#c2410c;color:#fff;border-radius:999px;padding:0 7px;font-weight:700;font-size:.68rem;text-transform:uppercase;letter-spacing:.03em}
+.cc{display:inline-flex;gap:6px;align-items:center}.cc .o{color:#b3540f;font-weight:600}
+[hidden]{display:none!important}
 """
 
 INDEX_JS = """
@@ -183,6 +190,103 @@ cards.forEach(function(c){c.hidden=b.dataset.filter!=="all"&&c.dataset.status!==
 """
 
 
+T_COMMENTS = {"pt": "Comentários", "en": "Comments", "zh": "评论"}
+
+INDEX_COUNTS_JS = """
+(function(){var c=window.PHIZ_CMT||{};if(!c.supabaseUrl||!c.supabaseKey)return;
+var h={apikey:c.supabaseKey};if(/^eyJ/.test(c.supabaseKey))h.Authorization="Bearer "+c.supabaseKey;
+var seen=0;try{seen=Date.parse(localStorage.getItem("phiz-rfc-seen:all")||"")||0}catch(e){}
+var me="";try{me=localStorage.getItem("phiz-rfc-author")||""}catch(e){}
+var W={pt:["comentários","sem resposta","novos"],en:["comments","unanswered","new"],zh:["条评论","条未回复","条新"]};
+function lg(){return document.documentElement.dataset.lang||"pt"}
+var data=null;
+function paint(){if(!data)return;var w=W[lg()]||W.pt,tot=0,fresh=0;
+document.querySelectorAll(".cc[data-rfc]").forEach(function(s){var id=s.dataset.rfc;
+var rows=data.filter(function(x){return x.rfc_id===id});var tops=rows.filter(function(x){return!x.parent_id});
+var withRep={};rows.forEach(function(x){if(x.parent_id)withRep[x.parent_id]=1});
+var open=tops.filter(function(x){return!withRep[x.id]}).length;
+var nw=rows.filter(function(x){return Date.parse(x.created_at)>seen&&x.author!==me}).length;
+tot+=rows.length;fresh+=nw;
+s.innerHTML="";if(!rows.length){s.hidden=true;return}s.hidden=false;
+var b=document.createElement("b");b.textContent="💬 "+rows.length;s.appendChild(b);s.appendChild(document.createTextNode(w[0]));
+if(open){var o=document.createElement("span");o.className="o";o.textContent="· "+open+" "+w[1];s.appendChild(o)}
+if(nw){var n=document.createElement("span");n.className="n";n.textContent=nw+" "+w[2];s.appendChild(n)}});
+var cc=document.querySelector(".ccount"),nb=document.querySelector(".cnewb");
+if(cc){cc.textContent=String(tot);cc.hidden=!tot}if(nb){nb.textContent=fresh+" "+(W[lg()]||W.pt)[2];nb.hidden=!fresh}}
+fetch(c.supabaseUrl.replace(/\\/+$/,"")+"/rest/v1/rfc_comments?select=id,rfc_id,parent_id,author,created_at&limit=5000",{headers:h})
+.then(function(r){return r.ok?r.json():[]}).then(function(d){var tops={};d.forEach(function(x){if(!x.parent_id)tops[x.id]=1});
+data=d.filter(function(x){return!x.parent_id||tops[x.parent_id]});paint()}).catch(function(){});
+new MutationObserver(paint).observe(document.documentElement,{attributes:true,attributeFilter:["data-lang"]})})();
+"""
+
+SECTION_RE = re.compile(r'<h2 id="(pt|en|zh)-([a-z0-9-]+)"[^>]*>(.*?)</h2>', re.S)
+
+
+def sections_of(d):
+    """{section key: {pt, en, zh}} titles from the RFC page, used by the comments page."""
+    out = {}
+    for lg, key, inner in SECTION_RE.findall((d / "source.html").read_text(encoding="utf-8")):
+        num = re.search(r'<span class="n">(.*?)</span>', inner)
+        text = re.sub(r"<[^>]+>", "", re.sub(r'<span class="n">.*?</span>', "", inner))
+        text = html.unescape(re.sub(r"\s+", " ", text)).strip()
+        out.setdefault(key, {})[lg] = (f"{num.group(1)} · " if num else "") + text
+    return out
+
+
+COMMENTS_CSS = """
+.cbar{display:grid;gap:10px;margin-bottom:10px}.cbar .filters{margin:0}
+.filters button b{font-weight:700;margin-left:2px}
+.filters .st-open[aria-pressed=true]{background:#b3540f;border-color:#b3540f;color:#fff}
+.filters .st-new[aria-pressed=true]{background:#c2410c;border-color:#c2410c;color:#fff}
+.csearch{width:100%;max-width:420px;font-weight:400;font-size:.9rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.csearch:focus{outline:2px solid var(--accent);outline-offset:0}
+.csum{color:var(--muted);font-size:.86rem;margin:4px 0 16px}
+.clist{display:grid;gap:12px;padding:0;margin:0 0 60px;list-style:none}
+.ccard{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 16px}
+.ccard.is-new{border-left:4px solid #c2410c}
+.ctop{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.csec{font-weight:600;font-size:.9rem}
+.cnew{font-weight:700;font-size:.66rem;text-transform:uppercase;color:#fff;background:#c2410c;border-radius:4px;padding:1px 6px}
+.copen{font-weight:600;font-size:.72rem;color:#b3540f;border:1px solid currentColor;border-radius:999px;padding:0 8px}
+.ctitle{margin:2px 0 8px;color:var(--muted);font-size:.82rem}
+.citem{margin:6px 0}.cmeta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:.84rem}
+.cmeta time{color:var(--muted)}.clang{font:600 .66rem "JetBrains Mono",ui-monospace,monospace;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.cquote{margin:6px 0;padding:4px 10px;border-left:3px solid var(--accent);color:var(--muted);font-style:italic;font-size:.86rem;background:var(--accent-soft);border-radius:0 6px 6px 0;overflow-wrap:anywhere}
+.cbody{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.94rem}
+.creps{margin:8px 0 0 14px;padding-left:12px;border-left:3px solid var(--accent)}
+.crepn{margin:0;font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.crep .cbody{font-size:.9rem}
+.cgo{display:inline-block;margin-top:8px;font-weight:600;font-size:.86rem;color:var(--accent-ink)}
+.back{color:var(--muted);text-decoration:none;font-size:.82rem;margin-left:6px}.back:hover{color:var(--accent-ink)}
+.err{color:#b3261e}
+"""
+
+
+def build_comments(items):
+    """dist/comments/index.html: every comment of every RFC, with filters (data loaded in the browser)."""
+    meta = {"cfg": CFG.get("comments", {}),
+            "rfcs": [{"id": m["id"], "title": m["title"], "sections": sections_of(d)} for d, m in items]}
+    data = json.dumps(meta, ensure_ascii=False).replace("</", "<\\/")
+    title = e(CFG["title"])
+    lead = {"pt": "Todos os comentários das RFCs em um só lugar. Filtre por RFC, veja o que está sem resposta ou o que chegou desde sua última visita, e abra o comentário na RFC para responder.",
+            "en": "Every RFC comment in one place. Filter by RFC, see what is unanswered or new since your last visit, and open a comment in its RFC to reply.",
+            "zh": "所有 RFC 评论集中在一处。可按 RFC 筛选，查看未回复或自上次访问以来的新评论，并在 RFC 中打开评论进行回复。"}
+    return f'''<!doctype html><html lang="pt-BR" data-lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{spans_plain(T_COMMENTS)} · {title}</title><meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap">
+<style>{INDEX_CSS}{COMMENTS_CSS}</style></head><body>
+<header><div class="wrap"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>PHIZCHAT</span><a class="back" href="../">← RFCs</a></div>
+<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></header>
+<main class="wrap"><h1>{spans(T_COMMENTS)}</h1><p class="lead">{spans(lead)}</p><div id="cmt-root"></div></main>
+<script>window.PHIZ_COMMENTS={data};{INDEX_JS}</script>
+<script src="../assets/comments-page.js"></script></body></html>'''
+
+
+def spans_plain(d):
+    return e(d["pt"])
+
+
 def build_index(items):
     items = sorted(items, key=lambda x: x[1]["id"], reverse=True)
     lis = []
@@ -193,7 +297,7 @@ def build_index(items):
         lis.append(f'''<li class="card-li" data-status="{st}"><a class="card" href="rfcs/{e(d.name)}/">
 <div class="top"><span class="id">{e(m["id"])}</span><span class="ver">v{e(versions_of(d, m)[0])}</span><span class="badge" data-st="{st}">{spans(STATUS[st])}</span></div>
 <h2>{spans(m["title"])}</h2><p>{spans(m["summary"])}</p>
-<div class="meta"><span>{e(authors)}</span><span>Reviewers: {e(revs)}</span><span>{e(m.get("updated", ""))}</span></div></a></li>''')
+<div class="meta"><span>{e(authors)}</span><span>Reviewers: {e(revs)}</span><span>{e(m.get("updated", ""))}</span><span class="cc" data-rfc="{e(m["id"])}" hidden></span></div></a></li>''')
     used = sorted({m["status"] for _, m in items}, key=list(STATUS).index)
     fl = '<button type="button" data-filter="all" aria-pressed="true">' + spans({"pt": "Todas", "en": "All", "zh": "全部"}) + "</button>"
     fl += "".join(f'<button type="button" data-filter="{s}" aria-pressed="false">{spans(STATUS[s])}</button>' for s in used)
@@ -204,11 +308,12 @@ def build_index(items):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap">
 <style>{INDEX_CSS}</style></head><body>
 <header><div class="wrap"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>PHIZCHAT</span></div>
-<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></header>
+<div class="hright"><a class="navc" href="comments/">💬 {spans(T_COMMENTS)}<span class="ccount" hidden></span><span class="cnewb" hidden></span></a>
+<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></div></header>
 <main class="wrap"><h1>RFCs</h1>
 <p class="lead">{spans({"pt": "Propostas técnicas da plataforma, com status e comentários por seção.", "en": "Platform technical proposals, with status and per-section comments.", "zh": "平台技术提案，含状态与分节评论。"})}</p>
 <div class="filters" role="group">{fl}</div>
-<ul class="list">{"".join(lis)}</ul></main><script>{INDEX_JS}</script></body></html>'''
+<ul class="list">{"".join(lis)}</ul></main><script>window.PHIZ_CMT={json.dumps(CFG.get("comments", {}))};{INDEX_JS}{INDEX_COUNTS_JS}</script></body></html>'''
 
 
 def main():
@@ -222,6 +327,8 @@ def main():
     for d, m in items:
         build_rfc(d, m)
     (DIST / "index.html").write_text(build_index(items), encoding="utf-8")
+    (DIST / "comments").mkdir()
+    (DIST / "comments" / "index.html").write_text(build_comments(items), encoding="utf-8")
     print(f"built {len(items)} RFC(s) -> {DIST}")
 
 

@@ -12,21 +12,36 @@
           on: "Sobre o trecho:", load: "Não foi possível carregar os comentários.", err: "Não foi possível enviar. Tente de novo.",
           rate: "Muitos comentários seguidos. Espere um minuto e tente de novo.", needName: "Informe seu nome.",
           needBody: "Escreva o comentário.", public: "Comentários são públicos e ficam salvos nesta página.",
-          removeQuote: "Remover trecho" },
+          removeQuote: "Remover trecho", all: "Comentários", newN: "novos", newTag: "novo",
+          drawer: "Comentários desta RFC", fAll: "Todos", fOpen: "Sem resposta", fNew: "Novos",
+          open: "Abrir e responder", replies: n => n === 1 ? "1 resposta" : `${n} respostas`,
+          noReplies: "Sem resposta", none: "Nenhum comentário nesta RFC ainda.", noneF: "Nada neste filtro.",
+          central: "Ver comentários de todas as RFCs →", close: "Fechar",
+          newHint: "“Novos” = desde a última vez que você abriu esta lista." },
     en: { btn: "Comment", fallback: "Open on GitHub", need: "Comments use your GitHub account.",
           name: "Your name", body: "Write a comment", send: "Comment", sending: "Sending…", reply: "Reply",
           replyTo: "Replying to", cancel: "Cancel", empty: "No comments on this section yet.", quote: "Comment on selection",
           on: "On the passage:", load: "Could not load comments.", err: "Could not send. Please try again.",
           rate: "Too many comments in a row. Wait a minute and try again.", needName: "Enter your name.",
           needBody: "Write the comment.", public: "Comments are public and saved on this page.",
-          removeQuote: "Remove passage" },
+          removeQuote: "Remove passage", all: "Comments", newN: "new", newTag: "new",
+          drawer: "Comments on this RFC", fAll: "All", fOpen: "Unanswered", fNew: "New",
+          open: "Open and reply", replies: n => n === 1 ? "1 reply" : `${n} replies`,
+          noReplies: "No reply yet", none: "No comments on this RFC yet.", noneF: "Nothing in this filter.",
+          central: "See comments on all RFCs →", close: "Close",
+          newHint: "“New” = since you last opened this list." },
     zh: { btn: "评论", fallback: "在 GitHub 打开", need: "评论需要使用 GitHub 账号。",
           name: "你的名字", body: "写下评论", send: "评论", sending: "发送中…", reply: "回复",
           replyTo: "回复", cancel: "取消", empty: "本节还没有评论。", quote: "评论所选内容",
           on: "关于这段内容：", load: "无法加载评论。", err: "发送失败，请重试。",
           rate: "评论过于频繁，请一分钟后再试。", needName: "请填写名字。",
           needBody: "请填写评论内容。", public: "评论是公开的，并保存在本页面。",
-          removeQuote: "移除引用" }
+          removeQuote: "移除引用", all: "评论", newN: "条新评论", newTag: "新",
+          drawer: "本 RFC 的评论", fAll: "全部", fOpen: "未回复", fNew: "新评论",
+          open: "打开并回复", replies: n => `${n} 条回复`,
+          noReplies: "尚无回复", none: "本 RFC 还没有评论。", noneF: "此筛选下没有内容。",
+          central: "查看所有 RFC 的评论 →", close: "关闭",
+          newHint: "“新评论”指自你上次打开此列表以来的评论。" }
   };
   const LANG_TAG = { pt: "PT", en: "EN", zh: "中文" };
   const lang = () => document.documentElement.dataset.lang || "pt";
@@ -85,8 +100,9 @@
       console.warn("comments", e);
       all = []; loadFailed = true;
     }
-    paintCounts(); paintMarks();
+    paintCounts(); paintMarks(); paintAllBtn();
     document.querySelectorAll(".cmt-panel[data-key]").forEach(renderThreads);
+    openFromLink();
   }
 
   async function addComment(row) {
@@ -231,7 +247,8 @@
         (all = all || []).push(saved);
         body.value = "";
         setReply(panel, null); setQuote(panel, "");
-        renderThreads(panel); paintCounts(); paintMarks();
+        renderThreads(panel); paintCounts(); paintMarks(); paintAllBtn();
+        if (drawer) renderDrawer();
       } catch (e) {
         err.textContent = e.code === "rate" ? L().rate : L().err; err.hidden = false;
       } finally {
@@ -295,6 +312,150 @@
     if (sb) paintCounts();
   }
 
+  /* ---------- every comment of this RFC: header button + side drawer ---------- */
+  const SEEN_KEY = "phiz-rfc-seen:" + rfcId;      // when this browser last opened the list
+  const ts = iso => Date.parse(iso) || 0;
+  let seenAt = ts(store.get(SEEN_KEY));
+  let newIds = new Set();                          // "new" at the moment the drawer was opened
+  let drawer = null, dFilter = "all";
+
+  const visible = () => {
+    const rows = all || [];
+    const tops = new Set(rows.filter(c => !c.parent_id).map(c => c.id));
+    return rows.filter(c => !c.parent_id || tops.has(c.parent_id));
+  };
+  // a comment is "new" if it arrived after the last visit and was not written by this browser's author name
+  const isNew = c => ts(c.created_at) > seenAt && c.author !== store.get("phiz-rfc-author");
+
+  function paintAllBtn() {
+    if (!sb || all === null) return;
+    let b = document.querySelector(".cmt-all");
+    if (!b) {
+      b = el("button", "cmt-all"); b.type = "button"; b.setAttribute("aria-haspopup", "dialog");
+      b.addEventListener("click", () => (drawer ? closeDrawer() : openDrawer()));
+      const langs = document.querySelector("header .langs");
+      if (langs) langs.before(b); else document.body.append(b);
+    }
+    const v = visible(), fresh = v.filter(isNew).length;
+    b.replaceChildren(el("span", null, "💬"), el("span", "cmt-all-l", L().all), el("span", "cmt-n", String(v.length)));
+    if (fresh) b.append(el("span", "cmt-new", `${fresh} ${L().newN}`));
+    b.title = L().drawer;
+  }
+
+  function openDrawer() {
+    newIds = new Set(visible().filter(isNew).map(c => c.id));
+    drawer = el("aside", "cmt-drawer");
+    drawer.setAttribute("role", "dialog"); drawer.setAttribute("aria-modal", "false"); drawer.setAttribute("aria-label", L().drawer);
+    document.body.append(drawer);
+    document.querySelector(".cmt-all")?.setAttribute("aria-expanded", "true");
+    renderDrawer();
+    drawer.querySelector(".cmt-x").focus();
+    // everything visible now counts as seen next time
+    store.set(SEEN_KEY, new Date().toISOString());
+    seenAt = Date.now();
+    paintAllBtn();
+  }
+
+  function closeDrawer() {
+    if (!drawer) return;
+    drawer.remove(); drawer = null;
+    const b = document.querySelector(".cmt-all");
+    if (b) { b.setAttribute("aria-expanded", "false"); b.focus(); }
+  }
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && drawer) closeDrawer(); });
+
+  function renderDrawer() {
+    const v = visible();
+    const tops = v.filter(c => !c.parent_id);
+    const repliesOf = id => v.filter(r => r.parent_id === id);
+    const fresh = c => newIds.has(c.id) || repliesOf(c.id).some(r => newIds.has(r.id));
+    const counts = { all: tops.length, open: tops.filter(c => !repliesOf(c.id).length).length, new: tops.filter(fresh).length };
+
+    const head = el("div", "cmt-d-head");
+    const x = el("button", "cmt-x", "✕"); x.type = "button"; x.setAttribute("aria-label", L().close); x.addEventListener("click", closeDrawer);
+    head.append(el("h2", null, L().drawer), x);
+
+    const chips = el("div", "cmt-chips"); chips.setAttribute("role", "group");
+    [["all", L().fAll], ["open", L().fOpen], ["new", L().fNew]].forEach(([k, label]) => {
+      const c = el("button", "cmt-chip"); c.type = "button";
+      c.setAttribute("aria-pressed", String(dFilter === k));
+      c.append(document.createTextNode(label + " "), el("b", null, String(counts[k])));
+      c.addEventListener("click", () => { dFilter = k; renderDrawer(); });
+      chips.append(c);
+    });
+
+    const body = el("div", "cmt-d-body");
+    const order = new Map([...document.querySelectorAll(".lang.active h2[id]")].map((h, i) => [sectionKey(h), i]));
+    const shown = tops
+      .filter(c => dFilter === "open" ? !repliesOf(c.id).length : dFilter === "new" ? fresh(c) : true)
+      .sort((a, b) => (order.get(a.section) ?? 999) - (order.get(b.section) ?? 999) || ts(b.created_at) - ts(a.created_at));
+    if (loadFailed) body.append(el("p", "cmt-note cmt-err", L().load));
+    else if (!tops.length) body.append(el("p", "cmt-note", L().none));
+    else if (!shown.length) body.append(el("p", "cmt-note", L().noneF));
+    let lastSec = null;
+    for (const c of shown) {
+      const h = document.getElementById(`${lang()}-${c.section}`);
+      if (c.section !== lastSec) {
+        lastSec = c.section;
+        body.append(el("h3", "cmt-d-sec", h ? titleOf(h) : c.section));
+      }
+      const reps = repliesOf(c.id);
+      const it = el("article", "cmt-d-item" + (fresh(c) ? " is-new" : ""));
+      const meta = el("div", "cmt-meta");
+      meta.append(el("strong", null, c.author), el("time", null, when(c.created_at)));
+      if (c.lang && c.lang !== lang()) meta.append(el("span", "cmt-lang", LANG_TAG[c.lang] || c.lang));
+      if (fresh(c)) meta.append(el("span", "cmt-newtag", L().newTag));
+      it.append(meta);
+      if (c.quote) it.append(el("blockquote", "cmt-quote", c.quote));
+      it.append(el("p", "cmt-body cmt-clamp", c.body));
+      if (reps.length) {
+        const last = reps[reps.length - 1];
+        const r = el("p", "cmt-d-rep");
+        r.append(el("b", null, L().replies(reps.length) + " · "), document.createTextNode(`${last.author}: ${last.body.slice(0, 140)}`));
+        it.append(r);
+      }
+      const foot = el("div", "cmt-d-foot");
+      foot.append(el("span", reps.length ? "cmt-note" : "cmt-note cmt-open", reps.length ? "" : L().noReplies));
+      const go = el("button", "cmt-link", L().open); go.type = "button";
+      go.addEventListener("click", () => {
+        closeDrawer();
+        if (!h) return;
+        h.scrollIntoView({ block: "start" });
+        const p = h.nextElementSibling;
+        if (p && p.classList.contains("cmt-panel")) p.remove();
+        openPanel(h, h.querySelector(".cmt-btn"), { focusId: c.id });
+        const f = h.nextElementSibling && h.nextElementSibling.querySelector("form");
+        if (f) setReply(h.nextElementSibling, c);
+      });
+      foot.append(go);
+      it.append(foot);
+      body.append(it);
+    }
+
+    const foot = el("div", "cmt-d-end");
+    const a = el("a", null, L().central); a.href = "../../comments/";
+    foot.append(el("p", "cmt-note", L().newHint), a);
+    drawer.replaceChildren(head, chips, body, foot);
+  }
+
+  /* ?c=<comment id> (links from the central comments page) opens that comment in its section */
+  let linkDone = false;
+  function openFromLink() {
+    if (linkDone) return; linkDone = true;
+    const id = new URLSearchParams(location.search).get("c");
+    if (!id || !all) return;
+    const c = all.find(x => x.id === id);
+    if (!c) return;
+    const top = c.parent_id ? all.find(x => x.id === c.parent_id) || c : c;
+    const h = document.getElementById(`${lang()}-${c.section}`);
+    if (!h) return;
+    setTimeout(() => {
+      h.scrollIntoView({ block: "start" });
+      openPanel(h, h.querySelector(".cmt-btn"), { focusId: c.id });
+      if (h.nextElementSibling && h.nextElementSibling.querySelector("form")) setReply(h.nextElementSibling, top);
+    }, 50);
+  }
+
   /* ---------- select text → comment ---------- */
   let fab = null;
   function hideFab() { if (fab) fab.hidden = true; }
@@ -327,7 +488,11 @@
   document.addEventListener("selectionchange", () => { const s = getSelection(); if (!s || s.isCollapsed) hideFab(); });
 
   /* ---------- wiring ---------- */
-  function refresh() { if (!frozen) decorate(); renderMermaid(); if (sb) paintMarks(); }
+  function refresh() {
+    if (!frozen) decorate();
+    renderMermaid();
+    if (sb) { paintMarks(); paintAllBtn(); if (drawer) renderDrawer(); }
+  }
 
   // close the version history when clicking elsewhere
   document.addEventListener("click", e => { document.querySelectorAll("details.vers[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }); });

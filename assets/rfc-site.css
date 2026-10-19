@@ -59,3 +59,29 @@ mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transpar
 .ver-banner { background: var(--warn-soft, #fbf0d6); color: var(--warn, #9a6408); border-bottom: 1px solid var(--line); padding: 9px 16px; text-align: center; font: 500 .88rem var(--f-body, system-ui); }
 .ver-banner a { color: inherit; font-weight: 700; margin-left: 6px; }
 @media (max-width: 600px) { .vers { position: static; } .vers-pop { position: fixed; left: 12px; right: 12px; top: 56px; width: auto; } }
+/* All comments of the RFC: header button + side drawer */
+.cmt-all { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 10px; font: 600 .8rem var(--f-body, system-ui); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.cmt-all:hover, .cmt-all[aria-expanded="true"] { border-color: var(--accent); color: var(--accent-ink); }
+.cmt-all .cmt-n { margin-left: 0; }
+.cmt-new { font: 700 .68rem var(--f-body, system-ui); text-transform: uppercase; letter-spacing: .04em; color: #fff; background: #c2410c; border-radius: 999px; padding: 2px 8px; }
+@media (max-width: 640px) { .cmt-all-l { display: none; } .cmt-all { margin-right: 6px; padding: 5px 9px; } }
+.cmt-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 80; width: min(440px, 100vw); display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border-left: 1px solid var(--line); box-shadow: -10px 0 32px rgba(0,0,0,.16); font: 400 .9rem/1.5 var(--f-body, system-ui); }
+.cmt-d-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 8px; }
+.cmt-d-head h2 { margin: 0; font: 700 1.05rem var(--f-display, system-ui); }
+.cmt-x { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; font-size: .95rem; }
+.cmt-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; border-bottom: 1px solid var(--line); }
+.cmt-chip { font: 500 .8rem var(--f-body, system-ui); border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.cmt-chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #052e16; }
+.cmt-d-body { flex: 1; overflow-y: auto; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.cmt-d-sec { margin: 10px 0 0; font: 600 .74rem var(--f-body, system-ui); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.cmt-d-item { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--bg); }
+.cmt-d-item.is-new { border-left: 3px solid #c2410c; }
+.cmt-newtag { font: 700 .64rem var(--f-body, system-ui); text-transform: uppercase; color: #fff; background: #c2410c; border-radius: 4px; padding: 1px 6px; }
+.cmt-clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.cmt-d-rep { margin: 4px 0 0; padding-left: 10px; border-left: 3px solid var(--accent); font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.cmt-d-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.cmt-d-foot .cmt-note { margin: 0; }
+.cmt-open { color: #b3540f; font-weight: 600; }
+.cmt-d-end { border-top: 1px solid var(--line); padding: 10px 16px 14px; }
+.cmt-d-end .cmt-note { margin-bottom: 4px; }
+.cmt-d-end a { color: var(--accent-ink); font-weight: 600; font-size: .86rem; }

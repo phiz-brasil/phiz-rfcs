@@ -26,6 +26,14 @@ Static site for the PHIZ Open Platform RFCs, published on GitHub Pages.
    Until this is done, the Comment button uses giscus (if `giscus.repoId`/`categoryId` are set) or opens a pre-filled GitHub Issue.
 4. Give reviewers repo access only if you want them to *write* RFCs; reading and commenting need no account.
 
+### Following comments
+
+- **Index**: the header shows the total number of comments and how many are new; each RFC card shows its count, how many threads have no reply and how many are new.
+- **Central page** (`/comments/`): every comment of every RFC, most recent activity first. Filter by RFC, by *Unanswered* or *New*, or search by text or author. *Open in the RFC and reply* jumps to the comment in its section (link `rfcs/<ID>/?c=<comment id>#<lang>-<section>`) with the reply form ready.
+- **On each RFC**: the *Comments* button in the header opens a side panel with every thread of that RFC, grouped by section, with the same filters.
+
+“New” means new since this browser last opened that list (stored in `localStorage`, nothing on the server); comments signed with the name you use in the form do not count as new for you.
+
 ## Add a new RFC
 
 ```bash
