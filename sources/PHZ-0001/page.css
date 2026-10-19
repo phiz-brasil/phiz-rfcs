@@ -225,3 +225,4 @@ html { scroll-behavior: smooth; }
 .shot img { display: block; width: 100%; height: auto; }
 .shot .cap { margin: 8px 2px 0; }
 .shot .cap b { color: var(--ink); font-weight: 600; }
+.shots.phones { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }

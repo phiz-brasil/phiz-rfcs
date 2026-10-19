@@ -11,16 +11,36 @@
     "zh": "OAuth 认证、向手机号或 PHIZ ID 发送消息、签名 Webhook，以及商家级开发者区域。"
   },
   "status": "in-review",
-  "authors": ["Gleison"],
-  "reviewers": ["Pedro Bettani", "Vitor Mozer", "Richard Liang"],
-  "version": "1.0",
+  "authors": [
+    "Gleison"
+  ],
+  "reviewers": [
+    "Pedro Bettani",
+    "Vitor Mozer",
+    "Richard Liang"
+  ],
+  "version": "1.1",
   "changelog": [
+    {
+      "version": "1.1",
+      "date": "2026-10-19",
+      "note": {
+        "pt": "Nova seção de referência com a experiência do usuário no WhatsApp (cadastro, opt-in, recebimento e opções do usuário) e política de consentimento (opt-in/opt-out, LGPD).",
+        "en": "New reference section on the WhatsApp user experience (sign-up, opt-in, receiving and user options) and a consent policy (opt-in/opt-out, LGPD).",
+        "zh": "新增 WhatsApp 用户体验参考章节（注册、opt-in、接收消息与用户选项），以及同意政策（opt-in/opt-out、LGPD）。"
+      }
+    },
     {
       "version": "1.0",
       "date": "2026-10-15",
-      "note": { "pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。" }
+      "note": {
+        "pt": "Primeira versão.",
+        "en": "First version.",
+        "zh": "首个版本。"
+      },
+      "status": "in-review"
     }
   ],
   "created": "2026-10-15",
-  "updated": "2026-10-15"
+  "updated": "2026-10-19"
 }

@@ -39,7 +39,82 @@
 </section>
 
 <section>
-<h2 id="§goals"><span class="n">03</span>Goals and non-goals</h2>
+<h2 id="§whatsapp"><span class="n">03</span>Reference: the WhatsApp experience</h2>
+<p>This RFC brings the WhatsApp Business Platform model to PHIZ. So that everyone (Brazil and China) shares the same picture of what we are copying, this section walks through a Brazilian user's journey on WhatsApp: how they create an account, how they <strong>authorize</strong> a business, how a message arrives and what they can do with it. Example: merchant PicPay, user Ana Souza, in São Paulo.</p>
+<div class="note-box"><span class="lbl">About the screens</span><p>They are illustrations, not the official WhatsApp UI. Text is in English (in the real app the user sees Portuguese). The codes (A2, O1, C3…) follow the Design canvas this section comes from. Click an image to open it at full size.</p></div>
+
+<h3>Message path</h3>
+<p>A business does not talk to WhatsApp directly: its system (CRM, customer service) calls a <strong>BSP</strong> (Blip, Zenvia, Twilio, Infobip), which calls Meta's <strong>Cloud API</strong>, which delivers to the phone. Replies, taps and statuses come back by webhook along the same path. In PHIZ, the <strong>PHIZ Business Messaging API</strong> takes the place of the Cloud API and the merchant account (<code>merchant_id</code>) takes the place of the WABA (see the mapping in section 05).</p>
+<div class="shots">
+<div class="shot"><a href="mocks/whatsapp/b01-architecture.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/b01-architecture.png" alt="Company → BSP → Meta Cloud API → WhatsApp → user, with opt-in as a prerequisite and the webhook return path" width="1400" height="869" loading="lazy"></a><p class="cap"><b>B01.</b> Company → BSP → Meta Cloud API → WhatsApp → user, with opt-in as a prerequisite and the webhook return path</p></div>
+</div>
+
+<h3>User sign-up</h3>
+<p>On WhatsApp, the account is the phone number, verified by SMS. There are no friend requests: anyone with the number can write. Businesses and family share <strong>one inbox</strong>, which is why business messaging is tightly controlled. Since 2026 WhatsApp offers usernames and business-scoped user IDs (BSUID) instead of the phone number, which lines up with the use of PHIZ ID in this RFC.</p>
+<div class="shots phones">
+<div class="shot"><a href="mocks/whatsapp/a02-phone-number.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/a02-phone-number.png" alt="Phone number = account identity" width="460" height="1031" loading="lazy"></a><p class="cap"><b>A02.</b> Phone number = account identity</p></div>
+<div class="shot"><a href="mocks/whatsapp/a10-chats-home.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/a10-chats-home.png" alt="One inbox for everything" width="460" height="1034" loading="lazy"></a><p class="cap"><b>A10.</b> One inbox for everything</p></div>
+</div>
+
+<h3>User authorization (opt-in)</h3>
+<p>Before a business starts a conversation, the user must have authorized <em>that business</em>. There are four common ways: in the business's app (O1), at sign-up or checkout (O2), when the user writes first, which covers only that service conversation (O3), and by answering “yes” inside the chat (O4). Good practice is to split by purpose: authorizing account alerts does not authorize offers.</p>
+<div class="shots">
+<div class="shot"><a href="mocks/whatsapp/o00-consent-lifecycle.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o00-consent-lifecycle.png" alt="Consent lifecycle: collect, record, send within scope, revoke" width="900" height="972" loading="lazy"></a><p class="cap"><b>O00.</b> Consent lifecycle: collect, record, send within scope, revoke</p></div>
+</div>
+<div class="shots phones">
+<div class="shot"><a href="mocks/whatsapp/o01-optin-app.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o01-optin-app.png" alt="Opt-in in the merchant's app, split by purpose" width="460" height="1075" loading="lazy"></a><p class="cap"><b>O01.</b> Opt-in in the merchant's app, split by purpose</p></div>
+<div class="shot"><a href="mocks/whatsapp/o02-optin-signup.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o02-optin-signup.png" alt="Opt-in at sign-up, with unticked boxes" width="460" height="1053" loading="lazy"></a><p class="cap"><b>O02.</b> Opt-in at sign-up, with unticked boxes</p></div>
+<div class="shot"><a href="mocks/whatsapp/o03-user-starts.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o03-user-starts.png" alt="The user writes first: authorizes only that service chat" width="460" height="1036" loading="lazy"></a><p class="cap"><b>O03.</b> The user writes first: authorizes only that service chat</p></div>
+<div class="shot"><a href="mocks/whatsapp/o04-optin-in-chat.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o04-optin-in-chat.png" alt="Opt-in asked inside the chat, with buttons" width="460" height="1036" loading="lazy"></a><p class="cap"><b>O04.</b> Opt-in asked inside the chat, with buttons</p></div>
+</div>
+<p><strong>Meta has the policy but does not verify the opt-in.</strong> There is no field or endpoint to prove authorization; Meta trusts the business and only reacts afterwards, through blocks, reports and the quality rating. <em>Opt-out</em>, on the other hand, is enforced by the platform: blocking, “stop offers” and the marketing cap make sends fail. Even so, under Brazil's LGPD the business must prove consent and honor withdrawal, so the record (who, merchant, category, source, date, wording shown, revocation) is required in practice.</p>
+<div class="shots">
+<div class="shot"><a href="mocks/whatsapp/o05-consent-record.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o05-consent-record.png" alt="Consent record on the merchant side" width="640" height="711" loading="lazy"></a><p class="cap"><b>O05.</b> Consent record on the merchant side</p></div>
+<div class="shot"><a href="mocks/whatsapp/o06-who-verifies.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o06-who-verifies.png" alt="Meta does not verify opt-in; opt-out is enforced by the platform; why record it anyway" width="900" height="1062" loading="lazy"></a><p class="cap"><b>O06.</b> Meta does not verify opt-in; opt-out is enforced by the platform; why record it anyway</p></div>
+</div>
+
+<h3>What the user receives</h3>
+<p>Business-initiated messages use approved <strong>templates</strong> in four categories: utility (payments, bills), marketing, authentication (codes) and service. Each category depends on the matching opt-in.</p>
+<div class="shots phones">
+<div class="shot"><a href="mocks/whatsapp/c01-notification.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c01-notification.png" alt="Notification identical to a personal contact's" width="460" height="991" loading="lazy"></a><p class="cap"><b>C01.</b> Notification identical to a personal contact's</p></div>
+<div class="shot"><a href="mocks/whatsapp/c03-utility.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c03-utility.png" alt="Utility: Pix received, with buttons" width="460" height="1015" loading="lazy"></a><p class="cap"><b>C03.</b> Utility: Pix received, with buttons</p></div>
+<div class="shot"><a href="mocks/whatsapp/c04-marketing.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c04-marketing.png" alt="Marketing: needs its own opt-in for offers" width="460" height="1036" loading="lazy"></a><p class="cap"><b>C04.</b> Marketing: needs its own opt-in for offers</p></div>
+<div class="shot"><a href="mocks/whatsapp/c05-authentication.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c05-authentication.png" alt="Authentication: code with a copy button" width="460" height="1036" loading="lazy"></a><p class="cap"><b>C05.</b> Authentication: code with a copy button</p></div>
+<div class="shot"><a href="mocks/whatsapp/c06-bill.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c06-bill.png" alt="Bill with a Pix copy-and-paste code" width="460" height="1015" loading="lazy"></a><p class="cap"><b>C06.</b> Bill with a Pix copy-and-paste code</p></div>
+</div>
+
+<h3>What the user can do</h3>
+<p>The user replies (text, buttons, list, form), checks the business profile or withdraws permission. Each action does, or does not, create an event for the business.</p>
+<div class="shots">
+<div class="shot"><a href="mocks/whatsapp/d00-options-map.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d00-options-map.png" alt="Every user option and what the business receives back" width="900" height="787" loading="lazy"></a><p class="cap"><b>D00.</b> Every user option and what the business receives back</p></div>
+</div>
+<div class="shots phones">
+<div class="shot"><a href="mocks/whatsapp/d02-quick-reply.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d02-quick-reply.png" alt="Quick-reply button" width="460" height="991" loading="lazy"></a><p class="cap"><b>D02.</b> Quick-reply button</p></div>
+<div class="shot"><a href="mocks/whatsapp/d04-list.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d04-list.png" alt="List message" width="460" height="991" loading="lazy"></a><p class="cap"><b>D04.</b> List message</p></div>
+<div class="shot"><a href="mocks/whatsapp/d05-flow.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d05-flow.png" alt="In-chat form (Flows), close to a mini app" width="460" height="1034" loading="lazy"></a><p class="cap"><b>D05.</b> In-chat form (Flows), close to a mini app</p></div>
+<div class="shot"><a href="mocks/whatsapp/d07-stop-offers.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d07-stop-offers.png" alt="Stop offers, keep alerts" width="460" height="1082" loading="lazy"></a><p class="cap"><b>D07.</b> Stop offers, keep alerts</p></div>
+<div class="shot"><a href="mocks/whatsapp/d08-block-report.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d08-block-report.png" alt="Block and report, with a reason" width="460" height="1034" loading="lazy"></a><p class="cap"><b>D08.</b> Block and report, with a reason</p></div>
+<div class="shot"><a href="mocks/whatsapp/d10-optout-keyword.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d10-optout-keyword.png" alt="Keyword opt-out, handled by the merchant" width="460" height="1036" loading="lazy"></a><p class="cap"><b>D10.</b> Keyword opt-out, handled by the merchant</p></div>
+</div>
+<div class="tbl"><table><thead><tr><th>User action</th><th>On WhatsApp</th><th>On PHIZ</th></tr></thead><tbody>
+<tr><td>Replies with text or media</td><td><code>messages</code> webhook; opens the 24 h window</td><td><code>message</code> event (section 09)</td></tr>
+<tr><td>Taps a button or list row</td><td><code>button_reply</code> / <code>list_reply</code></td><td><code>message</code> event with the chosen id</td></tr>
+<tr><td>Stops offers</td><td>Marketing sends fail</td><td>Proposal: the platform blocks the category for that <code>merchant_id</code></td></tr>
+<tr><td>Blocks or reports</td><td>All sends fail; quality rating drops</td><td>Proposal: send error plus a quality signal (see Q3)</td></tr>
+<tr><td>Mutes or archives</td><td>Invisible to the business</td><td>Same</td></tr>
+</tbody></table></div>
+
+<h3>What we take to PHIZ</h3>
+<ul>
+<li>The business identity throughout the flow is the <strong>Merchant ID</strong> (<code>merchant_id</code>): it receives the opt-in, the block and the quality rating. There is no separate developer ID; integrations and apps only act on behalf of the merchant.</li>
+<li>Consent per merchant and per category, with opt-out enforced by the platform (see Sending policy, section 08).</li>
+<li>User signals (block, report, stop offers) feeding the merchant's sending limits.</li>
+<li>In-chat forms (Flows) as a reference for mini apps.</li>
+</ul>
+</section>
+
+<section>
+<h2 id="§goals"><span class="n">04</span>Goals and non-goals</h2>
 <h4>Goals</h4>
 <ul>
   <li>Credentials tied to the <strong>merchant account</strong> instead of each channel. The merchant creates one <strong>integration</strong> per external system (for example, one for Blip and another for Salesforce). Each integration gets its own <code>client_id</code> and secret, and the merchant decides what it can do (send messages, check statuses, set up the webhook) and which senders it can speak through: the merchant itself and, if the merchant wants, its channels.</li>
@@ -58,7 +133,7 @@
 </section>
 
 <section>
-<h2 id="§model"><span class="n">04</span>Domain model</h2>
+<h2 id="§model"><span class="n">05</span>Domain model</h2>
 <p>The merchant account becomes the root of everything. The merchant talks to the PhizChat user in <strong>two ways</strong>:</p>
 <ul>
   <li><strong>Direct message (default).</strong> The merchant sends as itself, with the name and photo from <em>Merchant information</em>. No channel needed.</li>
@@ -128,7 +203,7 @@ flowchart LR
 </section>
 
 <section>
-<h2 id="§principles"><span class="n">05</span>Design principles</h2>
+<h2 id="§principles"><span class="n">06</span>Design principles</h2>
 <ul>
   <li><strong>Same shape as the Cloud API.</strong> Send bodies, responses and webhooks follow Meta's structure. We diverge only for a clear gain in security (timestamp in the signature) or clarity (<code>to_type</code>).</li>
   <li>HTTP status codes, a single error envelope and a <code>trace_id</code> in every error response.</li>
@@ -140,7 +215,7 @@ flowchart LR
 </section>
 
 <section>
-<h2 id="§auth"><span class="n">06</span>Authentication</h2>
+<h2 id="§auth"><span class="n">07</span>Authentication</h2>
 <p>We use the OAuth 2.0 <strong>client credentials</strong> flow (RFC 6749 §4.4). The app exchanges <code>client_id</code> and <code>client_secret</code> for a 1-hour access token and sends it as <code>Authorization: Bearer</code> on every call. There is no refresh token: when the token expires, the app requests a new one.</p>
 <div class="eps">
   <div class="ep"><span class="m m-post">POST</span><code class="p">/oauth/token</code><span class="d">Issues an access token</span></div>
@@ -196,7 +271,7 @@ sequenceDiagram
 </section>
 
 <section>
-<h2 id="§messages"><span class="n">07</span>Sending messages</h2>
+<h2 id="§messages"><span class="n">08</span>Sending messages</h2>
 <div class="eps">
   <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/{sender_id}/messages</code><span class="d">Sends a message or marks one as read</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/messages/{message_id}</code><span class="d">Latest known status (fallback)</span></div>
@@ -253,14 +328,21 @@ sequenceDiagram
 <tr><td><code>document</code></td><td>PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, CSV</td><td>100 MB</td></tr>
 </tbody></table></div>
 <p class="cap">Formats and sizes the PHIZ app should accept, inspired by the Cloud API limits. Conversion and compression are up to whoever hosts the file. They must be confirmed with the team that owns media in the app (see Q8).</p>
-<h3>Sending policy</h3>
-<div class="note-box risk"><span class="lbl">To be defined by Product</span><p>Product needs to define an opt-in policy: under which conditions the merchant may start a conversation with the user, and how the user grants or withdraws permission to receive messages. See Q1.</p></div>
+<h3>Sending policy (consent)</h3>
+<p>Proposal inspired by WhatsApp (see section 03):</p>
+<ul>
+<li><strong>Starting a conversation requires opt-in</strong> from the user for that merchant (<code>merchant_id</code>) and category: account alerts, offers or codes. Replying within 24 h of a user message needs no prior opt-in.</li>
+<li>Opt-in can be collected outside PHIZ (the merchant's app, website or store) or inside the PHIZ app.</li>
+<li><strong>Opt-out enforced by the platform:</strong> if the user blocks the merchant or stops offers, sends in that category fail with an error, without relying on the merchant.</li>
+<li><strong>Record required:</strong> the merchant keeps proof of each consent (user, <code>merchant_id</code>, category, source, date, wording shown and revocation). Under the LGPD, whoever processes the data must prove consent and honor withdrawal.</li>
+</ul>
+<div class="note-box risk"><span class="lbl">Product decision</span><p>Meta has an opt-in policy but does not verify it: it trusts the merchant and reacts afterwards, through reports and the quality rating. We need to choose between <strong>A</strong>, the same model (policy plus a record kept by the merchant), and <strong>B</strong>, a consent registry in PHIZ, checked before every send. See Q1.</p></div>
 <h3>Idempotency</h3>
 <p>Send an <code>Idempotency-Key</code> with every message. The same key within 24 h returns the original response without sending again. The same key with a different body returns <code>409</code>. This makes retries after a timeout or a <code>5xx</code> safe.</p>
 </section>
 
 <section>
-<h2 id="§webhooks"><span class="n">08</span>Webhooks</h2>
+<h2 id="§webhooks"><span class="n">09</span>Webhooks</h2>
 <p>Each app has one webhook subscription with a URL, a <code>verify_token</code> and a list of events. It is configured in the Developer area or through the API.</p>
 <div class="eps">
   <div class="ep"><span class="m m-put">PUT</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">Sets URL, verify_token and events</span></div>
@@ -316,7 +398,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§errors"><span class="n">09</span>Errors, limits and versions</h2>
+<h2 id="§errors"><span class="n">10</span>Errors, limits and versions</h2>
 <p>Outside <code>/oauth/*</code>, every error uses one envelope:</p>
 {CODE:error_env}
 <div class="tbl num"><table><thead><tr><th>code</th><th>HTTP</th><th>type</th><th>Meaning</th></tr></thead><tbody>
@@ -360,7 +442,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§devarea"><span class="n">10</span>Developer area in the Open Platform</h2>
+<h2 id="§devarea"><span class="n">11</span>Developer area in the Open Platform</h2>
 <p>Developer settings move out of <em>Channel › Development Settings</em> into a merchant menu item, <strong>Developer</strong>, next to <em>Settings</em>. It reuses the existing Merchant ID, the roles from <em>Team management</em> and the <em>Operation log</em>.</p>
 <p>Mockups of the new area, with sample values. Click an image to open it at full size.</p>
 <div class="shots">
@@ -402,7 +484,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§partners"><span class="n">11</span>Partner integrations</h2>
+<h2 id="§partners"><span class="n">12</span>Partner integrations</h2>
 <p><strong>In the MVP</strong>, the merchant creates an app in the Developer area and pastes the <code>client_id</code> and secret into Blip, Salesforce or their own system. Webhook URLs come from the partner. Because the contracts follow the Cloud API, partners that already have a WhatsApp connector can reuse most of it.</p>
 <p><strong>In a later phase</strong> we create a <em>technology partner</em> program, equivalent to Meta's Embedded Signup:</p>
 <ul>
@@ -413,7 +495,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§marketing"><span class="n">12</span>Path to the Marketing API</h2>
+<h2 id="§marketing"><span class="n">13</span>Path to the Marketing API</h2>
 <p>This RFC reserves the space the Marketing API will occupy, without implementing it:</p>
 <ul>
   <li><code>type: template</code> for sending and the <code>templates:manage</code> scope already exist in the contract.</li>
@@ -425,7 +507,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§plan"><span class="n">13</span>Delivery plan</h2>
+<h2 id="§plan"><span class="n">14</span>Delivery plan</h2>
 <div class="phases">
   <div class="phase first"><span class="tag">PHASE 1 · MVP</span><h5>Authenticate and send</h5><ul><li><code>/oauth/token</code>, <code>/oauth/revoke</code>, <code>/v1/me</code></li><li>Send <code>text</code>, <code>image</code>, <code>audio</code>, <code>video</code> and <code>document</code> to phone and PHIZ ID</li><li>Signed <code>messages</code> and <code>message_status</code> webhooks</li><li>Developer area: apps, secrets, webhook</li><li>Default sender (the merchant itself) for everyone; channels as optional senders</li><li>Automatic migration of channel credentials</li></ul></div>
 </div>
@@ -433,9 +515,9 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§questions"><span class="n">14</span>Open questions</h2>
+<h2 id="§questions"><span class="n">15</span>Open questions</h2>
 <ol class="qs">
-  <li><strong>Opt-in policy.</strong> Product needs to define under which conditions the merchant may start a conversation (for example a customer-service window, explicit authorization or a prior relationship with the merchant) and how the user grants or withdraws permission. The rule applies to Business Account and Channel Service.</li>
+  <li><strong>Opt-in policy.</strong> Section 08 proposes the policy (opt-in per merchant and category, opt-out enforced by the platform, record kept by the merchant). Still to decide: model A (like Meta, no verification) or B (a consent registry in PHIZ, for example <code>/v1/merchants/{merchant_id}/consents</code>, checked on send); which categories exist; whether the PHIZ app shows users what they authorized; and how a user blocks or stops offers from a Business Account (see Q3). Validate the LGPD points with Legal. Applies to Business Account and Channel Service.</li>
   <li><strong>Sender IDs.</strong> Use the <code>merchant_id</code> and the channel ID directly as <code>sender_id</code>, or create new opaque IDs? Reusing existing IDs simplifies migration, but exposes the channel's sequential ID.</li>
   <li><strong>Business Account conversation type.</strong> Confirm the path Public Accounts › Service › Business Account and its definition: a two-way service conversation for businesses, merchants, governments and institutions, allowing user messages and a configurable Menu, with proactive messages subject to authorization and messaging rules. Does this type already exist in the app or does it need to be built? How does the user block or mute a Business Account?</li>
   <li><strong>Current conversation types.</strong> Review the hierarchy and the permissions table (v1.2): which types exist today, which current rules differ, which types do not exist and which are missing.</li>
@@ -447,6 +529,6 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§openapi"><span class="n">15</span>OpenAPI reference</h2>
+<h2 id="§openapi"><span class="n">16</span>OpenAPI reference</h2>
 <p>The OpenAPI 3.1 specification below covers every endpoint and webhook in this RFC, with descriptions in this language. “Try it out” is turned off because the API does not exist yet. Use “Copy OpenAPI” to take the YAML into Apifox, Postman or an SDK generator.</p>
 </section>
