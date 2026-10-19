@@ -25,7 +25,7 @@ NAMES = {
     "O00_Consent": "o00-consent-lifecycle", "O01_AppToggle": "o01-optin-app", "O02_Signup": "o02-optin-signup",
     "O03_UserStarts": "o03-user-starts", "O04_InChat": "o04-optin-in-chat", "O05_Record": "o05-consent-record",
     "O06_WhoVerifies": "o06-who-verifies", "B01_Architecture": "b01-architecture", "B02_Rules": "b02-sending-rules",
-    "C01_Notification": "c01-notification", "C03_Utility": "c03-utility", "C04_Marketing": "c04-marketing",
+    "C01_Notification": "c01-notification", "C02_ChatList": "c02-chat-list", "C03_Utility": "c03-utility", "C04_Marketing": "c04-marketing",
     "C05_Auth": "c05-authentication", "C06_Bill": "c06-bill", "D00_Map": "d00-options-map",
     "D02_QuickReply": "d02-quick-reply", "D04_List": "d04-list", "D05_Flow": "d05-flow",
     "D07_Preferences": "d07-stop-offers", "D08_Block": "d08-block-report", "D10_OptOut": "d10-optout-keyword",
