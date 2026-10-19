@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>C6 Bill reminder</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ab">
+<div class="hd"><span class="id">C6</span><div><div class="tt">Bill due reminder (Pix code)</div><div class="te">Utility template with copy-code button</div></div></div>
+<div class="ph">
+<div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#17201C" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><div class="av" style="background: #0E7A45">P</div><div style="flex: 1"><div class="nm">PicPay <svg width="15" height="15" viewBox="0 0 16 16" role="img" aria-label="Verified business"><circle cx="8" cy="8" r="8" fill="#1572B6"/><path d="M4.5 8.2l2.2 2.2 4.6-4.8" stroke="#fff" stroke-width="1.8" fill="none"/></svg></div><div class="sb">Business account</div></div></div>
+<div class="chat">
+<div class="day">TODAY</div>
+<div class="tpl">
+<div style="padding: 10px 10px 0; font-weight: 700; font-size: 15px">Your bill is due tomorrow</div>
+<div class="tb">Ana, your PicPay card bill of <b>R$ 320,45</b> is due on <b>20/10/2026</b>.<br>Pay with Pix by copying the code below, or in the app.<div class="ft">If you have already paid, please ignore this message.</div><span class="tm">10:00</span></div>
+<button class="qb"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#027A6B" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>Copy Pix code</button>
+<button class="qb"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#027A6B" stroke-width="2"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>Pay in the app</button>
+</div>
+</div>
+<div class="cmp"><label for="c6m" class="sr">Message</label><input id="c6m" class="inp" placeholder="Message"><button class="mic" aria-label="Record audio"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>
+</div>
+<div class="cap">
+<div style="display: flex; gap: 8px; align-items: center"><span class="optag">ALLOWED BY OPT-IN</span><span class="ce">Account alerts — O1 / O4</span></div>
+<div class="cz">Very Brazilian pattern: the reminder carries a <b>"copy Pix code"</b> button; the user pastes it into any bank app to pay. Utility messages like this are useful to the user, so they are rarely blocked.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":460,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>B1 Architecture</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="wide" style="width: 1400px; gap: 18px">
+<div class="hd"><span class="id">B1</span><div><div class="tt" style="font-size: 26px">How a business message reaches the user: Company → BSP → Meta Cloud API → WhatsApp → User</div><div class="te" style="font-size: 14px">Outbound path, and how replies and statuses come back (webhooks)</div></div></div>
+
+<div class="optbox" style="flex-direction: row; align-items: center; gap: 16px">
+<span class="optag" style="font-size: 13px; align-self: center">⓪ OPT-IN</span>
+<div class="bz" style="flex: 1"><b>Prerequisite for everything below:</b> Ana has authorized PicPay to message her on WhatsApp (flow O). The company checks its consent record (O5) for the right category <b>before</b> calling the BSP. No opt-in → the message should never be sent.</div>
+</div>
+
+<div style="display: flex; align-items: stretch; gap: 10px">
+<div class="box" style="flex: 1; border-top: 5px solid #2A6FB5"><span class="pill">① Company</span><div class="bt">PicPay back-end</div><div class="bz">CRM / service platform (e.g. Salesforce) decides <b>who</b> gets <b>what</b>: payment alert, bill, campaign — only for users with a valid opt-in.</div></div>
+<div class="arr">→</div>
+<div class="box" style="flex: 1; border-top: 5px solid #B5532A"><span class="pill">② BSP</span><div class="bt">Blip / Zenvia / Twilio / Infobip</div><div class="bz">Connects the company to Meta: account onboarding, templates, agent inbox, chatbots, billing. Most large Brazilian companies use one.</div></div>
+<div class="arr">→</div>
+<div class="box" style="flex: 1; border-top: 5px solid #0B5F4A"><span class="pill">③ Meta Cloud API</span><div class="bt">graph.facebook.com</div><div class="bz">Meta-hosted API. Checks permissions, template, 24h window and marketing limits; returns a message ID (wamid).</div></div>
+<div class="arr">→</div>
+<div class="box" style="flex: 1; border-top: 5px solid #4D5B55"><span class="pill">④ WhatsApp network</span><div class="bt">End-to-end encrypted delivery</div><div class="bz">Same delivery network as personal chats. Queued while the phone is offline.</div></div>
+<div class="arr">→</div>
+<div class="box" style="flex: 1; border-top: 5px solid #7A4FB5"><span class="pill">⑤ User's phone</span><div class="bt">Ana's WhatsApp</div><div class="bz">Push notification → business chat in the inbox → opens the chat (flow C).</div></div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 12px; background: #fff; border: 1px dashed #0B5F4A; border-radius: 14px; padding: 14px 18px">
+<span class="arr">←</span>
+<div style="flex: 1" class="bz"><b>Return path (webhooks):</b> user replies, button taps, form submissions and statuses (sent / delivered / read / failed) go from Meta to the BSP and on to the company. Opt-in answers (O4) and opt-outs (D10) also come back this way and must update the consent record.</div>
+<span class="arr">←</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px">
+<div class="box">
+<div class="bt">One-time setup</div>
+<div class="bz">1. Create a <b>WABA</b> (WhatsApp Business Account) in Meta Business Manager; verify the business.</div>
+<div class="bz">2. Register the company phone number → <b>Phone Number ID</b>; display name ("PicPay") is reviewed by Meta.</div>
+<div class="bz">3. Submit <b>message templates</b> (text, variables, buttons) for Meta approval.</div>
+<div class="bz">4. BSP gets an access token and configures the webhook URL.</div>
+</div>
+<div class="box">
+<div class="bt">Per-message sequence</div>
+<div class="bz" style="background: #FFF4E0; border-radius: 8px; padding: 4px 8px">0. Company checks: active opt-in for this category?</div>
+<div class="bz">1. Company asks the BSP: "send template pix_received to 5511987654321".</div>
+<div class="bz">2. BSP calls <b>POST /{Phone-Number-ID}/messages</b> (B3).</div>
+<div class="bz">3. Meta returns a <b>wamid</b> = accepted, not yet delivered.</div>
+<div class="bz">4. Webhooks: sent → delivered → read (B4); replies drive flow D.</div>
+</div>
+</div>
+
+<div class="box" style="background: #E4F2EA; border-color: #9CCBB0">
+<div class="bt">Mapping to PhizChat</div>
+<div class="bz">Company (PicPay) → middleware (Salesforce-like / BSP) → <b>PhizChat Open Platform API</b> (replaces Meta Cloud API) → PhizChat network → PhizChat user. MVP scope: business account authentication + sending messages. Consent (opt-in) handling should be part of the design from day one.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

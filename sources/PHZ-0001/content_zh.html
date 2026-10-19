@@ -41,60 +41,60 @@
 <section>
 <h2 id="§whatsapp"><span class="n">03</span>参考：WhatsApp 上的用户体验</h2>
 <p>本 RFC 将 WhatsApp Business Platform 的模式引入 PHIZ。为了让巴西和中国团队对“我们要复刻的是什么”有相同的理解，本节展示一位巴西用户在 WhatsApp 上的完整旅程：如何注册账号、如何<strong>授权</strong>一家企业、消息如何到达，以及收到后能做什么。示例：商户 PicPay，用户 Ana Souza（圣保罗）。</p>
-<div class="note-box"><span class="lbl">关于画面</span><p>这些是示意图，并非 WhatsApp 官方界面。画面文字为英文（真实应用中用户看到的是葡萄牙语）。编号（A2、O1、C3…）与本节来源的设计画布一致。点击图片可查看原尺寸。</p></div>
+<div class="note-box"><span class="lbl">关于画面</span><p>这些是示意图，并非 WhatsApp 官方界面。画面文字已译为中文（真实应用中用户看到的是葡萄牙语）。编号（A2、O1、C3…）与本节来源的设计画布一致。点击图片可查看原尺寸。</p></div>
 
 <h3>消息路径</h3>
 <p>企业不直接对接 WhatsApp：企业系统（CRM、客服）调用 <strong>BSP</strong>（Blip、Zenvia、Twilio、Infobip），BSP 调用 Meta 的 <strong>Cloud API</strong>，再投递到用户手机。回复、点击和状态沿同一路径通过 Webhook 返回。在 PHIZ 中，<strong>PHIZ 商家消息 API</strong> 对应 Cloud API，商户账户（<code>merchant_id</code>）对应 WABA（对照见第 05 节）。</p>
 <div class="shots">
-<div class="shot"><a href="mocks/whatsapp/b01-architecture.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/b01-architecture.png" alt="企业 → BSP → Meta Cloud API → WhatsApp → 用户；opt-in 是前提，Webhook 为返回路径" width="1400" height="869" loading="lazy"></a><p class="cap"><b>B01.</b> 企业 → BSP → Meta Cloud API → WhatsApp → 用户；opt-in 是前提，Webhook 为返回路径</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/b01-architecture.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/b01-architecture.png" alt="企业 → BSP → Meta Cloud API → WhatsApp → 用户；opt-in 是前提，Webhook 为返回路径" width="1400" height="850" loading="lazy"></a><p class="cap"><b>B01.</b> 企业 → BSP → Meta Cloud API → WhatsApp → 用户；opt-in 是前提，Webhook 为返回路径</p></div>
 </div>
 
 <h3>用户注册</h3>
 <p>在 WhatsApp 上，账号就是经短信验证的手机号。没有好友申请：知道号码就能发消息。企业和家人在<strong>同一个收件箱</strong>里，因此企业消息受到严格管控。自 2026 年起，WhatsApp 提供用户名和企业范围用户 ID（BSUID）来替代手机号，这与本 RFC 中使用 PHIZ ID 的思路一致。</p>
 <div class="shots phones">
-<div class="shot"><a href="mocks/whatsapp/a02-phone-number.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/a02-phone-number.png" alt="手机号即账号身份" width="460" height="1031" loading="lazy"></a><p class="cap"><b>A02.</b> 手机号即账号身份</p></div>
-<div class="shot"><a href="mocks/whatsapp/a10-chats-home.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/a10-chats-home.png" alt="所有对话共用一个收件箱" width="460" height="1034" loading="lazy"></a><p class="cap"><b>A10.</b> 所有对话共用一个收件箱</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/a02-phone-number.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/a02-phone-number.png" alt="手机号即账号身份" width="460" height="1013" loading="lazy"></a><p class="cap"><b>A02.</b> 手机号即账号身份</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/a10-chats-home.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/a10-chats-home.png" alt="所有对话共用一个收件箱" width="460" height="994" loading="lazy"></a><p class="cap"><b>A10.</b> 所有对话共用一个收件箱</p></div>
 </div>
 
 <h3>用户授权（opt-in）</h3>
 <p>企业主动发起会话之前，用户必须已授权<em>该企业</em>。常见方式有四种：在企业自己的 App 中（O1）、注册或结账时（O2）、用户先发消息，仅覆盖这次客服会话（O3），以及在聊天中回答“是”（O4）。最佳实践是按用途分开：同意账户提醒不等于同意营销优惠。</p>
 <div class="shots">
-<div class="shot"><a href="mocks/whatsapp/o00-consent-lifecycle.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o00-consent-lifecycle.png" alt="同意的生命周期：收集、记录、在授权范围内发送、撤回" width="900" height="972" loading="lazy"></a><p class="cap"><b>O00.</b> 同意的生命周期：收集、记录、在授权范围内发送、撤回</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/o00-consent-lifecycle.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/o00-consent-lifecycle.png" alt="同意的生命周期：收集、记录、在授权范围内发送、撤回" width="900" height="894" loading="lazy"></a><p class="cap"><b>O00.</b> 同意的生命周期：收集、记录、在授权范围内发送、撤回</p></div>
 </div>
 <div class="shots phones">
-<div class="shot"><a href="mocks/whatsapp/o01-optin-app.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o01-optin-app.png" alt="在商户 App 中 opt-in，按用途分开" width="460" height="1075" loading="lazy"></a><p class="cap"><b>O01.</b> 在商户 App 中 opt-in，按用途分开</p></div>
-<div class="shot"><a href="mocks/whatsapp/o02-optin-signup.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o02-optin-signup.png" alt="注册时 opt-in，复选框默认不勾选" width="460" height="1053" loading="lazy"></a><p class="cap"><b>O02.</b> 注册时 opt-in，复选框默认不勾选</p></div>
-<div class="shot"><a href="mocks/whatsapp/o03-user-starts.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o03-user-starts.png" alt="用户先发消息：仅授权本次客服" width="460" height="1036" loading="lazy"></a><p class="cap"><b>O03.</b> 用户先发消息：仅授权本次客服</p></div>
-<div class="shot"><a href="mocks/whatsapp/o04-optin-in-chat.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o04-optin-in-chat.png" alt="在聊天中用按钮请求 opt-in" width="460" height="1036" loading="lazy"></a><p class="cap"><b>O04.</b> 在聊天中用按钮请求 opt-in</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/o01-optin-app.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/o01-optin-app.png" alt="在商户 App 中 opt-in，按用途分开" width="460" height="1039" loading="lazy"></a><p class="cap"><b>O01.</b> 在商户 App 中 opt-in，按用途分开</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/o02-optin-signup.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/o02-optin-signup.png" alt="注册时 opt-in，复选框默认不勾选" width="460" height="1017" loading="lazy"></a><p class="cap"><b>O02.</b> 注册时 opt-in，复选框默认不勾选</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/o03-user-starts.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/o03-user-starts.png" alt="用户先发消息：仅授权本次客服" width="460" height="1022" loading="lazy"></a><p class="cap"><b>O03.</b> 用户先发消息：仅授权本次客服</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/o04-optin-in-chat.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/o04-optin-in-chat.png" alt="在聊天中用按钮请求 opt-in" width="460" height="1000" loading="lazy"></a><p class="cap"><b>O04.</b> 在聊天中用按钮请求 opt-in</p></div>
 </div>
 <p><strong>Meta 有政策，但不验证 opt-in。</strong>没有用于证明授权的字段或接口；Meta 信任企业，只在事后通过屏蔽、举报和质量评级作出反应。而 <em>opt-out</em> 由平台强制执行：屏蔽、“停止优惠”和营销上限都会使发送失败。尽管如此，根据巴西 LGPD，企业必须能证明已获得同意并尊重撤回，因此实际上必须保存记录（谁、商户、类别、来源、时间、展示的文案、撤回）。</p>
 <div class="shots">
-<div class="shot"><a href="mocks/whatsapp/o05-consent-record.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o05-consent-record.png" alt="商户侧的同意记录" width="640" height="711" loading="lazy"></a><p class="cap"><b>O05.</b> 商户侧的同意记录</p></div>
-<div class="shot"><a href="mocks/whatsapp/o06-who-verifies.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/o06-who-verifies.png" alt="Meta 不验证 opt-in；opt-out 由平台执行；为何仍需记录" width="900" height="1062" loading="lazy"></a><p class="cap"><b>O06.</b> Meta 不验证 opt-in；opt-out 由平台执行；为何仍需记录</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/o05-consent-record.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/o05-consent-record.png" alt="商户侧的同意记录" width="640" height="650" loading="lazy"></a><p class="cap"><b>O05.</b> 商户侧的同意记录</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/o06-who-verifies.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/o06-who-verifies.png" alt="Meta 不验证 opt-in；opt-out 由平台执行；为何仍需记录" width="900" height="983" loading="lazy"></a><p class="cap"><b>O06.</b> Meta 不验证 opt-in；opt-out 由平台执行；为何仍需记录</p></div>
 </div>
 
 <h3>用户收到什么</h3>
 <p>企业主动发送的消息使用经审核的<strong>模板</strong>，分四类：交易通知（付款、账单）、营销、验证码和客服。每一类都依赖对应的 opt-in。</p>
 <div class="shots phones">
-<div class="shot"><a href="mocks/whatsapp/c01-notification.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c01-notification.png" alt="通知与私人联系人的通知完全相同" width="460" height="991" loading="lazy"></a><p class="cap"><b>C01.</b> 通知与私人联系人的通知完全相同</p></div>
-<div class="shot"><a href="mocks/whatsapp/c03-utility.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c03-utility.png" alt="交易通知：收到 Pix，带按钮" width="460" height="1015" loading="lazy"></a><p class="cap"><b>C03.</b> 交易通知：收到 Pix，带按钮</p></div>
-<div class="shot"><a href="mocks/whatsapp/c04-marketing.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c04-marketing.png" alt="营销：需要单独的优惠 opt-in" width="460" height="1036" loading="lazy"></a><p class="cap"><b>C04.</b> 营销：需要单独的优惠 opt-in</p></div>
-<div class="shot"><a href="mocks/whatsapp/c05-authentication.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c05-authentication.png" alt="验证码：带复制按钮" width="460" height="1036" loading="lazy"></a><p class="cap"><b>C05.</b> 验证码：带复制按钮</p></div>
-<div class="shot"><a href="mocks/whatsapp/c06-bill.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/c06-bill.png" alt="账单提醒，附 Pix 复制粘贴付款码" width="460" height="1015" loading="lazy"></a><p class="cap"><b>C06.</b> 账单提醒，附 Pix 复制粘贴付款码</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/c01-notification.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/c01-notification.png" alt="通知与私人联系人的通知完全相同" width="460" height="972" loading="lazy"></a><p class="cap"><b>C01.</b> 通知与私人联系人的通知完全相同</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/c03-utility.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/c03-utility.png" alt="交易通知：收到 Pix，带按钮" width="460" height="1000" loading="lazy"></a><p class="cap"><b>C03.</b> 交易通知：收到 Pix，带按钮</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/c04-marketing.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/c04-marketing.png" alt="营销：需要单独的优惠 opt-in" width="460" height="1022" loading="lazy"></a><p class="cap"><b>C04.</b> 营销：需要单独的优惠 opt-in</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/c05-authentication.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/c05-authentication.png" alt="验证码：带复制按钮" width="460" height="1022" loading="lazy"></a><p class="cap"><b>C05.</b> 验证码：带复制按钮</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/c06-bill.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/c06-bill.png" alt="账单提醒，附 Pix 复制粘贴付款码" width="460" height="1000" loading="lazy"></a><p class="cap"><b>C06.</b> 账单提醒，附 Pix 复制粘贴付款码</p></div>
 </div>
 
 <h3>用户能做什么</h3>
 <p>用户可以回复（文字、按钮、列表、表单）、查看企业资料，或撤回授权。每个操作可能会、也可能不会向企业产生事件。</p>
 <div class="shots">
-<div class="shot"><a href="mocks/whatsapp/d00-options-map.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d00-options-map.png" alt="用户的所有选项，以及企业收到的反馈" width="900" height="787" loading="lazy"></a><p class="cap"><b>D00.</b> 用户的所有选项，以及企业收到的反馈</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/d00-options-map.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d00-options-map.png" alt="用户的所有选项，以及企业收到的反馈" width="900" height="784" loading="lazy"></a><p class="cap"><b>D00.</b> 用户的所有选项，以及企业收到的反馈</p></div>
 </div>
 <div class="shots phones">
-<div class="shot"><a href="mocks/whatsapp/d02-quick-reply.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d02-quick-reply.png" alt="快捷回复按钮" width="460" height="991" loading="lazy"></a><p class="cap"><b>D02.</b> 快捷回复按钮</p></div>
-<div class="shot"><a href="mocks/whatsapp/d04-list.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d04-list.png" alt="列表消息" width="460" height="991" loading="lazy"></a><p class="cap"><b>D04.</b> 列表消息</p></div>
-<div class="shot"><a href="mocks/whatsapp/d05-flow.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d05-flow.png" alt="聊天内表单（Flows），接近小程序" width="460" height="1034" loading="lazy"></a><p class="cap"><b>D05.</b> 聊天内表单（Flows），接近小程序</p></div>
-<div class="shot"><a href="mocks/whatsapp/d07-stop-offers.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d07-stop-offers.png" alt="停止优惠，保留提醒" width="460" height="1082" loading="lazy"></a><p class="cap"><b>D07.</b> 停止优惠，保留提醒</p></div>
-<div class="shot"><a href="mocks/whatsapp/d08-block-report.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d08-block-report.png" alt="屏蔽并举报，附原因" width="460" height="1034" loading="lazy"></a><p class="cap"><b>D08.</b> 屏蔽并举报，附原因</p></div>
-<div class="shot"><a href="mocks/whatsapp/d10-optout-keyword.png" target="_blank" rel="noopener"><img src="mocks/whatsapp/d10-optout-keyword.png" alt="关键词退订，由商户处理" width="460" height="1036" loading="lazy"></a><p class="cap"><b>D10.</b> 关键词退订，由商户处理</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/d02-quick-reply.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d02-quick-reply.png" alt="快捷回复按钮" width="460" height="972" loading="lazy"></a><p class="cap"><b>D02.</b> 快捷回复按钮</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/d04-list.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d04-list.png" alt="列表消息" width="460" height="972" loading="lazy"></a><p class="cap"><b>D04.</b> 列表消息</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/d05-flow.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d05-flow.png" alt="聊天内表单（Flows），接近小程序" width="460" height="1015" loading="lazy"></a><p class="cap"><b>D05.</b> 聊天内表单（Flows），接近小程序</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/d07-stop-offers.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d07-stop-offers.png" alt="停止优惠，保留提醒" width="460" height="1022" loading="lazy"></a><p class="cap"><b>D07.</b> 停止优惠，保留提醒</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/d08-block-report.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d08-block-report.png" alt="屏蔽并举报，附原因" width="460" height="1015" loading="lazy"></a><p class="cap"><b>D08.</b> 屏蔽并举报，附原因</p></div>
+<div class="shot"><a href="mocks/zh/whatsapp/d10-optout-keyword.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d10-optout-keyword.png" alt="关键词退订，由商户处理" width="460" height="1022" loading="lazy"></a><p class="cap"><b>D10.</b> 关键词退订，由商户处理</p></div>
 </div>
 <div class="tbl"><table><thead><tr><th>用户操作</th><th>WhatsApp</th><th>PHIZ</th></tr></thead><tbody>
 <tr><td>回复文字或媒体</td><td><code>messages</code> Webhook；开启 24 小时窗口</td><td><code>message</code> 事件（第 09 节）</td></tr>

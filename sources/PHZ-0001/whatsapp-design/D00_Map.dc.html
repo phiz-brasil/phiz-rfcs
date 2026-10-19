@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D0 Options map</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="wide" style="width: 900px; gap: 16px">
+<div class="hd"><span class="id">D0</span><div><div class="tt" style="font-size: 24px">Every option after a business message</div><div class="te" style="font-size: 13px">And what the business receives back</div></div></div>
+<div class="box" style="align-self: center; background: #0B5F4A; color: #fff; border: 0; align-items: center"><div class="bt">Business message received</div></div>
+<div class="arr" style="height: 20px">↓</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+<div class="box" style="border-top: 5px solid #0E7A45">
+<div class="bt">Respond <span class="be">→ webhook to the business</span></div>
+<div class="bz"><b>D1</b> Free text or voice reply → <span class="pill">messages · text</span> opens 24h window</div>
+<div class="bz"><b>D2</b> Tap a quick-reply button → <span class="pill">button_reply</span></div>
+<div class="bz"><b>D3</b> Tap link / call button → leaves WhatsApp, <b>no</b> webhook</div>
+<div class="bz"><b>D4</b> Pick from a list menu → <span class="pill">list_reply</span></div>
+<div class="bz"><b>D5</b> Fill an in-chat form → <span class="pill">nfm_reply</span></div>
+</div>
+<div class="box" style="border-top: 5px solid #2A6FB5">
+<div class="bt">Inspect</div>
+<div class="bz"><b>D6</b> Tap the business name → profile: verified badge, description, website, hours</div>
+<div class="bz">Tap the yellow banner → learn the business uses Meta's hosted service</div>
+<div class="be">No signal to the business</div>
+</div>
+<div class="optbox" style="border-color: #4D5B55; background: #F1F3F2">
+<div style="display: flex; gap: 8px; align-items: center"><span class="offtag">OPT-OUT</span><div class="bt">Withdraw permission</div></div>
+<div class="bz"><b>D7</b> Interested / not interested / stop offers (keep alerts) → future marketing fails; quality rating affected</div>
+<div class="bz"><b>D8</b> Block and report, with a reason → all future messages fail; quality rating drops</div>
+<div class="bz"><b>D10</b> Reply "STOP" → the company's own system must update the consent record (O5)</div>
+</div>
+<div class="box" style="border-top: 5px solid #4D5B55">
+<div class="bt">Organize</div>
+<div class="bz"><b>D9</b> Mute, archive, pin, delete the chat, mark as read</div>
+<div class="be">Invisible to the business — it can only infer from missing "read" statuses</div>
+</div>
+</div>
+<div class="cap">
+<div class="cz">Design insight: the user holds many brakes — stop offers, block, report — and each directly affects the company's ability to send. Opt-in and opt-out are two ends of the same consent: whatever the user authorized (flow O) can be withdrawn here at any time. PhizChat should design both sides plus a quality rating.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

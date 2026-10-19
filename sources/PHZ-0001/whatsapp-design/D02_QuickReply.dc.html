@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D2 Quick reply</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ab">
+<div class="hd"><span class="id">D2</span><div><div class="tt">Tap a quick-reply button</div><div class="te">Structured answer the business can automate</div></div></div>
+<div class="ph">
+<div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#17201C" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><div class="av" style="background: #0E7A45">P</div><div style="flex: 1"><div class="nm">PicPay <svg width="15" height="15" viewBox="0 0 16 16" role="img" aria-label="Verified business"><circle cx="8" cy="8" r="8" fill="#1572B6"/><path d="M4.5 8.2l2.2 2.2 4.6-4.8" stroke="#fff" stroke-width="1.8" fill="none"/></svg></div><div class="sb">Business account</div></div></div>
+<div class="chat">
+<div class="tpl">
+<div class="tb">Ana, we detected a purchase of <b>R$ 89,90</b> on your card ending 4417 at <b>XYZ Online Store</b>. Was it you?<span class="tm">15:20</span></div>
+<button class="qb">Yes, it was me</button>
+<button class="qb" style="background: #E4F2EA">I don't recognize it</button>
+</div>
+<div class="out" style="min-width: 60%"><div style="background: rgba(0,0,0,0.05); border-left: 3px solid #0E7A45; border-radius: 6px; padding: 4px 8px; font-size: 12px; color: #3B4742; margin-bottom: 4px">PicPay · Was it you?</div>I don't recognize it<span class="tm">15:21 <span class="rd">✓✓</span></span></div>
+<div class="tpl">
+<div class="tb">Understood. We blocked your card ending 4417 for safety and will dispute the purchase. A new virtual card is already available in the app.<span class="tm">15:21</span></div>
+<button class="qb">Talk to an agent</button>
+</div>
+</div>
+<div class="cmp"><label for="d2m" class="sr">Message</label><input id="d2m" class="inp" placeholder="Message"><button class="mic" aria-label="Record audio"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>
+</div>
+<div class="cap">
+<div class="cz">Tapping a button sends its text as a quoted reply. The webhook carries the button's payload (e.g. FRAUD_NO), so the company's system acts automatically (blocks the card) — more reliable than free text.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":460,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

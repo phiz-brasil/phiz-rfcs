@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>O0 Consent lifecycle</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="wide" style="width: 900px; gap: 16px">
+<div class="hd"><span class="optag" style="font-size: 13px; align-self: center">O0</span><div><div class="tt" style="font-size: 24px">No opt-in, no message</div><div class="te" style="font-size: 13px">The consent lifecycle every business message depends on</div></div></div>
+<div class="optbox" style="flex-direction: row; align-items: center; gap: 14px">
+<div style="font-size: 40px; font-weight: 700; color: #B45309; line-height: 1">!</div>
+<div class="bz">Before a company may send a WhatsApp message that the user did not ask for, the user must have <b>authorized that company</b>: clearly told they will receive its messages, with the company's name stated (Meta policy). Mentioning WhatsApp and one choice per purpose are best practices. Having the phone number is not enough — and Meta does <b>not</b> verify any of this (O6).</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div class="optbox"><div style="display: flex; gap: 10px; align-items: center"><span class="optag">1 · COLLECT</span><div class="bt">The user says yes</div></div><div class="bz">In the company's app (O1), at sign-up or checkout (O2), by messaging the company first (O3), or by answering yes inside WhatsApp (O4).</div></div>
+<div class="arr" style="height: 22px">↓</div>
+<div class="box" style="border: 2px solid #0B5F4A"><div style="display: flex; gap: 10px; align-items: center"><span class="id">2 · RECORD</span><div class="bt">The company stores proof</div></div><div class="bz">Who, when, where, which wording, which message categories (O5). Required by Meta's policy and Brazil's data protection law (LGPD).</div></div>
+<div class="arr" style="height: 22px">↓</div>
+<div class="box" style="border: 2px solid #0B5F4A"><div style="display: flex; gap: 10px; align-items: center"><span class="id">3 · SEND</span><div class="bt">Only within what was authorized</div></div><div class="bz">Payment alerts consent ≠ marketing consent. Messages go out through the BSP and Cloud API (flow B) and land on the phone (flow C).</div></div>
+<div class="arr" style="height: 22px">↓</div>
+<div class="box" style="border: 2px solid #4D5B55"><div style="display: flex; gap: 10px; align-items: center"><span class="offtag">4 · REVOKE</span><div class="bt">The user can withdraw at any time</div></div><div class="bz">Stop offers (D7), block and report (D8), reply a stop keyword (D10), or switch off the toggle in the app (O1). The company must honor it immediately.</div></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+<div class="box"><div class="bt" style="color: #0B5F4A">Counts as opt-in</div>
+<div class="bz">✓ Clear notice naming the company, actively accepted (best: unticked box that also names WhatsApp)</div>
+<div class="bz">✓ Separate choice per message type (alerts vs. offers)</div>
+<div class="bz">✓ User sends the first message — for that conversation</div>
+<div class="bz">✓ User taps "Yes" to an in-chat question</div></div>
+<div class="box"><div class="bt red">Does not count</div>
+<div class="bz">✗ Pre-ticked boxes or consent hidden in long terms</div>
+<div class="bz">✗ Number in the CRM from another context</div>
+<div class="bz">✗ Number collected for another purpose, with no notice</div>
+<div class="bz">✗ Purchased or shared contact lists</div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":900,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

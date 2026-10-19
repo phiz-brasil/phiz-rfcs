@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>O5 Consent record</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ab" style="width: 640px; gap: 14px">
+<div class="hd"><span class="optag" style="font-size: 13px; align-self: center">O5</span><div><div class="tt">The company records each consent</div><div class="te">Business-side CRM view (illustrative) — the user never sees this</div></div></div>
+<div class="box" style="padding: 0; overflow: hidden; gap: 0">
+<div style="display: grid; grid-template-columns: 1.1fr 1fr 1.1fr 1fr 0.8fr; gap: 8px; padding: 10px 14px; background: #17201C; color: #fff; font-size: 12px; font-weight: 600"><div>Source</div><div>Category</div><div>Date / time</div><div>Wording</div><div>Status</div></div>
+<div style="display: grid; grid-template-columns: 1.1fr 1fr 1.1fr 1fr 0.8fr; gap: 8px; padding: 10px 14px; font-size: 12px; border-bottom: 1px solid #EEF0EE; background: #FFF8EC"><div>App toggle (O1)</div><div>Account alerts</div><div>2026-03-02 18:40</div><div>v3 · app</div><div style="color: #0E7A45; font-weight: 700">Active</div></div>
+<div style="display: grid; grid-template-columns: 1.1fr 1fr 1.1fr 1fr 0.8fr; gap: 8px; padding: 10px 14px; font-size: 12px; border-bottom: 1px solid #EEF0EE"><div>Sign-up form (O2)</div><div>Offers</div><div>2025-11-14 10:05</div><div>v2 · web</div><div style="color: #4D5B55; font-weight: 700">Revoked</div></div>
+<div style="display: grid; grid-template-columns: 1.1fr 1fr 1.1fr 1fr 0.8fr; gap: 8px; padding: 10px 14px; font-size: 12px; border-bottom: 1px solid #EEF0EE; background: #FFF8EC"><div>In-chat button (O4)</div><div>Account alerts</div><div>2026-10-19 09:53</div><div>v1 · chat</div><div style="color: #0E7A45; font-weight: 700">Active</div></div>
+<div style="display: grid; grid-template-columns: 1.1fr 1fr 1.1fr 1fr 0.8fr; gap: 8px; padding: 10px 14px; font-size: 12px"><div>"STOP" reply (D10)</div><div>Offers</div><div>2026-10-19 12:41</div><div>keyword</div><div style="color: #4D5B55; font-weight: 700">Opt-out</div></div>
+</div>
+<div class="be">Customer: Ana Souza · +55 11 98765-4321 · WhatsApp</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div class="optbox"><div class="bt">What to store</div>
+<div class="bz">• Who: customer ID and WhatsApp number</div>
+<div class="bz">• What: which categories (alerts, offers)</div>
+<div class="bz">• Where: app, web form, chat, store</div>
+<div class="bz">• When: timestamp</div>
+<div class="bz">• Exact wording version shown</div></div>
+<div class="box"><div class="bt">How it is used</div>
+<div class="bz">Before every send, the company (or its BSP) checks: is there an active opt-in <b>for this category</b>?</div>
+<div class="bz">Revoking must be as easy as consenting, and takes effect immediately.</div>
+<div class="bz">Meta does not check the record itself — but blocks and reports from users who never opted in lower the company's quality rating (B2).</div></div>
+</div>
+<div class="cap">
+<div class="cz"><b>For PhizChat:</b> an equivalent consent store (per user, per business, per category) is a natural part of the Open Platform — either kept by the platform, or required from businesses and enforced through user feedback.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
