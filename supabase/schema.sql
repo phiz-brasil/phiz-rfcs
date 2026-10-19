@@ -90,7 +90,7 @@ create policy "add comments" on public.rfc_comments
   for insert to anon, authenticated
   with check (hidden = false);
 
--- Tradução automática (DeepL) ------------------------------------------------------------
+-- Tradução automática (Cloudflare Workers AI) ------------------------------------------------------------
 -- A Edge Function supabase/functions/translate-comment preenche estas colunas depois de cada
 -- comentário novo: {"pt": {"body": …, "quote": …}, "en": {…}, "zh": {…}} e o idioma detectado.
 -- A página só LÊ estas colunas; a chave pública não pode gravá-las (o insert continua limitado

@@ -1,66 +1,87 @@
-// Translates RFC comments into PT-BR, EN-US and Chinese with DeepL and stores the result in
-// rfc_comments.translations / rfc_comments.src_lang.
+// Translates RFC comments into PT-BR, EN-US and Chinese with Cloudflare Workers AI (m2m100) and
+// stores the result in rfc_comments.translations / rfc_comments.src_lang.
 //
 // Called by a Supabase Database Webhook on INSERT into public.rfc_comments, with the header
 //   x-webhook-secret: <TRANSLATE_WEBHOOK_SECRET>
 // POST {"backfill": true} with the same header translates comments that have no translation yet
-// (up to 200 per call).
+// (up to 50 per call).
 //
-// Secrets: DEEPL_API_KEY (free keys end with ":fx"), TRANSLATE_WEBHOOK_SECRET.
+// Secrets: CF_ACCOUNT_ID, CF_API_TOKEN (permission "Workers AI"), TRANSLATE_WEBHOOK_SECRET.
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
+//
+// m2m100 does not detect the source language, so detect() guesses it (CJK characters → zh;
+// otherwise Portuguese vs English by accents and common words) and falls back to the language
+// the page was in when the comment was written (rfc_comments.lang).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const DEEPL_KEY = Deno.env.get("DEEPL_API_KEY") ?? "";
+const ACCOUNT = Deno.env.get("CF_ACCOUNT_ID") ?? "";
+const TOKEN = Deno.env.get("CF_API_TOKEN") ?? "";
 const SECRET = Deno.env.get("TRANSLATE_WEBHOOK_SECRET") ?? "";
-const DEEPL_URL = Deno.env.get("DEEPL_API_URL") ??
-  (DEEPL_KEY.endsWith(":fx") ? "https://api-free.deepl.com/v2/translate" : "https://api.deepl.com/v2/translate");
-// English first: its result tells us the source language, so the matching target can be skipped.
-const TARGETS: [string, string][] = [["en", "EN-US"], ["pt", "PT-BR"], ["zh", "ZH"]];
-const SUPPORTED = new Set(TARGETS.map(([l]) => l));
+const MODEL = Deno.env.get("CF_TRANSLATE_MODEL") ?? "@cf/meta/m2m100-1.2b";
+const ENDPOINT = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/ai/run/${MODEL}`;
+const LANGS = ["pt", "en", "zh"] as const;
+type Lang = typeof LANGS[number];
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
 });
 
-type Row = { id: string; body: string; quote: string | null };
+type Row = { id: string; body: string; quote: string | null; lang: string | null };
 type Piece = { body: string; quote: string | null };
 
-async function deepl(texts: string[], target: string) {
-  const r = await fetch(DEEPL_URL, {
+const PT_WORDS = /\b(que|não|nao|uma|para|com|como|mais|isso|esse|essa|está|sobre|também|então|pode|deve|seria|ainda|já|mas|por|dos|das|nos|nas|ao|se|é)\b/gi;
+const EN_WORDS = /\b(the|and|that|this|with|for|not|are|is|was|would|should|could|can|will|have|has|from|but|what|how|why|it|of|to|in)\b/gi;
+
+function detect(text: string): Lang | null {
+  const letters = text.replace(/[\s\d\p{P}\p{S}]/gu, "");
+  if (!letters) return null;
+  const cjk = (letters.match(/[㐀-鿿]/g) ?? []).length;
+  if (cjk / letters.length > 0.3) return "zh";
+  const pt = (text.match(PT_WORDS) ?? []).length + (text.match(/[ãõçáéíóúâêô]/gi) ?? []).length * 2;
+  const en = (text.match(EN_WORDS) ?? []).length;
+  if (pt === en) return null;
+  return pt > en ? "pt" : "en";
+}
+
+async function translate(text: string, from: Lang, to: Lang): Promise<string> {
+  const r = await fetch(ENDPOINT, {
     method: "POST",
-    headers: { Authorization: `DeepL-Auth-Key ${DEEPL_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ text: texts, target_lang: target, preserve_formatting: true }),
+    headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text, source_lang: from, target_lang: to }),
   });
-  if (!r.ok) throw new Error(`DeepL ${r.status}: ${await r.text()}`);
-  const json = await r.json();
-  return json.translations as { text: string; detected_source_language: string }[];
+  const json = await r.json().catch(() => null);
+  if (!r.ok || json?.success === false) throw new Error(`Workers AI ${r.status}: ${JSON.stringify(json?.errors ?? json)}`);
+  const out = json?.result?.translated_text ?? json?.translated_text;
+  if (typeof out !== "string") throw new Error(`Workers AI: unexpected response ${JSON.stringify(json)}`);
+  return out;
 }
 
 async function translateRow(row: Row) {
-  const texts = row.quote ? [row.body, row.quote] : [row.body];
+  const hint = LANGS.includes(row.lang as Lang) ? (row.lang as Lang) : null;
+  const src = detect(row.body) ?? detect(row.quote ?? "") ?? hint;
   const out: Record<string, Piece> = {};
-  let src = "";
-  for (const [lang, target] of TARGETS) {
-    if (lang === src) continue;
-    const t = await deepl(texts, target);
-    if (!src) src = (t[0].detected_source_language || "").toLowerCase().slice(0, 2);
-    out[lang] = { body: t[0].text, quote: row.quote ? t[1].text : null };
-  }
-  const srcLang = SUPPORTED.has(src) ? src : null;
-  if (srcLang) out[srcLang] = { body: row.body, quote: row.quote };   // the original stays as written
-  const { error } = await db.from("rfc_comments").update({ translations: out, src_lang: srcLang }).eq("id", row.id);
+  if (src) {
+    out[src] = { body: row.body, quote: row.quote };   // the original stays as written
+    await Promise.all(LANGS.filter((to) => to !== src).map(async (to) => {
+      out[to] = {
+        body: await translate(row.body, src, to),
+        quote: row.quote ? await translate(row.quote, src, to) : null,
+      };
+    }));
+  }   // unknown language: store {} so the comment is not retried; the page shows the original
+  const { error } = await db.from("rfc_comments").update({ translations: out, src_lang: src }).eq("id", row.id);
   if (error) throw error;
 }
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
   if (!SECRET || req.headers.get("x-webhook-secret") !== SECRET) return new Response("unauthorized", { status: 401 });
-  if (!DEEPL_KEY) return new Response("DEEPL_API_KEY is not set", { status: 500 });
+  if (!ACCOUNT || !TOKEN) return new Response("CF_ACCOUNT_ID / CF_API_TOKEN are not set", { status: 500 });
   const payload = await req.json().catch(() => ({}));
   try {
     if (payload.backfill) {
-      const { data, error } = await db.from("rfc_comments").select("id,body,quote").is("translations", null)
-        .order("created_at", { ascending: true }).limit(200);
+      const { data, error } = await db.from("rfc_comments").select("id,body,quote,lang").is("translations", null)
+        .order("created_at", { ascending: true }).limit(50);
       if (error) throw error;
       for (const row of data ?? []) await translateRow(row as Row);
       return Response.json({ translated: data?.length ?? 0 });

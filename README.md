@@ -34,31 +34,35 @@ Static site for the PHIZ Open Platform RFCs, published on GitHub Pages.
 
 “New” means new since this browser last opened that list (stored in `localStorage`, nothing on the server); comments signed with the name you use in the form do not count as new for you.
 
-### Automatic translation of comments (DeepL)
+### Automatic translation of comments (Cloudflare Workers AI)
 
 Comments are shown in the language selected on the page (PT-BR, EN-US or 中文), with a *Machine translation · Show original* note. Translations are made once on the server and stored with the comment, so every reader sees the same text in any browser. Until this is set up, comments simply appear as written.
 
 1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run) or only its last block, “Tradução automática”. It adds the read-only columns `translations` and `src_lang`.
-2. **DeepL key**: create an account at <https://www.deepl.com/pro-api> (the Free plan covers 500,000 characters a month) and copy the API key (Free keys end with `:fx`).
+2. **Cloudflare keys** (free, no card needed for the free allowance of 10,000 Neurons a day, roughly several hundred comments):
+   1. Create an account at <https://dash.cloudflare.com/sign-up>. Your **Account ID** is on the right side of the dashboard home (or in the URL after `dash.cloudflare.com/`).
+   2. **My Profile → API Tokens → Create Token → Create Custom Token**, permission **Account · Workers AI · Read** (the "Workers AI" template also works). Copy the token; it is shown once.
+
+   When the daily allowance is used up, translation calls fail until 00:00 UTC; comments keep showing in the original language.
 3. **Function**: deploy [`supabase/functions/translate-comment`](supabase/functions/translate-comment/index.ts) with JWT verification **off** (the webhook authenticates with a shared secret instead):
 
    ```bash
    supabase login
    supabase link --project-ref <project ref, from the Supabase URL>
-   supabase secrets set DEEPL_API_KEY=<DeepL key> TRANSLATE_WEBHOOK_SECRET=<long random string>
+   supabase secrets set CF_ACCOUNT_ID=<account id> CF_API_TOKEN=<token> TRANSLATE_WEBHOOK_SECRET=<long random string>
    supabase functions deploy translate-comment --no-verify-jwt
    ```
 
-   Without the CLI: **Edge Functions → Deploy a new function → Via editor**, name it `translate-comment`, paste the file, turn off *Verify JWT*, and add both secrets under **Edge Functions → Secrets**.
+   Without the CLI: **Edge Functions → Deploy a new function → Via editor**, name it `translate-comment`, paste the file, turn off *Verify JWT*, and add the three secrets under **Edge Functions → Secrets**.
 4. **Webhook**: **Database → Webhooks → Create a new hook**: table `rfc_comments`, event **Insert**, type **Supabase Edge Functions** → `translate-comment`, method `POST`, HTTP header `x-webhook-secret: <same secret>`.
-5. **Existing comments**: translate the ones already posted (repeat until it returns `{"translated":0}`; 200 per call):
+5. **Existing comments**: translate the ones already posted (repeat until it returns `{"translated":0}`; 50 per call):
 
    ```bash
    curl -X POST "https://<project ref>.supabase.co/functions/v1/translate-comment" \
      -H "x-webhook-secret: <same secret>" -H "Content-Type: application/json" -d '{"backfill":true}'
    ```
 
-A new comment shows in its original language for a second or two, then in translation on the next load. Check the function's **Logs** in Supabase if translations do not appear (wrong key, missing secret or DeepL quota).
+The model (`m2m100`) does not detect the source language, so the function guesses it (Chinese characters, or Portuguese vs English by accents and common words) and falls back to the page language the author was using; a very short comment such as “ok” stays untranslated. A new comment shows in its original language for a second or two, then in translation on the next load. Check the function's **Logs** in Supabase if translations do not appear (wrong token or account id, missing secret, or the daily Workers AI allowance).
 
 ## Add a new RFC
 
