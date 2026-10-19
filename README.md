@@ -43,6 +43,20 @@ With Claude Code, the `phiz-rfc` skill follows this workflow, including research
 
 Open it as a pull request if you want review before it appears in the index.
 
+## Versions
+
+Every RFC has a version (`MAJOR.MINOR`, in `rfc.json` → `version`) and a changelog. The page header shows it (`v1.1 ▾`); clicking it lists every version with its date and a note in the three languages. Old versions stay available as read-only pages at `/rfcs/<ID>/v<version>.html`, with a banner pointing to the current one (no new comments on them).
+
+To publish a new version of an RFC that was already published:
+
+```bash
+python3 tools/new_version.py PHZ-0001 --note-pt "O que mudou" --note-en "What changed" --note-zh "变更内容"
+```
+
+Run it **before** editing, with the last published version committed. It archives `rfcs/<ID>/source.html` as it is in git HEAD into `rfcs/<ID>/versions/<current>/`, bumps the version (minor by default; `--major`, or `--set 2.0`) and adds the changelog entry. Then edit `sources/<ID>/`, rebuild and commit as usual. Typo fixes do not need a new version.
+
+Notes: archived pages reuse the RFC's current `mocks/` and OpenAPI files. Comments are keyed by section id and shared by all versions, so keep section ids stable.
+
 ## Status
 
 Change `status` in `rfc.json` and push. Allowed values:

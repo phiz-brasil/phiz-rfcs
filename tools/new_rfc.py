@@ -51,6 +51,9 @@ def main():
     meta = {"id": rid, "title": {"pt": a.pt, "en": a.en, "zh": a.zh},
             "summary": {"pt": "Uma frase.", "en": "One sentence.", "zh": "一句话。"},
             "status": "draft", "authors": [a.author], "reviewers": [],
+            "version": "1.0",
+            "changelog": [{"version": "1.0", "date": today.isoformat(),
+                           "note": {"pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。"}}],
             "created": today.isoformat(), "updated": today.isoformat()}
     (out / "rfc.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

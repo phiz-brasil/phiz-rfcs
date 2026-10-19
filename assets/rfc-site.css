@@ -39,3 +39,23 @@ mark.cmt-mark { background: var(--accent-soft); color: inherit; border-bottom: 2
 mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 .cmt-fab { position: absolute; z-index: 50; font: 600 .8rem var(--f-body, system-ui); color: #fff; background: var(--ink); border: 0; border-radius: 999px; padding: 7px 13px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
 .cmt-fab[hidden] { display: none; }
+/* Versions: history popover in the header and the banner on archived versions */
+.vers { position: relative; display: inline-block; }
+.vers > summary { list-style: none; cursor: pointer; user-select: none; }
+.vers > summary::-webkit-details-marker { display: none; }
+.vers > summary::after { content: " ▾"; font-size: .7em; }
+.vers[open] > summary, .vers > summary:hover { border-color: var(--accent); color: var(--accent-ink); }
+.vers-pop { position: absolute; left: 0; top: calc(100% + 8px); z-index: 60; width: min(380px, 88vw); max-height: 70vh; overflow-y: auto; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: 0 8px 28px rgba(0,0,0,.18); font: 400 .85rem/1.45 var(--f-body, system-ui); }
+.vers-pop h3 { margin: 0 0 8px; font: 600 .72rem var(--f-body, system-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.vers-pop ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.vers-pop li { border-left: 3px solid var(--line); padding-left: 10px; }
+.vers-pop li[aria-current] { border-left-color: var(--accent); }
+.vers-pop li > a, .vers-pop li > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; color: inherit; text-decoration: none; }
+.vers-pop li > a:hover b { color: var(--accent-ink); text-decoration: underline; }
+.vers-pop b { font: 700 .9rem var(--f-mono, ui-monospace, monospace); }
+.vers-pop time { color: var(--muted); font-size: .78rem; }
+.vers-pop .vtag { font: 600 .66rem var(--f-body, system-ui); text-transform: uppercase; letter-spacing: .05em; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
+.vers-pop .vnote-wrap { margin-top: 2px; color: var(--muted); }
+.ver-banner { background: var(--warn-soft, #fbf0d6); color: var(--warn, #9a6408); border-bottom: 1px solid var(--line); padding: 9px 16px; text-align: center; font: 500 .88rem var(--f-body, system-ui); }
+.ver-banner a { color: inherit; font-weight: 700; margin-left: 6px; }
+@media (max-width: 600px) { .vers { position: static; } .vers-pop { position: fixed; left: 12px; right: 12px; top: 56px; width: auto; } }

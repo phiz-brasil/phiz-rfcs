@@ -13,6 +13,14 @@
   "status": "in-review",
   "authors": ["Gleison"],
   "reviewers": ["Pedro Bettani", "Vitor Mozer", "Richard Liang"],
+  "version": "1.0",
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-10-15",
+      "note": { "pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。" }
+    }
+  ],
   "created": "2026-10-15",
   "updated": "2026-10-15"
 }

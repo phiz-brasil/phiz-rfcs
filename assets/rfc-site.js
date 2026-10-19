@@ -4,6 +4,7 @@
 (function () {
   const cfg = window.PHIZ_SITE || {};
   const rfcId = window.PHIZ_RFC_ID || "RFC";
+  const frozen = !!window.PHIZ_FROZEN;   // archived version: read-only, no new comments
   const T = {
     pt: { btn: "Comentar", fallback: "Abrir no GitHub", need: "Comentários usam sua conta do GitHub.",
           name: "Seu nome", body: "Escreva um comentário", send: "Comentar", sending: "Enviando…", reply: "Responder",
@@ -63,7 +64,7 @@
   };
 
   /* ---------- Supabase provider ---------- */
-  const sb = cfg.comments && cfg.comments.supabaseUrl && cfg.comments.supabaseKey ? {
+  const sb = !frozen && cfg.comments && cfg.comments.supabaseUrl && cfg.comments.supabaseKey ? {
     url: cfg.comments.supabaseUrl.replace(/\/+$/, "") + "/rest/v1/rfc_comments",
     // new publishable keys (sb_publishable_…) go only in "apikey"; legacy anon keys are JWTs and also go in Authorization
     headers: Object.assign({ apikey: cfg.comments.supabaseKey },
@@ -326,7 +327,10 @@
   document.addEventListener("selectionchange", () => { const s = getSelection(); if (!s || s.isCollapsed) hideFab(); });
 
   /* ---------- wiring ---------- */
-  function refresh() { decorate(); renderMermaid(); if (sb) paintMarks(); }
+  function refresh() { if (!frozen) decorate(); renderMermaid(); if (sb) paintMarks(); }
+
+  // close the version history when clicking elsewhere
+  document.addEventListener("click", e => { document.querySelectorAll("details.vers[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
 
   initMermaid();
   new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ["data-lang"] });

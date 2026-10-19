@@ -20,6 +20,14 @@
     "Richard Liang",
     "Henry Wu"
   ],
+  "version": "1.0",
+  "changelog": [
+    {
+      "version": "1.0",
+      "date": "2026-10-16",
+      "note": { "pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。" }
+    }
+  ],
   "created": "2026-10-16",
   "updated": "2026-10-16"
 }

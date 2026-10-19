@@ -5,6 +5,10 @@
   "status": "draft",
   "authors": [],
   "reviewers": [],
+  "version": "1.0",
+  "changelog": [
+    { "version": "1.0", "date": "YYYY-MM-DD", "note": { "pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。" } }
+  ],
   "created": "YYYY-MM-DD",
   "updated": "YYYY-MM-DD"
 }

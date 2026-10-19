@@ -43,10 +43,58 @@ def load():
     return out
 
 
-def build_rfc(d, meta):
-    dest = DIST / "rfcs" / d.name
-    shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html"))
-    page = (d / "source.html").read_text(encoding="utf-8")
+VER_RE = re.compile(r"\d+\.\d+")
+T_VERSIONS = {"pt": "Histórico de versões", "en": "Version history", "zh": "版本历史"}
+T_CURRENT = {"pt": "atual", "en": "current", "zh": "当前"}
+T_NOFILE = {"pt": "sem arquivo", "en": "no archive", "zh": "无存档"}
+
+
+def versions_of(d, meta):
+    """(current version, changelog newest first). Older rfc.json without versioning counts as 1.0."""
+    cur = str(meta.get("version", "1.0"))
+    if not VER_RE.fullmatch(cur):
+        sys.exit(f"{d.name}: invalid version {cur!r}; use MAJOR.MINOR, e.g. 1.0")
+    log = meta.get("changelog") or [{"version": cur, "date": meta.get("created", ""), "note": {l: "" for l in LANGS}}]
+    seen = [str(x["version"]) for x in log]
+    if cur not in seen:
+        sys.exit(f"{d.name}: version {cur} is missing from changelog")
+    if len(set(seen)) != len(seen):
+        sys.exit(f"{d.name}: duplicate versions in changelog")
+    return cur, log
+
+
+def snapshot(d, v):
+    return d / "versions" / v / "source.html"
+
+
+def versions_html(d, meta, shown):
+    cur, log = versions_of(d, meta)
+    lis = []
+    for ent in log:
+        v = str(ent["version"])
+        href = "./" if v == cur else (f"v{v}.html" if snapshot(d, v).exists() else None)
+        tag = spans(T_CURRENT, "vtag") if v == cur else ("" if href else spans(T_NOFILE, "vtag"))
+        head = f'<b>v{e(v)}</b>{tag}<time>{e(ent.get("date", ""))}</time>'
+        head = f'<a href="{href}">{head}</a>' if href else f"<span>{head}</span>"
+        note = spans({l: ent.get("note", {}).get(l, "") for l in LANGS}, "vnote")
+        cur_attr = ' aria-current="true"' if v == shown else ""
+        lis.append(f"<li{cur_attr}>{head}<div class=\"vnote-wrap\">{note}</div></li>")
+    return (f'<details class="vers"><summary class="rfcno ver" aria-label="Version">v{e(shown)}</summary>'
+            f'<div class="vers-pop"><h3>{spans(T_VERSIONS)}</h3><ul>{"".join(lis)}</ul></div></details>')
+
+
+def banner_html(shown, cur):
+    msg = {"pt": f"Você está lendo a versão {shown}, arquivada e somente leitura. A versão atual é a {cur}.",
+           "en": f"You are reading version {shown}, archived and read-only. The current version is {cur}.",
+           "zh": f"你正在阅读已存档的只读版本 {shown}。当前版本为 {cur}。"}
+    go = {"pt": "Ver versão atual", "en": "View current version", "zh": "查看当前版本"}
+    return (f'<div class="ver-banner" role="note">{spans(msg)} '
+            f'<a href="./">{spans(go)}</a></div>')
+
+
+def render_rfc(d, meta, text, out, shown, frozen, status, up):
+    """Writes one RFC page. `up` is the path from the page to the site root ('../../')."""
+    page = text
     if not page.lstrip().lower().startswith("<!doctype"):
         # the source is a fragment (the Artifact viewer adds the skeleton); hosted pages need their own
         head = ('<!doctype html>\n<html lang="pt-BR">\n<head>\n<meta charset="utf-8">\n'
@@ -54,17 +102,41 @@ def build_rfc(d, meta):
         marker = re.search(r"<header|<body|<main|<h1", page)
         i = marker.start() if marker else len(page)
         page = head + page[:i] + "\n</head>\n<body>\n" + page[i:] + "\n</body>\n</html>\n"
-    st = meta["status"]
-    page = page.replace('<span class="rfcno">', '<a class="back" href="../../">← RFCs</a><span class="rfcno">', 1)
-    badge = (f'<span class="rfcno st" data-st="{st}">'
-             + "".join(f'<span class="lang-st" data-l="{l}">{e(STATUS[st][l])}</span>' for l in LANGS) + "</span>")
-    page = re.sub(r'(<span class="rfcno">[^<]*</span>)', r"\1" + badge, page, count=1)
-    page = page.replace("</title>", "</title>\n<link rel=\"stylesheet\" href=\"../../assets/rfc-site.css\">", 1)
+    cur, _ = versions_of(d, meta)
+    page = page.replace('<span class="rfcno">', f'<a class="back" href="{up}">← RFCs</a><span class="rfcno">', 1)
+    badge = (f'<span class="rfcno st" data-st="{status}">'
+             + "".join(f'<span class="lang-st" data-l="{l}">{e(STATUS[status][l])}</span>' for l in LANGS) + "</span>")
+    extra = badge + versions_html(d, meta, shown)
+    page = re.sub(r'(<span class="rfcno">[^<]*</span>)', lambda m: m.group(1) + extra, page, count=1)
+    if frozen:
+        page = page.replace("</header>", "</header>\n" + banner_html(shown, cur), 1)
+        page = page.replace("</title>", f" · v{shown}</title>", 1)
+    page = page.replace("</title>", f"</title>\n<link rel=\"stylesheet\" href=\"{up}assets/rfc-site.css\">", 1)
     cfg = {"repo": CFG["repo"], "giscus": CFG["giscus"], "comments": CFG.get("comments", {})}
-    inject = (f'<script>window.PHIZ_SITE={json.dumps(cfg)};window.PHIZ_RFC_ID={json.dumps(meta["id"])};</script>\n'
-              '<script src="../../assets/mermaid.min.js"></script>\n<script src="../../assets/rfc-site.js"></script>\n</body>')
+    inject = (f'<script>window.PHIZ_SITE={json.dumps(cfg)};window.PHIZ_RFC_ID={json.dumps(meta["id"])};'
+              f'window.PHIZ_FROZEN={json.dumps(frozen)};</script>\n'
+              f'<script src="{up}assets/mermaid.min.js"></script>\n<script src="{up}assets/rfc-site.js"></script>\n</body>')
     page = page.replace("</body>", inject, 1) if "</body>" in page else page + inject
-    (dest / "index.html").write_text(page, encoding="utf-8")
+    out.write_text(page, encoding="utf-8")
+
+
+def build_rfc(d, meta):
+    dest = DIST / "rfcs" / d.name
+    shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html", "versions"))
+    cur, log = versions_of(d, meta)
+    render_rfc(d, meta, (d / "source.html").read_text(encoding="utf-8"), dest / "index.html", cur, False, meta["status"], "../../")
+    for ent in log:
+        v = str(ent["version"])
+        if v == cur:
+            continue
+        if not snapshot(d, v).exists():
+            print(f"warning: {d.name} v{v} is in the changelog but has no archive ({snapshot(d, v).relative_to(ROOT)})")
+            continue
+        st = ent.get("status", meta["status"])
+        if st not in STATUS:
+            sys.exit(f"{d.name} v{v}: invalid status {st!r}")
+        render_rfc(d, meta, snapshot(d, v).read_text(encoding="utf-8"), dest / f"v{v}.html", v, True, st, "../../")
+
 
 
 INDEX_CSS = """
@@ -87,6 +159,7 @@ h1{font:800 clamp(1.8rem,5vw,2.6rem)/1.1 "Schibsted Grotesk",system-ui,sans-seri
 .card:hover{border-color:var(--accent)}.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .id{font:600 .78rem "JetBrains Mono",ui-monospace,monospace;color:var(--muted)}
+.ver{font:600 .72rem "JetBrains Mono",ui-monospace,monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
 .badge{font:600 .7rem inherit;font-family:inherit;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
 [data-st=draft]{color:var(--muted)}[data-st=in-review]{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
 [data-st=approved]{background:#dff3e4;color:#17692f;border-color:transparent}[data-st=implemented]{background:#dbeafe;color:#1d4ed8;border-color:transparent}
@@ -118,7 +191,7 @@ def build_index(items):
         authors = ", ".join(m.get("authors", [])) or "—"
         revs = ", ".join(m.get("reviewers", [])) or "—"
         lis.append(f'''<li class="card-li" data-status="{st}"><a class="card" href="rfcs/{e(d.name)}/">
-<div class="top"><span class="id">{e(m["id"])}</span><span class="badge" data-st="{st}">{spans(STATUS[st])}</span></div>
+<div class="top"><span class="id">{e(m["id"])}</span><span class="ver">v{e(versions_of(d, m)[0])}</span><span class="badge" data-st="{st}">{spans(STATUS[st])}</span></div>
 <h2>{spans(m["title"])}</h2><p>{spans(m["summary"])}</p>
 <div class="meta"><span>{e(authors)}</span><span>Reviewers: {e(revs)}</span><span>{e(m.get("updated", ""))}</span></div></a></li>''')
     used = sorted({m["status"] for _, m in items}, key=list(STATUS).index)
