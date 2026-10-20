@@ -40,8 +40,8 @@ tags:
   description: Upload de mídia para o armazenamento temporário da PHIZ. Toda mídia enviada em mensagens precisa
     passar por aqui; links de terceiros não são aceitos.
 - name: Webhooks
-  description: Eventos enviados ao seu servidor. Na Fase 1, a URL do webhook é cadastrada manualmente pela PHIZ;
-    os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.
+  description: Eventos enviados ao seu servidor. Na Fase 1, o parceiro cadastra a URL em Assinaturas de eventos,
+    no Developer Center; os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.
 security:
 - bearerAuth: []
 paths:
@@ -632,7 +632,7 @@ paths:
       - Webhooks
       summary: Configurar webhook
       description: '**Fase 2.** Define URL, verify_token e eventos. A PHIZ faz o handshake GET na URL antes de ativar;
-        se falhar, responde 422. Na Fase 1, a PHIZ cadastra a URL manualmente.'
+        se falhar, responde 422. Na Fase 1, o parceiro cadastra a URL em Assinaturas de eventos.'
       operationId: setWebhook
       parameters:
       - name: app_id
@@ -1022,7 +1022,7 @@ components:
         client_id:
           type: string
           example: app_2Fk81PzQ
-          description: ID do app (client_id) gerado na Área do Desenvolvedor.
+          description: ID do app (client_id) gerado no Developer Center.
         client_secret:
           type: string
           format: password
