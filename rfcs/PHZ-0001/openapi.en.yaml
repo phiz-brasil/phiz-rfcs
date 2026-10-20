@@ -39,8 +39,8 @@ tags:
   description: Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party
     links are not accepted.
 - name: Webhooks
-  description: Events delivered to your server. In Phase 1, PHIZ registers the webhook URL manually; the app setup
-    endpoints (`/v1/apps/{app_id}/webhook…`) belong to Phase 2.
+  description: Events delivered to your server. In Phase 1, the partner registers the webhook URL under Event subscriptions
+    in the Developer Center; the app setup endpoints (`/v1/apps/{app_id}/webhook…`) belong to Phase 2.
 security:
 - bearerAuth: []
 paths:
@@ -629,7 +629,7 @@ paths:
       - Webhooks
       summary: Set webhook
       description: '**Phase 2.** Sets URL, verify_token and events. PHIZ performs the GET handshake on the URL before
-        activating; if it fails, returns 422. In Phase 1, PHIZ registers the URL manually.'
+        activating; if it fails, returns 422. In Phase 1, the partner registers the URL under Event subscriptions.'
       operationId: setWebhook
       parameters:
       - name: app_id
@@ -1019,7 +1019,7 @@ components:
         client_id:
           type: string
           example: app_2Fk81PzQ
-          description: App ID (client_id) issued in the Developer area.
+          description: App ID (client_id) issued in the Developer Center.
         client_secret:
           type: string
           format: password

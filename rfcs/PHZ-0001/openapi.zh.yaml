@@ -36,7 +36,7 @@ tags:
 - name: Media
   description: 将媒体上传到 PHIZ 临时存储。消息中发送的所有媒体都必须经由此处上传；不接受第三方链接。
 - name: Webhooks
-  description: 推送到您服务器的事件。第 1 阶段由 PHIZ 手工登记 Webhook URL；应用配置接口（`/v1/apps/{app_id}/webhook…`）属于第 2 阶段。
+  description: 推送到您服务器的事件。第 1 阶段由合作方在开发者中心的事件订阅中登记 Webhook URL；应用配置接口（`/v1/apps/{app_id}/webhook…`）属于第 2 阶段。
 security:
 - bearerAuth: []
 paths:
@@ -610,7 +610,7 @@ paths:
       tags:
       - Webhooks
       summary: 配置 Webhook
-      description: '**第 2 阶段。**设置 URL、verify_token 和订阅事件。PHIZ 会先对 URL 发起 GET 握手，失败则返回 422。第 1 阶段由 PHIZ 手工登记 URL。'
+      description: '**第 2 阶段。**设置 URL、verify_token 和订阅事件。PHIZ 会先对 URL 发起 GET 握手，失败则返回 422。第 1 阶段由合作方在事件订阅中登记 URL。'
       operationId: setWebhook
       parameters:
       - name: app_id

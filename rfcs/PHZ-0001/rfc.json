@@ -6,9 +6,9 @@
     "zh": "PHIZ 商家消息 API"
   },
   "summary": {
-    "pt": "Autenticação OAuth, envio de mensagens para telefone ou PHIZ ID, webhooks assinados e Área do Desenvolvedor no nível do comerciante.",
-    "en": "OAuth authentication, sending messages to a phone number or PHIZ ID, signed webhooks and a merchant-level Developer area.",
-    "zh": "OAuth 认证、向手机号或 PHIZ ID 发送消息、签名 Webhook，以及商家级开发者区域。"
+    "pt": "Autenticação OAuth, envio de mensagens para telefone ou PHIZ ID, webhooks assinados e configuração na Central do Desenvolvedor PHIZ.",
+    "en": "OAuth authentication, sending messages to a phone number or PHIZ ID, signed webhooks and setup in the PHIZ Developer Center.",
+    "zh": "OAuth 认证、向手机号或 PHIZ ID 发送消息、签名 Webhook，以及在 PHIZ开发者中心中的配置。"
   },
   "status": "in-review",
   "authors": [
@@ -19,8 +19,17 @@
     "Vitor Mozer",
     "Richard Liang"
   ],
-  "version": "1.4",
+  "version": "1.5",
   "changelog": [
+    {
+      "version": "1.5",
+      "date": "2026-10-20",
+      "note": {
+        "pt": "Seção 12 renomeada para “Central do Desenvolvedor PHIZ” e migrada para a ferramenta existente: novas telas (painel, nova aplicação Business Messaging, detalhes com scopes, remetentes e segredos, segredo gerado, assinaturas de eventos, webhook, remetentes e aplicações legadas da migração) e o que muda em cada menu, no visual da Central e em PT/EN/ZH. Integração vira aplicação Business Messaging e as permissões viram os papéis da organização. Webhook: a Fase 1 passa a usar Assinaturas de eventos em autoatendimento, no lugar do cadastro manual, e as retentativas, dead letters e reenvio da plataforma são reaproveitados (seção 10). Ajustes nas seções 01, 06, 08, 13 e 15. Q9 reescrita e nova Q10.",
+        "en": "Section 12 renamed “PHIZ Developer Center” and moved into the existing tool: new screens (dashboard, new Business Messaging application, details with scopes, senders and secrets, generated secret, event subscriptions, webhook, senders and legacy applications from the migration) and what changes in each menu, in the Developer Center look and in PT/EN/ZH. An integration becomes a Business Messaging application and permissions become the organization roles. Webhook: Phase 1 now uses self-service Event subscriptions instead of manual registration, and the platform’s retries, dead letters and replay are reused (section 10). Adjustments to sections 01, 06, 08, 13 and 15. Q9 rewritten and new Q10.",
+        "zh": "第 12 节更名为“PHIZ开发者中心”并迁移至现有工具：按开发者中心的视觉风格重新绘制页面（仪表盘、新建 Business Messaging 应用、含范围/发送方/密钥的应用详情、新密钥、事件订阅、Webhook、发送方及迁移生成的 Legacy 应用），并说明各菜单的变化，提供 PT/EN/ZH 三种语言。集成改为 Business Messaging 应用，权限改为组织角色。Webhook：第 1 阶段改用自助的事件订阅，取代手工登记，并沿用平台的重试、死信和重放（第 10 节）。调整第 01、06、08、13、15 节。重写 Q9，新增 Q10。"
+      }
+    },
     {
       "version": "1.4",
       "date": "2026-10-20",

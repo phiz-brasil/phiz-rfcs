@@ -18,7 +18,7 @@
   <li><strong>OAuth 2.0 鉴权（客户端凭证模式）</strong>，凭证签发给<em>商户账号</em>，不再绑定频道。</li>
   <li><strong>发送消息</strong>：直接以商户名义向手机号（E.164）或 PHIZ ID 发送消息，是否通过频道发送为可选项。</li>
   <li>带签名的 <strong>Webhook</strong>：推送用户发来的消息，以及已发送消息的每一次状态变化。</li>
-  <li>开放平台中商户级的<strong>开发者中心</strong>：商户将每个调用 API 的外部系统（如 Blip 或 Salesforce）登记为一个<strong>集成</strong>。每个集成拥有独立的 <code>client_id</code> 和密钥、Webhook 及投递记录。集成与小程序（Miniapp）无关。</li>
+  <li>现有的 <strong>PHIZ开发者中心</strong>：商户将每个调用 API 的外部系统（如 Blip 或 Salesforce）登记为一个<strong>应用</strong>。每个应用拥有独立的 <code>client_id</code> 和密钥、事件订阅及投递记录。集成与小程序（Miniapp）无关。</li>
 </ul>
 <p>消息与 Webhook 的数据结构沿用 Meta Cloud API，仅替换领域名称。已对接 WhatsApp Business Platform 的系统，只需修改 URL、凭证和少量字段名即可适配。</p>
 </section>
@@ -34,7 +34,7 @@
 <p>商户层面已有<strong>商户 ID</strong>（UUID），以及包含角色、成员和操作记录的<em>团队管理</em>。新功能将以这三者为基础。</p>
 <h3>本 RFC 带来的变化</h3>
 <p>每一行分别说明现状、存在的问题、本方案的做法，以及一个具体使用场景。</p>
-<div class="tbl changes"><table><thead><tr><th>现状</th><th>问题所在</th><th>本 RFC 的做法</th><th>使用场景</th></tr></thead><tbody><tr><td>商户要通过 API 联系用户，必须拥有频道。</td><td>没有频道、或希望以企业本身身份沟通的商户，无法直接给用户发消息。</td><td>商户可以以自身名义直接发送消息，频道变为可选项。</td><td>一家没有频道的药店通过手机号通知顾客 Maria 订单已可取货。消息出现在她与药店的直接对话中。</td></tr><tr><td>每个频道都有自己的 AppID 和密钥。</td><td>有 5 个频道的商户要管理 5 套凭证，Blip 需要为每个频道单独获取令牌。</td><td>每个集成一套凭证，归属商户账号，可使用直接发送及选定的频道。</td><td>Loja Exemplo 有 3 个频道并使用 Blip。现在要在 Blip 中录入 3 个 AppID；采用本 RFC 后，只需创建一个 “Blip” 集成，勾选直接发送和这 3 个频道。</td></tr><tr><td>“重置”会立即使密钥失效。</td><td>在外部系统更新密钥之前，集成一直不可用。</td><td>两个密钥可同时有效：新密钥生效后，旧密钥在一段时间内仍可用（默认 24 小时）。</td><td>Salesforce 的密钥出现在日志中。团队生成新密钥，下午更新 Salesforce，当天结束时撤销旧密钥，没有丢失任何消息。</td></tr><tr><td>登录使用 <code>grant_type: user_credentials</code>，并要求填写 <code>description</code>。</td><td>Salesforce 等原生支持 OAuth 的工具，必须写定制代码才能接入。</td><td>标准 OAuth 2.0（<code>client_credentials</code>），这些工具开箱即用。</td><td>Salesforce 管理员在 Named Credentials 中只需填写令牌 URL、client_id 和密钥即可连接 PHIZ，无需开发人员。</td></tr><tr><td>存在有效期约 90 天的刷新令牌。</td><td>多了一个需要保管的长期密钥，对服务端之间的集成没有好处。</td><td>1 小时令牌，不提供刷新令牌；过期后重新申请。</td><td>Blip 每小时用同一组 client_id 和密钥自动续期令牌，不会出现刷新令牌在周末过期、导致客服中断的情况。</td></tr><tr><td>没有配置 Webhook、查看日志或管理多个集成的页面。</td><td>商户无法自行配置 Webhook，也无法自行排查集成为何中断。</td><td>开发者中心：独立的集成、Webhook、投递记录和日志。</td><td>顾客回复不再进入 Blip。商户打开投递记录，发现 Webhook 从上午 10 点起一直返回 500，修复后重放这些事件。</td></tr></tbody></table></div>
+<div class="tbl changes"><table><thead><tr><th>现状</th><th>问题所在</th><th>本 RFC 的做法</th><th>使用场景</th></tr></thead><tbody><tr><td>商户要通过 API 联系用户，必须拥有频道。</td><td>没有频道、或希望以企业本身身份沟通的商户，无法直接给用户发消息。</td><td>商户可以以自身名义直接发送消息，频道变为可选项。</td><td>一家没有频道的药店通过手机号通知顾客 Maria 订单已可取货。消息出现在她与药店的直接对话中。</td></tr><tr><td>每个频道都有自己的 AppID 和密钥。</td><td>有 5 个频道的商户要管理 5 套凭证，Blip 需要为每个频道单独获取令牌。</td><td>每个集成一套凭证，归属商户账号，可使用直接发送及选定的频道。</td><td>Loja Exemplo 有 3 个频道并使用 Blip。现在要在 Blip 中录入 3 个 AppID；采用本 RFC 后，只需创建一个 “Blip” 集成，勾选直接发送和这 3 个频道。</td></tr><tr><td>“重置”会立即使密钥失效。</td><td>在外部系统更新密钥之前，集成一直不可用。</td><td>两个密钥可同时有效：新密钥生效后，旧密钥在一段时间内仍可用（默认 24 小时）。</td><td>Salesforce 的密钥出现在日志中。团队生成新密钥，下午更新 Salesforce，当天结束时撤销旧密钥，没有丢失任何消息。</td></tr><tr><td>登录使用 <code>grant_type: user_credentials</code>，并要求填写 <code>description</code>。</td><td>Salesforce 等原生支持 OAuth 的工具，必须写定制代码才能接入。</td><td>标准 OAuth 2.0（<code>client_credentials</code>），这些工具开箱即用。</td><td>Salesforce 管理员在 Named Credentials 中只需填写令牌 URL、client_id 和密钥即可连接 PHIZ，无需开发人员。</td></tr><tr><td>存在有效期约 90 天的刷新令牌。</td><td>多了一个需要保管的长期密钥，对服务端之间的集成没有好处。</td><td>1 小时令牌，不提供刷新令牌；过期后重新申请。</td><td>Blip 每小时用同一组 client_id 和密钥自动续期令牌，不会出现刷新令牌在周末过期、导致客服中断的情况。</td></tr><tr><td>频道配置中没有配置 Webhook、查看日志或管理多个集成的页面。</td><td>商户无法自行配置 Webhook，也无法自行排查集成为何中断。</td><td>沿用现有开发者中心，扩展出 Business API 的独立应用、事件订阅、投递记录和日志。</td><td>顾客回复不再进入 Blip。商户打开投递记录，发现 Webhook 从上午 10 点起一直返回 500，修复后重放这些事件。</td></tr></tbody></table></div>
 
 </section>
 
@@ -242,14 +242,14 @@ flowchart LR
 </pre></div>
 <p class="cap">回程：用户回复和消息状态通过 Webhook 送达 BSP。</p>
 <ol>
-  <li><strong>集成。</strong>企业（如 PicPay 或 Ambar）通过 BSP 提供客服。商户在开发者中心为该 BSP 创建集成，并提供 <code>client_id</code> 和密钥。</li>
+  <li><strong>集成。</strong>企业（如 PicPay 或 Ambar）通过 BSP 提供客服。商户在开发者中心为该 BSP 创建 Business Messaging 应用，并提供 <code>client_id</code> 和密钥。</li>
   <li><strong>令牌。</strong>BSP 调用 <code>/oauth/token</code>。Auth 在 Merchant Account 中校验集成（密钥、范围和可用发送方），返回 1 小时有效的 JWT。</li>
   <li><strong>发送。</strong>BSP 调用 <code>POST /v1/{sender_id}/messages</code>。API 校验令牌、范围、发送方、选择接收策略和 <code>Idempotency-Key</code>，返回 <code>202</code> 并将消息入队。如需发送媒体，BSP 先将文件上传到 <code>POST /v1/{sender_id}/media</code>，再在发送时使用返回的 <code>id</code> 或 PHIZ 链接。</li>
   <li><strong>路由。</strong><code>sender_id = merchant_id</code> 时作为 Direct Message 发送（默认）；使用频道 ID 时作为 Channel Message 发送（可选）。</li>
   <li><strong>投递。</strong>Phiz App 向用户展示消息，并通过上传时生成的链接从 PHIZ 存储下载媒体。</li>
   <li><strong>返回。</strong>用户回复和状态（<code>sent</code>、<code>delivered</code>、<code>read</code>、<code>failed</code>）生成事件，由 Webhooks 服务签名后投递给负责该发送方的集成。</li>
 </ol>
-<div class="tbl"><table><thead><tr><th>组件</th><th>职责</th><th>状态</th></tr></thead><tbody><tr><td>BSP / 企业系统</td><td>调用 API，上传媒体，接收 Webhook。</td><td>外部</td></tr><tr><td>PHIZ Business API · Auth</td><td>签发和撤销 JWT；校验 <code>client_id</code> 和密钥。</td><td>新增</td></tr><tr><td>PHIZ Business API · Messages</td><td>校验并受理发送（<code>202</code>），处理幂等和限流，入队并按 <code>sender_id</code> 路由。</td><td>新增</td></tr><tr><td>PHIZ Business API · Media</td><td>接收上传，校验格式和大小，限时存储文件，并生成发送时使用的 <code>id</code> 和 PHIZ 链接。</td><td>新增</td></tr><tr><td>PHIZ Business API · Webhooks</td><td>消费 App 事件，签名并带重试投递；保留 72 小时投递记录。</td><td>新增</td></tr><tr><td>Open Platform · Merchant Account</td><td>存储集成、密钥（哈希）、范围、可用发送方和 Webhook 配置；承载开发者中心。</td><td>变更：凭证从频道迁移到商户</td></tr><tr><td>Direct Message</td><td>App 内商户与用户的直接对话。</td><td>新增（见 Q3）</td></tr><tr><td>Channel / Channel Message</td><td>通过商户频道发送。</td><td>现有</td></tr><tr><td>Phiz App</td><td>展示消息，通过 PHIZ 链接下载媒体，产生送达、已读和回复事件。</td><td>变更</td></tr></tbody></table></div>
+<div class="tbl"><table><thead><tr><th>组件</th><th>职责</th><th>状态</th></tr></thead><tbody><tr><td>BSP / 企业系统</td><td>调用 API，上传媒体，接收 Webhook。</td><td>外部</td></tr><tr><td>PHIZ Business API · Auth</td><td>签发和撤销 JWT；校验 <code>client_id</code> 和密钥。</td><td>新增</td></tr><tr><td>PHIZ Business API · Messages</td><td>校验并受理发送（<code>202</code>），处理幂等和限流，入队并按 <code>sender_id</code> 路由。</td><td>新增</td></tr><tr><td>PHIZ Business API · Media</td><td>接收上传，校验格式和大小，限时存储文件，并生成发送时使用的 <code>id</code> 和 PHIZ 链接。</td><td>新增</td></tr><tr><td>PHIZ Business API · Webhooks</td><td>消费 App 事件，签名后通过开发者中心的事件订阅投递，沿用其重试和记录。</td><td>新增</td></tr><tr><td>Open Platform · Developer Center</td><td>已有。存储组织、应用、密钥（哈希）、范围和事件订阅；Business API 新增按应用的可用发送方。</td><td>变更：凭证从频道迁移到商户</td></tr><tr><td>Direct Message</td><td>App 内商户与用户的直接对话。</td><td>新增（见 Q3）</td></tr><tr><td>Channel / Channel Message</td><td>通过商户频道发送。</td><td>现有</td></tr><tr><td>Phiz App</td><td>展示消息，通过 PHIZ 链接下载媒体，产生送达、已读和回复事件。</td><td>变更</td></tr></tbody></table></div>
 <h3>与 Meta Cloud API 的对应关系</h3>
 <div class="tbl"><table><thead><tr><th>Meta（WhatsApp Cloud API）</th><th>PHIZ（本方案）</th></tr></thead><tbody>
 <tr><td>WhatsApp Business Account（WABA）</td><td>商户账号 · <code>merchant_id</code></td></tr>
@@ -279,6 +279,7 @@ flowchart LR
 <section>
 <h2 id="§auth"><span class="n">08</span>鉴权</h2>
 <p>采用 OAuth 2.0 <strong>客户端凭证模式</strong>（RFC 6749 §4.4）。应用用 <code>client_id</code> 和 <code>client_secret</code> 换取 1 小时有效的访问令牌，并在每次调用时通过 <code>Authorization: Bearer</code> 传递。不提供刷新令牌：令牌过期后重新申请即可。</p>
+<p>在开发者中心，应用、<code>appId</code> 和 <code>appSecret</code> 即本节的应用、<code>client_id</code> 和 <code>client_secret</code>，平台的 <code>CLIENT_CREDENTIALS</code> 授权类型就是这里描述的流程（见第 12 节）。</p>
 <div class="eps">
   <div class="ep"><span class="m m-post">POST</span><code class="p">/oauth/token</code><span class="d">签发访问令牌</span></div>
   <div class="ep"><span class="m m-post">POST</span><code class="p">/oauth/revoke</code><span class="d">撤销令牌（RFC 7009）</span></div>
@@ -318,7 +319,7 @@ sequenceDiagram
   <li>密钥<strong>仅在创建或轮换时显示一次</strong>，服务端只保存哈希（Argon2id）。</li>
   <li>每个应用<strong>最多可有两个有效密钥</strong>。生成新密钥后，旧密钥在设定时间内仍然有效（默认 24 小时，可设 0 至 7 天），切换过程不中断。</li>
   <li>页面显示每个密钥的最近使用时间，便于确认旧密钥已停用后再撤销。</li>
-  <li>可选：按应用配置 IP 白名单。</li>
+  <li>按应用设置 IP 白名单以及 90 天轮换策略，二者开发者中心均已具备。</li>
 </ul>
 <h3>现状与方案对比</h3>
 <div class="tbl"><table><thead><tr><th>方面</th><th>现状</th><th>方案</th></tr></thead><tbody>
@@ -422,16 +423,16 @@ sequenceDiagram
 
 <section>
 <h2 id="§webhooks"><span class="n">10</span>Webhook</h2>
-<p>每个应用有一个 Webhook 订阅，包含 URL、<code>verify_token</code> 和事件列表。</p>
-<div class="note-box decision"><span class="lbl">决定（v1.4）</span><p><strong>第 1 阶段：</strong>Webhook URL 由 <strong>PHIZ 手工配置</strong>，依托与商户或合作方的商务关系。通过开发者中心和 API 配置（下列接口）在 <strong>第 2 阶段</strong> 开放平台开放时提供。已与 Henry Wu 在本节评论中达成一致。</p></div>
-<h3>第 1 阶段：手工配置</h3>
+<p>每个应用有一个 Webhook 订阅，包含 URL、<code>verify_token</code> 和事件列表。在开发者中心，它登记在<em>事件订阅</em>中：一条订阅把应用的某个事件与一个回调 URL 关联起来。</p>
+<div class="note-box decision"><span class="lbl">决定（v1.5，待确认）</span><p><strong>第 1 阶段：</strong>合作方在开发者中心的<strong>事件订阅</strong>中自行登记 URL。这取代了 v1.4 提出的由 PHIZ 手工登记。由于平台已提供重试、死信和重放，这些保障改为<strong>沿用</strong>，不再是第 2 阶段的工作。第 2 阶段保留的是通过 API 配置。需与 Henry Wu 和开发者中心团队确认（Q9）。</p></div>
+<h3>第 1 阶段：在开发者中心配置</h3>
 <ul>
-  <li>商户或合作方通过与 PHIZ 的商务对接人申请配置，并提供 Webhook URL 和想接收的事件（<code>messages</code>、<code>message_status</code>）。</li>
-  <li>PHIZ 在服务端登记该 URL，并用下文相同的 <code>GET</code> 握手进行验证（提议）。</li>
-  <li>事件格式、签名和握手与第 2 阶段相同，只是配置的人不同。</li>
+  <li>开发者中心的事件目录新增 <code>messages</code> 和 <code>message_status</code>，应用在<em>事件订阅 › 新建订阅</em>中选择，并填写回调 URL。</li>
+  <li>订阅可在同一页面启用、停用和编辑，修改会产生审计记录和通知。</li>
+  <li>下文的事件格式、签名和握手适用于两种配置方式。平台目前已具备哪些能力仍需确认（Q9）。</li>
 </ul>
 <h3>通过 API 配置（第 2 阶段）</h3>
-<p>以下接口将在第 2 阶段与开发者中心一并开放。</p>
+<p>以下接口为可选项，留待第 2 阶段。第 1 阶段合作方使用<em>事件订阅</em>页面。</p>
 <div class="eps">
   <div class="ep"><span class="m m-put">PUT</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">设置 URL、verify_token 和事件（第 2 阶段）</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">配置与健康状态（第 2 阶段）</span></div>
@@ -484,8 +485,8 @@ stateDiagram-v2
   <li><strong>10 秒内返回</strong> 2xx，再异步处理。其他响应或超时均视为失败。</li>
   <li>已发送消息的状态，如果 Webhook 丢失，可用 <code>GET /v1/messages/{message_id}</code> 兜底查询。</li>
 </ul>
-<div class="note-box risk"><span class="lbl">第 1 阶段风险</span><p>没有完整的重试策略时，投递失败的事件可能不会再次发送，收到的消息也没有兜底查询。第 1 阶段的最低要求由技术评审确定（见 Q9）。</p></div>
-<p><strong>第 2 阶段（保障机制）。</strong>留待后续开发实现的保障机制：</p>
+<div class="note-box risk"><span class="lbl">第 1 阶段风险</span><p>带重试、死信和重放的投递来自开发者中心的事件订阅，其策略（退避、窗口、保留期）是否满足下文提议仍需确认。收到的消息仍没有兜底查询（见 Q9）。</p></div>
+<p><strong>目标策略。</strong>开发者中心已具备重试、死信和重放。下列策略是 Business API 的目标：平台已满足的部分直接沿用，其余放入第 2 阶段。</p>
 <ul>
   <li><strong>至少一次。</strong>带<strong>重试</strong>的投递，采用指数退避（10 秒、30 秒、1 分钟、5 分钟、15 分钟、1 小时，之后每小时一次），最长 24 小时。</li>
   <li><strong>手动重放。</strong>24 小时之后，事件在 72 小时内可手动重放，并提供投递记录（<code>/webhook/deliveries</code>）。</li>
@@ -542,56 +543,67 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§devarea"><span class="n">12</span>开放平台开发者中心</h2>
-<p>开发配置从 <em>频道 › 开发配置</em> 移出，成为商户菜单中的独立入口 <strong>开发者</strong>，位于 <em>设置</em> 旁边。它复用现有的商户 ID、<em>团队管理</em> 中的角色以及 <em>操作记录</em>。</p>
-<p>新区域的界面示意，数值均为示例。点击图片可查看原图。</p>
+<h2 id="§devarea"><span class="n">12</span>PHIZ开发者中心</h2>
+<p>Business API 的开发者配置<strong>不会成为商户菜单中的新区域</strong>，而是建在已有的 <strong>PHIZ开发者中心</strong>内（测试环境：<code>developer-uat.phiz.chat</code>）：沿用相同的菜单，以及应用、密钥、审计、事件订阅和 Webhook 页面，并新增<em>发送方</em>页面。</p>
+<div class="note-box decision"><span class="lbl">决定（v1.5）</span><p>v1.4 为开放平台设计的体验（概览、集成、密钥、Webhook 和发送方）迁移至开发者中心。集成改为 <strong>Business Messaging 类型的应用</strong>，权限改为组织角色，Webhook 使用<em>事件订阅</em>。“频道 › 开发配置”改为指向开发者中心。</p></div>
+<p>采用开发者中心视觉风格的原型，数据为示例。点击图片可查看原图。</p>
 <div class="shots">
-<div class="shot"><a href="mocks/zh/01-visao-geral.png" target="_blank" rel="noopener"><img src="mocks/zh/01-visao-geral.png" alt="概览：商户 ID、基础 URL、集成和入门步骤" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 1.</b> 概览：商户 ID、基础 URL、集成和入门步骤</p></div>
-<div class="shot"><a href="mocks/zh/02-nova-integracao.png" target="_blank" rel="noopener"><img src="mocks/zh/02-nova-integracao.png" alt="新建集成：名称、范围、可用发送方和环境" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 2.</b> 新建集成：名称、范围、可用发送方和环境</p></div>
-<div class="shot"><a href="mocks/zh/03-detalhe-integracao.png" target="_blank" rel="noopener"><img src="mocks/zh/03-detalhe-integracao.png" alt="集成详情：凭证、可轮换的密钥和范围" width="1440" height="1023" loading="lazy"></a><p class="cap"><b>界面 3.</b> 集成详情：凭证、可轮换的密钥和范围</p></div>
-<div class="shot"><a href="mocks/zh/04-segredo-criado.png" target="_blank" rel="noopener"><img src="mocks/zh/04-segredo-criado.png" alt="密钥已创建，仅显示一次" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 4.</b> 密钥已创建，仅显示一次</p></div>
-<div class="shot"><a href="mocks/zh/05-webhooks.png" target="_blank" rel="noopener"><img src="mocks/zh/05-webhooks.png" alt="Webhook：配置、事件和最近投递记录" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 5.</b> Webhook：配置、事件和最近投递记录（第 2 阶段）</p></div>
-<div class="shot"><a href="mocks/zh/06-remetentes.png" target="_blank" rel="noopener"><img src="mocks/zh/06-remetentes.png" alt="发送方：直接消息和频道，以及使用它们的集成" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 6.</b> 发送方：直接消息和频道，以及使用它们的集成</p></div>
-<div class="shot"><a href="mocks/zh/07-canal-migracao.png" target="_blank" rel="noopener"><img src="mocks/zh/07-canal-migracao.png" alt="带凭证迁移提示的频道页面" width="1440" height="760" loading="lazy"></a><p class="cap"><b>界面 7.</b> 带凭证迁移提示的频道页面</p></div>
+<div class="shot"><a href="mocks/zh/01-painel.png" target="_blank" rel="noopener"><img src="mocks/zh/01-painel.png" alt="仪表盘：组织、商户 ID、消息指标、Business Messaging API 快速开始和提醒" width="1440" height="973" loading="lazy"></a><p class="cap"><b>页面 1.</b> 仪表盘：组织、商户 ID、消息指标、Business Messaging API 快速开始和提醒</p></div>
+<div class="shot"><a href="mocks/zh/02-nova-aplicacao.png" target="_blank" rel="noopener"><img src="mocks/zh/02-nova-aplicacao.png" alt="新建应用：Business Messaging 类型、集成类型、环境、需审批的范围、可用发送方和 IP 白名单" width="1440" height="1270" loading="lazy"></a><p class="cap"><b>页面 2.</b> 新建应用：Business Messaging 类型、集成类型、环境、需审批的范围、可用发送方和 IP 白名单</p></div>
+<div class="shot"><a href="mocks/zh/03-detalhe-aplicacao.png" target="_blank" rel="noopener"><img src="mocks/zh/03-detalhe-aplicacao.png" alt="应用详情：OAuth 凭证、已批准或待审批的范围、可用发送方和可轮换的密钥" width="1440" height="1010" loading="lazy"></a><p class="cap"><b>页面 3.</b> 应用详情：OAuth 凭证、已批准或待审批的范围、可用发送方和可轮换的密钥</p></div>
+<div class="shot"><a href="mocks/zh/04-segredo-gerado.png" target="_blank" rel="noopener"><img src="mocks/zh/04-segredo-gerado.png" alt="新密钥仅显示一次；旧密钥在宽限期内仍有效" width="1440" height="1010" loading="lazy"></a><p class="cap"><b>页面 4.</b> 新密钥仅显示一次；旧密钥在宽限期内仍有效</p></div>
+<div class="shot"><a href="mocks/zh/05-assinaturas-eventos.png" target="_blank" rel="noopener"><img src="mocks/zh/05-assinaturas-eventos.png" alt="事件订阅：messages 和 message_status，含已验证的 URL、verify token 和 webhook secret" width="1440" height="960" loading="lazy"></a><p class="cap"><b>页面 5.</b> 事件订阅：<code>messages</code> 和 <code>message_status</code>，含已验证的 URL、verify token 和 webhook secret</p></div>
+<div class="shot"><a href="mocks/zh/06-webhook-entregas.png" target="_blank" rel="noopener"><img src="mocks/zh/06-webhook-entregas.png" alt="Webhook：投递、重试、最后响应、trace_id、失败重试和死信" width="1440" height="1110" loading="lazy"></a><p class="cap"><b>页面 6.</b> Webhook：投递、重试、最后响应、<code>trace_id</code>、失败重试和死信</p></div>
+<div class="shot"><a href="mocks/zh/07-remetentes.png" target="_blank" rel="noopener"><img src="mocks/zh/07-remetentes.png" alt="发送方（新页面）：商户和频道、有权限的应用以及负责会话的应用" width="1440" height="960" loading="lazy"></a><p class="cap"><b>页面 7.</b> 发送方（新页面）：商户和频道、有权限的应用以及负责会话的应用</p></div>
+<div class="shot"><a href="mocks/zh/08-aplicacoes-legadas.png" target="_blank" rel="noopener"><img src="mocks/zh/08-aplicacoes-legadas.png" alt="应用页面中的频道凭证迁移：Legacy 应用、时间节点和切换至 OAuth" width="1440" height="960" loading="lazy"></a><p class="cap"><b>页面 8.</b> 应用页面中的频道凭证迁移：Legacy 应用、时间节点和切换至 OAuth</p></div>
 </div>
-<h3>页面</h3>
+<h3>各菜单的变化</h3>
+<p>每张卡片对应开发者中心侧边菜单中的一项，说明 Business Messaging API 带来的变化，以及上方展示它的页面。</p>
 <div class="screens">
-  <div class="screen"><h5>概览</h5><span class="path">/developer</span><ul><li>最近 24 小时已发送、已送达和失败的消息数</li><li>Webhook 健康状态（第 2 阶段）</li><li>提醒：旧密钥仍在使用；Webhook 失败（第 2 阶段）</li></ul></div>
-  <div class="screen"><h5>应用</h5><span class="path">/developer/apps</span><ul><li>创建应用：名称、集成类型（自有、Blip、Salesforce、其他）、环境</li><li>范围和可用发送方</li><li>Client ID、可轮换的密钥及最近使用时间</li><li>IP 白名单（可选）</li><li>停用或删除应用</li></ul></div>
-  <div class="screen"><h5>应用 Webhook（第 2 阶段）</h5><span class="path">/developer/apps/:id/webhook</span><ul><li>第 1 阶段由 PHIZ 手工登记 URL（第 10 节）</li><li>URL、verify token 和事件</li><li>可轮换的 webhook secret</li><li>验证并发送测试</li><li>最近 72 小时投递记录：HTTP 状态、重试次数、延迟、重放</li></ul></div>
-  <div class="screen"><h5>发送方</h5><span class="path">/developer/senders</span><ul><li>商户本身（始终存在），以及已有的频道</li><li>每个发送方的 <code>sender_id</code>、状态、额度和质量</li><li>为每个发送方指定接收会话的集成</li><li>频道可开启 “Phiz Business API” 模式</li></ul></div>
-  <div class="screen"><h5>API 日志</h5><span class="path">/developer/logs</span><ul><li>最近 7 天的请求：方法、路由、状态、延迟、<code>trace_id</code></li><li>按应用和错误码筛选</li></ul></div>
-  <div class="screen"><h5>沙箱</h5><span class="path">/developer/sandbox</span><ul><li>测试发送方</li><li>最多 5 个测试接收方</li><li><code>phzsk_test_</code> 凭证</li></ul></div>
+  <div class="screen"><h5>仪表盘</h5><span class="path">有变化 · 页面 1</span><ul><li>消息指标：最近 24 小时已发送、已送达和失败的消息，以及 Webhook 投递情况</li><li>Business Messaging API 快速开始</li><li>旧密钥仍在使用、Webhook 失败的提醒</li></ul></div>
+  <div class="screen"><h5>成员</h5><span class="path">无变化</span><ul><li>OWNER、ADMIN、DEVELOPER、AUDITOR 角色决定谁可以管理应用、密钥和订阅（见“角色”表）</li></ul></div>
+  <div class="screen"><h5>应用</h5><span class="path">有变化 · 页面 2, 3, 4, 8</span><ul><li>新增 <em>Business Messaging</em> 类型及集成类型（自有、Blip、Salesforce、其他）</li><li>TEST、SANDBOX、PRODUCTION 环境；SANDBOX 中有测试发送方、最多 5 个接收方和 <code>phzsk_test_</code> 凭证</li><li>按应用设置可用发送方</li><li>可轮换密钥、最长 7 天宽限期及最近使用时间</li><li>由频道生成的 <em>Legacy</em> 应用</li></ul></div>
+  <div class="screen"><h5>发送方</h5><span class="path">新增 · 页面 7</span><ul><li>商户本身（直接消息）和频道，含 <code>sender_id</code>、状态和限额</li><li>有权限的应用以及负责会话的应用</li><li>为每个频道开启“Phiz Business API”模式</li></ul></div>
+  <div class="screen"><h5>Scope 与 API</h5><span class="path">有变化</span><ul><li>发布 Business API 资产：消息、媒体、<code>/v1/me</code> 和账户</li><li>登记第 08 节的范围，由平台审批申请</li></ul></div>
+  <div class="screen"><h5>白名单</h5><span class="path">无变化</span><ul><li>允许调用 API 的 IP</li><li>事件订阅可用的回调 URL</li></ul></div>
+  <div class="screen"><h5>密钥与证书</h5><span class="path">无变化</span><ul><li>Business API 不使用 API Key（<code>X-Api-Key</code>）和证书，只使用 <code>Authorization: Bearer</code></li></ul></div>
+  <div class="screen"><h5>API 用量</h5><span class="path">有变化</span><ul><li>同样统计 Business API 接口的通过、拒绝和失败调用</li><li>第 2 阶段：带 <code>trace_id</code> 的逐请求日志</li></ul></div>
+  <div class="screen"><h5>事件订阅</h5><span class="path">有变化 · 页面 5</span><ul><li>新增 <code>messages</code>、<code>message_status</code>、<code>sender_update</code> 和 <code>account_update</code> 事件</li><li>用 <code>hub.challenge</code> 验证 URL，配置 verify token 和 webhook secret</li><li>发送测试事件</li></ul></div>
+  <div class="screen"><h5>Webhook</h5><span class="path">无变化 · 页面 6</span><ul><li>同一投递页面，增加消息类事件</li><li>重试、死信以及 72 小时内手动重放</li></ul></div>
+  <div class="screen"><h5>审计与通知</h5><span class="path">无变化</span><ul><li>记录并通知密钥、范围、发送方和订阅的变更</li><li><em>密钥</em>和 <em>Webhook</em> 类别为仪表盘提醒提供数据</li></ul></div>
 </div>
-<h3>权限</h3>
-<p>在现有的 <em>角色管理</em> 页面中新增以下权限，超级管理员默认拥有全部权限。</p>
-<div class="tbl"><table><thead><tr><th>权限</th><th>允许的操作</th></tr></thead><tbody>
-<tr><td><code>developer.view</code></td><td>查看集成、发送方、日志和投递记录（不含密钥）</td></tr>
-<tr><td><code>developer.apps.manage</code></td><td>创建、编辑和停用集成；设置范围和发送方</td></tr>
-<tr><td><code>developer.secrets.manage</code></td><td>生成、轮换和撤销密钥</td></tr>
-<tr><td><code>developer.webhooks.manage</code></td><td>配置 Webhook、测试及重放投递（第 2 阶段）</td></tr>
-</tbody></table></div>
-<p>创建、轮换或撤销密钥，修改范围和 Webhook，都会写入 <em>操作记录</em> 并邮件通知管理员。</p>
-<h3>一个发送方对应多个集成</h3>
-<p>为避免两个系统同时回复同一用户，每个发送方（商户或频道）有<strong>一个负责会话的集成</strong>，在 <em>发送方</em> 页面中指定。只有该集成会收到此发送方的 <code>messages</code> 事件。任何获得授权的集成都可以通过它发送消息，并收到自己所发消息的 <code>message_status</code>。集成之间的会话移交协议（类似 Messenger 的 handover）留待后续。</p>
+<h3>角色</h3>
+<p>开发者中心已通过<em>成员</em>中设置的组织角色控制访问，不新增权限。下表说明各角色在 Business Messaging API 相关页面中能做什么。这是提议，需对照各角色目前的权限确认（Q10）。范围审批不属于组织角色，由平台负责。</p>
+<div class="tbl"><table><thead><tr><th>操作</th><th>OWNER</th><th>ADMIN</th><th>DEVELOPER</th><th>AUDITOR</th></tr></thead><tbody><tr><td>查看应用、发送方、订阅、投递、用量和审计（不含密钥）</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr><tr><td>创建、编辑、停用 Business Messaging 应用；申请范围</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>为应用选择发送方及负责会话的应用</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>为频道开启“Phiz Business API”模式</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>生成、轮换、撤销密钥</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>创建、编辑事件订阅；发送测试；重试投递</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>管理成员和角色</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></tbody></table></div>
+<p>创建、轮换或撤销密钥，修改范围或发送方，修改事件订阅，都会在<em>审计</em>中留下记录，并在<em>密钥</em>和 <em>Webhook</em> 类别中通知 OWNER 和 ADMIN。</p>
+<h3>一个发送方被多个应用使用</h3>
+<p>一个组织可以有多个应用通过同一发送方发送，例如用 Blip 做客服、用 Salesforce 做营销。为避免两个系统回复同一用户，每个发送方有<strong>一个负责会话的应用</strong>，在<em>发送方</em>页面（页面 7）中选择：</p>
+<ul>
+  <li>只有负责的应用会收到该发送方的 <code>messages</code> 事件。</li>
+  <li>任何有权限的应用都可以通过该发送方发送，并收到自己所发消息的 <code>message_status</code>。</li>
+  <li>更换负责应用对之后收到的消息生效，并记录在<em>审计</em>中。</li>
+  <li>应用之间的会话移交协议（类似 Messenger 的 handover）留待以后（Q6）。</li>
+</ul>
 <h3>频道凭证迁移</h3>
+<p>目前每个频道在开放平台的<em>频道 › 开发配置</em>中有独立的 AppID 和密钥。迁移会把这些凭证转入开发者中心，且不中断任何集成（页面 8）：</p>
 <ol>
-  <li><strong>自动创建。</strong>为每个已有 AppID 的频道，在商户下创建 “Legacy – 频道名称” 应用，沿用原 AppID 作为 <code>client_id</code>、沿用已存储的密钥，并仅授权该频道。现有集成不受影响。</li>
-  <li><strong>并行期。</strong><code>/gateway/openapi/auth</code> 和 <code>/token/refresh</code> 继续可用，频道页面显示提示，引导至新入口。</li>
-  <li><strong>只读。</strong>3 个月后，频道页面不再允许重置密钥，统一在新入口管理。</li>
-  <li><strong>下线。</strong>6 个月后，且实际调用量接近零时，旧接口返回 <code>410 Gone</code>。</li>
+  <li><strong>自动创建。</strong>对每个带 AppID 的频道，在商户组织下创建一个 Business Messaging 类型的 <em>Legacy – 频道名</em> 应用，使用相同的 AppID 作为 <code>appId</code>、相同的密钥（已存储），只能访问该频道，并作为该频道的负责会话应用。如果商户在开发者中心还没有组织，会先创建组织（Q10）。</li>
+  <li><strong>并行期。</strong><code>/gateway/openapi/auth</code> 和 <code>/token/refresh</code> 继续可用。要使用新 API，只需用相同的 AppID 和密钥调用 <code>/oauth/token</code>。开放平台的频道页面显示指向开发者中心的提示，<em>应用</em>页面显示旧登录方式的最近使用时间。</li>
+  <li><strong>只读。</strong>3 个月后，频道页面不再允许重置密钥；密钥和轮换只在开发者中心管理。</li>
+  <li><strong>下线。</strong>6 个月后，在旧登录用量接近零时，旧接口返回 <code>410 Gone</code>。下线前 30 天在<em>通知</em>中提醒 OWNER 和 ADMIN。</li>
 </ol>
 </section>
 
 <section>
 <h2 id="§partners"><span class="n">13</span>合作伙伴集成</h2>
-<p><strong>MVP 阶段</strong>，商户在开发者中心创建应用，把 <code>client_id</code> 和密钥填入 Blip、Salesforce 或自有系统，Webhook URL 由合作方提供，第 1 阶段由 PHIZ 手工登记（第 10 节）。由于契约沿用 Cloud API，已有 WhatsApp 连接器的合作方可以复用大部分实现。</p>
+<p><strong>MVP 阶段</strong>，商户在开发者中心创建应用，把 <code>client_id</code> 和密钥填入 Blip、Salesforce 或自有系统，Webhook URL 由合作方在<em>事件订阅</em>中自行登记（第 10 节）。由于契约沿用 Cloud API，已有 WhatsApp 连接器的合作方可以复用大部分实现。</p>
 <p><strong>后续阶段</strong>推出<em>技术合作伙伴</em>计划，对应 Meta 的 Embedded Signup：</p>
 <ul>
   <li>合作伙伴在 PHIZ 注册平台应用。</li>
   <li>商户在合作方产品中点击 “连接 PHIZ”，在授权页面确认范围和发送方（OAuth 2.0 授权码模式 + PKCE）。</li>
   <li>合作伙伴获得仅限该商户的令牌，并用一个 Webhook 接收所有客户的事件。外层结构中的 <code>entry[].id</code> 标识商户，因此该结构从一开始就这样设计。</li>
 </ul>
+<p>开发者中心已支持 authorization code 和 <code>openId</code>/<code>unionId</code> 映射，这是该计划的基础。</p>
 </section>
 
 <section>
@@ -609,8 +621,8 @@ stateDiagram-v2
 <section>
 <h2 id="§plan"><span class="n">15</span>交付计划</h2>
 <div class="phases">
-  <div class="phase first"><span class="tag">第 1 阶段 · MVP</span><h5>鉴权与发送</h5><ul><li><code>/oauth/token</code>、<code>/oauth/revoke</code>、<code>/v1/me</code></li><li>向手机号和 PHIZ ID 发送 <code>text</code>、<code>image</code>、<code>audio</code>、<code>video</code> 和 <code>document</code></li><li>媒体上传（<code>/v1/{sender_id}/media</code>）并临时存储；不支持第三方链接</li><li>带签名的 <code>messages</code> 和 <code>message_status</code> Webhook，URL 由 PHIZ 手工登记</li><li>开发者中心：应用和密钥</li><li>所有商户的默认发送方（商户本身）；频道作为可选发送方</li><li>频道凭证自动迁移</li></ul></div>
-  <div class="phase"><span class="tag">第 2 阶段</span><h5>自助配置 Webhook 与保障机制</h5><ul><li>通过开发者中心和 API 配置 Webhook（<code>PUT /v1/apps/{app_id}/webhook</code>、测试和健康状态）</li><li>指数退避重试，最长 24 小时</li><li>投递记录与 72 小时内手动重放</li><li><code>failing</code> 状态并通知管理员</li></ul></div>
+  <div class="phase first"><span class="tag">第 1 阶段 · MVP</span><h5>鉴权与发送</h5><ul><li><code>/oauth/token</code>、<code>/oauth/revoke</code>、<code>/v1/me</code></li><li>向手机号和 PHIZ ID 发送 <code>text</code>、<code>image</code>、<code>audio</code>、<code>video</code> 和 <code>document</code></li><li>媒体上传（<code>/v1/{sender_id}/media</code>）并临时存储；不支持第三方链接</li><li>带签名的 <code>messages</code> 和 <code>message_status</code> Webhook，URL 由合作方在事件订阅中自行登记</li><li>开发者中心：Business Messaging 应用类型、API 资产与范围、按应用的发送方、事件目录中的事件</li><li>所有商户的默认发送方（商户本身）；频道作为可选发送方</li><li>频道凭证自动迁移</li></ul></div>
+  <div class="phase"><span class="tag">第 2 阶段</span><h5>补充项</h5><ul><li>通过 API 配置 Webhook（<code>PUT /v1/apps/{app_id}/webhook</code>、测试和健康状态）</li><li>若平台策略不满足第 10 节，则调整重试与重放策略</li><li>带 <code>trace_id</code> 的逐请求日志和消息指标</li><li>带测试接收方的沙箱</li></ul></div>
 </div>
 <p>具体时间将在与中国团队评审本 RFC 后确定。</p>
 </section>
@@ -626,7 +638,8 @@ stateDiagram-v2
   <li><strong>每个发送方一个负责集成是否足够</strong>，还是第 2 阶段就需要应用间会话移交（机器人 → 人工客服）？</li>
   <li><strong>现有 Business Message API。</strong>AI 机器人的 “Phiz Business API” 模式已有发送和回调接口，似乎对应带 Channel Bot 的 Channel Service。本 RFC 是替代、扩展还是封装这套 API？</li>
   <li><strong>媒体。</strong>v1.3 已决定：媒体只能上传至 PHIZ 并临时存储，第 1 阶段不接受第三方链接（第 09 节）。仍需确定：PHIZ App 能否播放媒体表中的所有格式，支持多大的文件？30 天的保存期是否合适，还是应更短？投递后媒体是否转入聊天的常规存储，还是到期后从用户的聊天记录中消失？何时、对哪些客户开放第三方 URL？收到的媒体 <code>url</code> 有效期多长？</li>
-  <li><strong>第 1 阶段的 Webhook。</strong>v1.4 已决定：由 PHIZ 手工登记 URL，重试、手动重放和 <code>failing</code> 状态留待第 2 阶段（第 10 节）。仍需确定：申请配置的方式、由 PHIZ 哪个团队执行以及时效；webhook secret 如何交给合作方；第 1 阶段的最低重试要求（不重试或短时间窗口）；合作方如何找回丢失的收到消息（目前只有状态可查询）；以及什么条件触发第 2 阶段。</li>
+  <li><strong>第 1 阶段的 Webhook。</strong>v1.5 提议：合作方在开发者中心的<em>事件订阅</em>中自行登记 URL，取代 v1.4 的手工登记。需与 Henry Wu 确认：是否仍因商务原因需要手工登记；平台的重试策略、投递保留期和重放是否满足第 10 节；平台是否对投递签名，并接受 Cloud API 的握手和信封格式；以及合作方如何找回丢失的收到消息（目前只有状态可查询）。</li>
+  <li><strong>开发者中心。</strong>(a) 商户账户（<code>merchant_id</code>）与开发者中心组织是什么关系，商户如何登录控制台？(b) <code>CLIENT_CREDENTIALS</code> 授权的令牌端点、有效期和令牌格式是什么？(c) Business API 的范围是沿用平台命名方式（如 <code>write:clips:publish</code>），还是保留第 08 节的名称？(d) 谁审批范围申请，需要多久？(e) 各角色（OWNER、ADMIN、DEVELOPER、AUDITOR）目前对密钥和订阅有哪些权限？(f) SANDBOX 环境发送的是模拟消息还是真实消息？(g) 由哪个团队开发第 12 节中的页面和扩展？</li>
 </ol>
 </section>
 

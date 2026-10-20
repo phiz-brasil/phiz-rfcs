@@ -98,9 +98,9 @@ TAGS = [
         "Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party links are not accepted.",
         "将媒体上传到 PHIZ 临时存储。消息中发送的所有媒体都必须经由此处上传；不接受第三方链接。")},
     {"name": "Webhooks", "description": T(
-        "Eventos enviados ao seu servidor. Na Fase 1, a URL do webhook é cadastrada manualmente pela PHIZ; os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.",
-        "Events delivered to your server. In Phase 1, PHIZ registers the webhook URL manually; the app setup endpoints (`/v1/apps/{app_id}/webhook…`) belong to Phase 2.",
-        "推送到您服务器的事件。第 1 阶段由 PHIZ 手工登记 Webhook URL；应用配置接口（`/v1/apps/{app_id}/webhook…`）属于第 2 阶段。")},
+        "Eventos enviados ao seu servidor. Na Fase 1, o parceiro cadastra a URL em Assinaturas de eventos, na Central do Desenvolvedor; os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.",
+        "Events delivered to your server. In Phase 1, the partner registers the webhook URL under Event subscriptions in the Developer Center; the app setup endpoints (`/v1/apps/{app_id}/webhook…`) belong to Phase 2.",
+        "推送到您服务器的事件。第 1 阶段由合作方在开发者中心的事件订阅中登记 Webhook URL；应用配置接口（`/v1/apps/{app_id}/webhook…`）属于第 2 阶段。")},
 ]
 
 INFO_DESC = T(
@@ -128,8 +128,8 @@ SCHEMAS = {
         "properties": {
             "grant_type": {"type": "string", "enum": ["client_credentials"]},
             "client_id": {"type": "string", "example": "app_2Fk81PzQ",
-                           "description": T("ID do app (client_id) gerado na Área do Desenvolvedor.",
-                                            "App ID (client_id) issued in the Developer area.",
+                           "description": T("ID do app (client_id) gerado na Central do Desenvolvedor.",
+                                            "App ID (client_id) issued in the Developer Center.",
                                             "在开发者中心生成的应用 ID（client_id）。")},
             "client_secret": {"type": "string", "format": "password", "example": "phzsk_live_9c1f…",
                                "description": T("Secret do app. Exibido uma única vez na criação ou rotação.",
@@ -542,9 +542,9 @@ The file stays available until `expires_at` (proposed: 30 days) and can be used 
                   T("**Fase 2.** Configuração e saúde da assinatura de webhook do app.", "**Phase 2.** App webhook subscription settings and health.", "**第 2 阶段。**应用 Webhook 订阅配置及健康状态。"),
                   "getWebhook", parameters=[APP_ID], responses={"200": resp("OK", ref("WebhookConfig")), **STD_ERRORS}),
         "put": op("Webhooks", T("Configurar webhook", "Set webhook", "配置 Webhook"),
-                  T("**Fase 2.** Define URL, verify_token e eventos. A PHIZ faz o handshake GET na URL antes de ativar; se falhar, responde 422. Na Fase 1, a PHIZ cadastra a URL manualmente.",
-                    "**Phase 2.** Sets URL, verify_token and events. PHIZ performs the GET handshake on the URL before activating; if it fails, returns 422. In Phase 1, PHIZ registers the URL manually.",
-                    "**第 2 阶段。**设置 URL、verify_token 和订阅事件。PHIZ 会先对 URL 发起 GET 握手，失败则返回 422。第 1 阶段由 PHIZ 手工登记 URL。"),
+                  T("**Fase 2.** Define URL, verify_token e eventos. A PHIZ faz o handshake GET na URL antes de ativar; se falhar, responde 422. Na Fase 1, o parceiro cadastra a URL em Assinaturas de eventos.",
+                    "**Phase 2.** Sets URL, verify_token and events. PHIZ performs the GET handshake on the URL before activating; if it fails, returns 422. In Phase 1, the partner registers the URL under Event subscriptions.",
+                    "**第 2 阶段。**设置 URL、verify_token 和订阅事件。PHIZ 会先对 URL 发起 GET 握手，失败则返回 422。第 1 阶段由合作方在事件订阅中登记 URL。"),
                   "setWebhook", parameters=[APP_ID],
                   requestBody={"required": True, "content": {"application/json": {"schema": ref("WebhookConfig")}}},
                   responses={"200": resp("OK", ref("WebhookConfig")), **STD_ERRORS,
