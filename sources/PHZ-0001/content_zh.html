@@ -573,17 +573,24 @@ stateDiagram-v2
   <div class="screen"><h5>审计与通知</h5><span class="path">无变化</span><ul><li>记录并通知密钥、范围、发送方和订阅的变更</li><li><em>密钥</em>和 <em>Webhook</em> 类别为仪表盘提醒提供数据</li></ul></div>
 </div>
 <h3>角色</h3>
-<p>v1.4 提议的权限改为开发者中心组织中已有的角色。下面的对应关系只是提议，取决于各角色目前的权限（Q10）。</p>
-<div class="tbl"><table><thead><tr><th>能力</th><th>角色</th></tr></thead><tbody><tr><td><code>developer.view</code> — 查看应用、发送方、投递和用量（不含密钥）</td><td>AUDITOR、DEVELOPER、ADMIN、OWNER</td></tr><tr><td><code>developer.apps.manage</code> — 创建、编辑、停用应用；范围与发送方</td><td>DEVELOPER、ADMIN、OWNER</td></tr><tr><td><code>developer.secrets.manage</code> — 生成、轮换、撤销密钥</td><td>ADMIN、OWNER</td></tr><tr><td><code>developer.webhooks.manage</code> — 事件订阅、测试与重放</td><td>DEVELOPER、ADMIN、OWNER</td></tr></tbody></table></div>
-<p>创建、轮换或撤销密钥、修改范围、修改事件订阅，会在<em>审计</em>中留下记录，并在<em>密钥</em>和 <em>Webhook</em> 类别中发出通知。</p>
-<h3>一个发送方对应多个集成</h3>
-<p>为避免两个系统回复同一用户，每个发送方（商户或频道）有<strong>一个负责集成</strong>处理对话，在应用的发送方标签页中选择。只有该集成会收到该发送方的 <code>messages</code> 事件。任何有权限的集成都可以通过它发送，并收到自己所发消息的 <code>message_status</code>。集成之间的会话移交协议（类似 Messenger 的 handover）留待以后。</p>
+<p>开发者中心已通过<em>成员</em>中设置的组织角色控制访问，不新增权限。下表说明各角色在 Business Messaging API 相关页面中能做什么。这是提议，需对照各角色目前的权限确认（Q10）。范围审批不属于组织角色，由平台负责。</p>
+<div class="tbl"><table><thead><tr><th>操作</th><th>OWNER</th><th>ADMIN</th><th>DEVELOPER</th><th>AUDITOR</th></tr></thead><tbody><tr><td>查看应用、发送方、订阅、投递、用量和审计（不含密钥）</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr><tr><td>创建、编辑、停用 Business Messaging 应用；申请范围</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>为应用选择发送方及负责会话的应用</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>为频道开启“Phiz Business API”模式</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>生成、轮换、撤销密钥</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>创建、编辑事件订阅；发送测试；重试投递</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>管理成员和角色</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></tbody></table></div>
+<p>创建、轮换或撤销密钥，修改范围或发送方，修改事件订阅，都会在<em>审计</em>中留下记录，并在<em>密钥</em>和 <em>Webhook</em> 类别中通知 OWNER 和 ADMIN。</p>
+<h3>一个发送方被多个应用使用</h3>
+<p>一个组织可以有多个应用通过同一发送方发送，例如用 Blip 做客服、用 Salesforce 做营销。为避免两个系统回复同一用户，每个发送方有<strong>一个负责会话的应用</strong>，在<em>发送方</em>页面（页面 7）中选择：</p>
+<ul>
+  <li>只有负责的应用会收到该发送方的 <code>messages</code> 事件。</li>
+  <li>任何有权限的应用都可以通过该发送方发送，并收到自己所发消息的 <code>message_status</code>。</li>
+  <li>更换负责应用对之后收到的消息生效，并记录在<em>审计</em>中。</li>
+  <li>应用之间的会话移交协议（类似 Messenger 的 handover）留待以后（Q6）。</li>
+</ul>
 <h3>频道凭证迁移</h3>
+<p>目前每个频道在开放平台的<em>频道 › 开发配置</em>中有独立的 AppID 和密钥。迁移会把这些凭证转入开发者中心，且不中断任何集成（页面 8）：</p>
 <ol>
-  <li><strong>自动创建。</strong>对每个带 AppID 的频道，在开发者中心的商户组织下创建一个“Legacy – 频道名”应用，使用相同的 AppID 作为 <code>appId</code>、相同的密钥（已存储），且只授权该频道。所有集成都不会中断。</li>
-  <li><strong>并行期。</strong><code>/gateway/openapi/auth</code> 和 <code>/token/refresh</code> 继续可用。频道页面显示提示，指向开发者中心。</li>
-  <li><strong>只读。</strong>3 个月后，频道页面不再允许重置密钥；管理完全转到开发者中心。</li>
-  <li><strong>下线。</strong>6 个月后，在监测到用量接近零时，旧接口返回 <code>410 Gone</code>。</li>
+  <li><strong>自动创建。</strong>对每个带 AppID 的频道，在商户组织下创建一个 Business Messaging 类型的 <em>Legacy – 频道名</em> 应用，使用相同的 AppID 作为 <code>appId</code>、相同的密钥（已存储），只能访问该频道，并作为该频道的负责会话应用。如果商户在开发者中心还没有组织，会先创建组织（Q10）。</li>
+  <li><strong>并行期。</strong><code>/gateway/openapi/auth</code> 和 <code>/token/refresh</code> 继续可用。要使用新 API，只需用相同的 AppID 和密钥调用 <code>/oauth/token</code>。开放平台的频道页面显示指向开发者中心的提示，<em>应用</em>页面显示旧登录方式的最近使用时间。</li>
+  <li><strong>只读。</strong>3 个月后，频道页面不再允许重置密钥；密钥和轮换只在开发者中心管理。</li>
+  <li><strong>下线。</strong>6 个月后，在旧登录用量接近零时，旧接口返回 <code>410 Gone</code>。下线前 30 天在<em>通知</em>中提醒 OWNER 和 ADMIN。</li>
 </ol>
 </section>
 

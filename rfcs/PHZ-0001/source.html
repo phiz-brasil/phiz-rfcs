@@ -1192,17 +1192,24 @@ stateDiagram-v2
   <div class="screen"><h5>Auditoria e Notificações</h5><span class="path">Sem mudança</span><ul><li>Registram e avisam mudanças de segredos, scopes, remetentes e assinaturas</li><li>Categorias <em>Segredos</em> e <em>Webhook</em> alimentam os alertas do Painel</li></ul></div>
 </div>
 <h3>Papéis</h3>
-<p>As permissões propostas na v1.4 viram os papéis que a Central já usa na organização. O mapeamento abaixo é uma proposta e depende do que cada papel permite hoje (Q10).</p>
-<div class="tbl"><table><thead><tr><th>Capacidade</th><th>Papéis</th></tr></thead><tbody><tr><td><code>developer.view</code> — ver apps, remetentes, entregas e uso (sem secrets)</td><td>AUDITOR, DEVELOPER, ADMIN, OWNER</td></tr><tr><td><code>developer.apps.manage</code> — criar, editar e desativar apps; escopos e remetentes</td><td>DEVELOPER, ADMIN, OWNER</td></tr><tr><td><code>developer.secrets.manage</code> — gerar, rotacionar e revogar secrets</td><td>ADMIN, OWNER</td></tr><tr><td><code>developer.webhooks.manage</code> — assinaturas de eventos, teste e reenvio</td><td>DEVELOPER, ADMIN, OWNER</td></tr></tbody></table></div>
-<p>Criar, rotacionar ou revogar um segredo, mudar scopes e alterar uma assinatura de evento geram registro em <em>Auditoria</em> e notificação nas categorias <em>Segredos</em> e <em>Webhook</em>.</p>
-<h3>Remetente com mais de uma integração</h3>
-<p>Para evitar que dois sistemas respondam ao mesmo usuário, cada remetente (o comerciante ou um canal) tem <strong>uma integração responsável</strong> pelas conversas, escolhida no app, na aba de remetentes. Só essa integração recebe o evento <code>messages</code> daquele remetente. Qualquer integração com permissão pode enviar por ele e recebe o <code>message_status</code> das mensagens que enviou. Um protocolo de passagem de conversa entre integrações (como o handover do Messenger) fica para depois.</p>
+<p>A Central já controla o acesso pelos papéis da organização, definidos em <em>Membros</em>; não há permissões novas. A tabela mostra o que cada papel faz nas telas da Business Messaging API. É uma proposta, a confirmar com o que cada papel permite hoje (Q10). Aprovar scopes não é papel da organização: quem aprova é a plataforma.</p>
+<div class="tbl"><table><thead><tr><th>Ação</th><th>OWNER</th><th>ADMIN</th><th>DEVELOPER</th><th>AUDITOR</th></tr></thead><tbody><tr><td>Ver aplicações, remetentes, assinaturas, entregas, uso e auditoria (sem segredos)</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr><tr><td>Criar, editar e desativar aplicações Business Messaging; solicitar scopes</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Escolher os remetentes de cada aplicação e a responsável pelas conversas</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Ligar o modo “Phiz Business API” de um canal</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>Gerar, rotacionar e revogar segredos</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>Criar e editar assinaturas de eventos; enviar teste; retentar entregas</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Gerenciar membros e papéis</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></tbody></table></div>
+<p>Criar, rotacionar ou revogar um segredo, mudar scopes ou remetentes e alterar uma assinatura de evento geram registro em <em>Auditoria</em> e notificação para OWNER e ADMIN nas categorias <em>Segredos</em> e <em>Webhook</em>.</p>
+<h3>Remetente usado por mais de uma aplicação</h3>
+<p>Uma organização pode ter várias aplicações enviando pelo mesmo remetente, por exemplo Blip para atendimento e Salesforce para campanhas. Para evitar que dois sistemas respondam ao mesmo usuário, cada remetente tem <strong>uma aplicação responsável pelas conversas</strong>, escolhida na tela <em>Remetentes</em> (Tela 7):</p>
+<ul>
+  <li>Só a aplicação responsável recebe o evento <code>messages</code> daquele remetente.</li>
+  <li>Qualquer aplicação com acesso ao remetente pode enviar por ele e recebe o <code>message_status</code> das mensagens que ela enviou.</li>
+  <li>Trocar a responsável vale para as próximas mensagens recebidas e fica registrado em <em>Auditoria</em>.</li>
+  <li>Um protocolo de passagem de conversa entre aplicações, como o handover do Messenger, fica para depois (Q6).</li>
+</ul>
 <h3>Migração das credenciais de canal</h3>
+<p>Hoje cada canal tem AppID e secret próprios, gerenciados em <em>Canal › Configuração de Desenvolvimento</em> no Open Platform. A migração leva essas credenciais para a Central sem parar nenhuma integração (Tela 8):</p>
 <ol>
-  <li><strong>Criação automática.</strong> Para cada canal com AppID, criamos um app “Legado – nome do canal” na Central do Desenvolvedor, na organização do comerciante, com o mesmo AppID como <code>appId</code>, o mesmo secret (já armazenado) e permissão só para aquele canal. Nenhuma integração para.</li>
-  <li><strong>Convivência.</strong> <code>/gateway/openapi/auth</code> e <code>/token/refresh</code> continuam funcionando. A página do canal mostra um aviso apontando para a Central do Desenvolvedor.</li>
-  <li><strong>Somente leitura.</strong> Após 3 meses, a página do canal deixa de permitir redefinir o secret; a gestão passa a ser só na Central do Desenvolvedor.</li>
-  <li><strong>Desligamento.</strong> Após 6 meses, e com o uso medido perto de zero, os endpoints antigos respondem <code>410 Gone</code>.</li>
+  <li><strong>Criação automática.</strong> Para cada canal com AppID, criamos na organização do comerciante uma aplicação <em>Legado – nome do canal</em>, do tipo Business Messaging, com o mesmo AppID como <code>appId</code>, o mesmo secret (já armazenado) e acesso só àquele canal, que fica como responsável pelas conversas dele. Se o comerciante ainda não tem organização na Central, ela é criada antes (Q10).</li>
+  <li><strong>Convivência.</strong> <code>/gateway/openapi/auth</code> e <code>/token/refresh</code> continuam funcionando. Para usar a nova API, basta pedir o token em <code>/oauth/token</code> com o mesmo AppID e secret. A página do canal no Open Platform mostra um aviso com link para a Central, e a tela <em>Aplicações</em> mostra o último uso do login antigo.</li>
+  <li><strong>Somente leitura.</strong> Após 3 meses, a página do canal deixa de permitir redefinir o secret; segredos e rotação passam a ser só na Central.</li>
+  <li><strong>Desligamento.</strong> Após 6 meses, e com o uso do login antigo perto de zero, os endpoints antigos respondem <code>410 Gone</code>. OWNER e ADMIN recebem aviso em <em>Notificações</em> 30 dias antes.</li>
 </ol>
 </section>
 
@@ -2194,17 +2201,24 @@ stateDiagram-v2
   <div class="screen"><h5>Audit and Notifications</h5><span class="path">No change</span><ul><li>Record and notify changes to secrets, scopes, senders and subscriptions</li><li>The <em>Secrets</em> and <em>Webhook</em> categories feed the Dashboard alerts</li></ul></div>
 </div>
 <h3>Roles</h3>
-<p>The permissions proposed in v1.4 become the roles the Developer Center already uses in the organization. The mapping below is a proposal and depends on what each role allows today (Q10).</p>
-<div class="tbl"><table><thead><tr><th>Capability</th><th>Roles</th></tr></thead><tbody><tr><td><code>developer.view</code> — see apps, senders, deliveries and usage (no secrets)</td><td>AUDITOR, DEVELOPER, ADMIN, OWNER</td></tr><tr><td><code>developer.apps.manage</code> — create, edit and disable apps; scopes and senders</td><td>DEVELOPER, ADMIN, OWNER</td></tr><tr><td><code>developer.secrets.manage</code> — generate, rotate and revoke secrets</td><td>ADMIN, OWNER</td></tr><tr><td><code>developer.webhooks.manage</code> — event subscriptions, test and replay</td><td>DEVELOPER, ADMIN, OWNER</td></tr></tbody></table></div>
-<p>Creating, rotating or revoking a secret, changing scopes and changing an event subscription produce a record in <em>Audit</em> and a notification in the <em>Secrets</em> and <em>Webhook</em> categories.</p>
-<h3>Sender with more than one integration</h3>
-<p>To keep two systems from answering the same user, each sender (the merchant or a channel) has <strong>one integration responsible</strong> for conversations, chosen in the app, on the senders tab. Only that integration receives the <code>messages</code> event for that sender. Any integration with permission can send through it and receives the <code>message_status</code> of the messages it sent. A conversation handover protocol between integrations (like Messenger’s handover) is left for later.</p>
+<p>The Developer Center already controls access through the organization roles set in <em>Members</em>; there are no new permissions. The table shows what each role does in the Business Messaging API screens. It is a proposal, to be confirmed against what each role allows today (Q10). Approving scopes is not an organization role: the platform approves them.</p>
+<div class="tbl"><table><thead><tr><th>Action</th><th>OWNER</th><th>ADMIN</th><th>DEVELOPER</th><th>AUDITOR</th></tr></thead><tbody><tr><td>See applications, senders, subscriptions, deliveries, usage and audit (no secrets)</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr><tr><td>Create, edit and disable Business Messaging applications; request scopes</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Choose each application’s senders and the one that owns conversations</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Turn on “Phiz Business API” mode for a channel</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>Generate, rotate and revoke secrets</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>Create and edit event subscriptions; send a test; retry deliveries</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Manage members and roles</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></tbody></table></div>
+<p>Creating, rotating or revoking a secret, changing scopes or senders and changing an event subscription produce a record in <em>Audit</em> and a notification to OWNER and ADMIN in the <em>Secrets</em> and <em>Webhook</em> categories.</p>
+<h3>Sender used by more than one application</h3>
+<p>An organization can have several applications sending through the same sender, for example Blip for customer service and Salesforce for campaigns. To keep two systems from answering the same user, each sender has <strong>one application that owns conversations</strong>, chosen on the <em>Senders</em> screen (Screen 7):</p>
+<ul>
+  <li>Only the owning application receives the <code>messages</code> event for that sender.</li>
+  <li>Any application with access to the sender can send through it and receives the <code>message_status</code> of the messages it sent.</li>
+  <li>Changing the owner applies to the next incoming messages and is recorded in <em>Audit</em>.</li>
+  <li>A conversation handover protocol between applications, like Messenger’s handover, is left for later (Q6).</li>
+</ul>
 <h3>Migration of channel credentials</h3>
+<p>Today each channel has its own AppID and secret, managed in <em>Channel › Development settings</em> in the Open Platform. The migration moves these credentials into the Developer Center without stopping any integration (Screen 8):</p>
 <ol>
-  <li><strong>Automatic creation.</strong> For each channel with an AppID, we create a “Legacy – channel name” app in the Developer Center, in the merchant’s organization, with the same AppID as <code>appId</code>, the same secret (already stored) and permission for that channel only. No integration stops.</li>
-  <li><strong>Coexistence.</strong> <code>/gateway/openapi/auth</code> and <code>/token/refresh</code> keep working. The channel page shows a notice pointing to the Developer Center.</li>
-  <li><strong>Read-only.</strong> After 3 months, the channel page no longer allows resetting the secret; management moves entirely to the Developer Center.</li>
-  <li><strong>Shutdown.</strong> After 6 months, and with measured usage near zero, the old endpoints return <code>410 Gone</code>.</li>
+  <li><strong>Automatic creation.</strong> For each channel with an AppID, we create a <em>Legacy – channel name</em> Business Messaging application in the merchant’s organization, with the same AppID as <code>appId</code>, the same secret (already stored) and access to that channel only, which it owns conversations for. If the merchant has no organization in the Developer Center yet, one is created first (Q10).</li>
+  <li><strong>Coexistence.</strong> <code>/gateway/openapi/auth</code> and <code>/token/refresh</code> keep working. To use the new API, request a token at <code>/oauth/token</code> with the same AppID and secret. The channel page in the Open Platform shows a notice linking to the Developer Center, and the <em>Applications</em> screen shows the last use of the old login.</li>
+  <li><strong>Read-only.</strong> After 3 months, the channel page no longer allows resetting the secret; secrets and rotation live only in the Developer Center.</li>
+  <li><strong>Shutdown.</strong> After 6 months, and with old-login usage near zero, the old endpoints return <code>410 Gone</code>. OWNER and ADMIN get a notice in <em>Notifications</em> 30 days before.</li>
 </ol>
 </section>
 
@@ -3196,17 +3210,24 @@ stateDiagram-v2
   <div class="screen"><h5>审计与通知</h5><span class="path">无变化</span><ul><li>记录并通知密钥、范围、发送方和订阅的变更</li><li><em>密钥</em>和 <em>Webhook</em> 类别为仪表盘提醒提供数据</li></ul></div>
 </div>
 <h3>角色</h3>
-<p>v1.4 提议的权限改为开发者中心组织中已有的角色。下面的对应关系只是提议，取决于各角色目前的权限（Q10）。</p>
-<div class="tbl"><table><thead><tr><th>能力</th><th>角色</th></tr></thead><tbody><tr><td><code>developer.view</code> — 查看应用、发送方、投递和用量（不含密钥）</td><td>AUDITOR、DEVELOPER、ADMIN、OWNER</td></tr><tr><td><code>developer.apps.manage</code> — 创建、编辑、停用应用；范围与发送方</td><td>DEVELOPER、ADMIN、OWNER</td></tr><tr><td><code>developer.secrets.manage</code> — 生成、轮换、撤销密钥</td><td>ADMIN、OWNER</td></tr><tr><td><code>developer.webhooks.manage</code> — 事件订阅、测试与重放</td><td>DEVELOPER、ADMIN、OWNER</td></tr></tbody></table></div>
-<p>创建、轮换或撤销密钥、修改范围、修改事件订阅，会在<em>审计</em>中留下记录，并在<em>密钥</em>和 <em>Webhook</em> 类别中发出通知。</p>
-<h3>一个发送方对应多个集成</h3>
-<p>为避免两个系统回复同一用户，每个发送方（商户或频道）有<strong>一个负责集成</strong>处理对话，在应用的发送方标签页中选择。只有该集成会收到该发送方的 <code>messages</code> 事件。任何有权限的集成都可以通过它发送，并收到自己所发消息的 <code>message_status</code>。集成之间的会话移交协议（类似 Messenger 的 handover）留待以后。</p>
+<p>开发者中心已通过<em>成员</em>中设置的组织角色控制访问，不新增权限。下表说明各角色在 Business Messaging API 相关页面中能做什么。这是提议，需对照各角色目前的权限确认（Q10）。范围审批不属于组织角色，由平台负责。</p>
+<div class="tbl"><table><thead><tr><th>操作</th><th>OWNER</th><th>ADMIN</th><th>DEVELOPER</th><th>AUDITOR</th></tr></thead><tbody><tr><td>查看应用、发送方、订阅、投递、用量和审计（不含密钥）</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr><tr><td>创建、编辑、停用 Business Messaging 应用；申请范围</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>为应用选择发送方及负责会话的应用</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>为频道开启“Phiz Business API”模式</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>生成、轮换、撤销密钥</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>创建、编辑事件订阅；发送测试；重试投递</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>管理成员和角色</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></tbody></table></div>
+<p>创建、轮换或撤销密钥，修改范围或发送方，修改事件订阅，都会在<em>审计</em>中留下记录，并在<em>密钥</em>和 <em>Webhook</em> 类别中通知 OWNER 和 ADMIN。</p>
+<h3>一个发送方被多个应用使用</h3>
+<p>一个组织可以有多个应用通过同一发送方发送，例如用 Blip 做客服、用 Salesforce 做营销。为避免两个系统回复同一用户，每个发送方有<strong>一个负责会话的应用</strong>，在<em>发送方</em>页面（页面 7）中选择：</p>
+<ul>
+  <li>只有负责的应用会收到该发送方的 <code>messages</code> 事件。</li>
+  <li>任何有权限的应用都可以通过该发送方发送，并收到自己所发消息的 <code>message_status</code>。</li>
+  <li>更换负责应用对之后收到的消息生效，并记录在<em>审计</em>中。</li>
+  <li>应用之间的会话移交协议（类似 Messenger 的 handover）留待以后（Q6）。</li>
+</ul>
 <h3>频道凭证迁移</h3>
+<p>目前每个频道在开放平台的<em>频道 › 开发配置</em>中有独立的 AppID 和密钥。迁移会把这些凭证转入开发者中心，且不中断任何集成（页面 8）：</p>
 <ol>
-  <li><strong>自动创建。</strong>对每个带 AppID 的频道，在开发者中心的商户组织下创建一个“Legacy – 频道名”应用，使用相同的 AppID 作为 <code>appId</code>、相同的密钥（已存储），且只授权该频道。所有集成都不会中断。</li>
-  <li><strong>并行期。</strong><code>/gateway/openapi/auth</code> 和 <code>/token/refresh</code> 继续可用。频道页面显示提示，指向开发者中心。</li>
-  <li><strong>只读。</strong>3 个月后，频道页面不再允许重置密钥；管理完全转到开发者中心。</li>
-  <li><strong>下线。</strong>6 个月后，在监测到用量接近零时，旧接口返回 <code>410 Gone</code>。</li>
+  <li><strong>自动创建。</strong>对每个带 AppID 的频道，在商户组织下创建一个 Business Messaging 类型的 <em>Legacy – 频道名</em> 应用，使用相同的 AppID 作为 <code>appId</code>、相同的密钥（已存储），只能访问该频道，并作为该频道的负责会话应用。如果商户在开发者中心还没有组织，会先创建组织（Q10）。</li>
+  <li><strong>并行期。</strong><code>/gateway/openapi/auth</code> 和 <code>/token/refresh</code> 继续可用。要使用新 API，只需用相同的 AppID 和密钥调用 <code>/oauth/token</code>。开放平台的频道页面显示指向开发者中心的提示，<em>应用</em>页面显示旧登录方式的最近使用时间。</li>
+  <li><strong>只读。</strong>3 个月后，频道页面不再允许重置密钥；密钥和轮换只在开发者中心管理。</li>
+  <li><strong>下线。</strong>6 个月后，在旧登录用量接近零时，旧接口返回 <code>410 Gone</code>。下线前 30 天在<em>通知</em>中提醒 OWNER 和 ADMIN。</li>
 </ol>
 </section>
 
