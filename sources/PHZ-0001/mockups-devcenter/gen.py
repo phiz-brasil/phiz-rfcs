@@ -112,6 +112,8 @@ BO = lambda: ('B', T('Backoffice interno', 'Internal back office', '内部后台
 STORE = lambda: T('Loja Exemplo', 'Example Store', '示例商店')
 OFFERS = lambda: T('Loja Exemplo · Ofertas', 'Example Store · Offers', '示例商店 · 优惠')
 NEWS = lambda: T('Loja Exemplo · Novidades', 'Example Store · News', '示例商店 · 新品')
+PROMO = lambda: T('Loja Exemplo Promoções', 'Example Store Deals', '示例商店促销')
+ENTREG = lambda: T('Loja Exemplo Entregas', 'Example Store Deliveries', '示例商店配送')
 
 # ------------------------------------------------------------------ 01 Painel
 def s01():
@@ -119,11 +121,11 @@ def s01():
     hero = f'''<div style="background:#0d0d0d;color:#fff;border-radius:10px;padding:24px 26px;margin-top:22px">
 <div style="display:flex;align-items:center;gap:12px"><span style="font-size:21px;font-weight:600">{STORE()}</span><span class="tag" style="color:#4ade80;border-color:#14532d;background:#0d1f13">● {T('Em operação','Operating','运营中')}</span><span class="tag" style="color:#e5e7eb;border-color:#374151;background:#111">{T('Organização verificada','Verified organization','已认证组织')}</span></div>
 <div style="display:flex;gap:28px;margin-top:16px;font-size:13px;color:#a3a3a3">
-<span>{T('ID da organização','Organization ID','组织 ID')} <b style="color:#fff;font-weight:500" class="mono">org_7b1e4c5291d04a6e</b></span>
-<span>{T('ID do comerciante','Merchant ID','商户 ID')} <b style="color:#fff;font-weight:500" class="mono">7b1e4c52-91d0-4a6e-b3f8-2c5d9a0e7f14</b></span>
+<span>Developer ID <b style="color:#fff;font-weight:500" class="mono">dev_suPb10cTzMQ</b></span>
+<span>Merchant ID <b style="color:#fff;font-weight:500" class="mono">7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57</b></span>
 <span>{T('Responsável','Owner','负责人')} <b style="color:#fff;font-weight:500">gleison</b></span></div>
-<div style="display:flex;gap:28px;margin-top:10px;font-size:13px;color:#a3a3a3"><span>{T('Membros','Members','成员')} <b style="color:#fff">4</b></span><span>{T('Aplicações','Applications','应用')} <b style="color:#fff">4</b></span><span>{T('Remetentes','Senders','发送方')} <b style="color:#fff">3</b></span></div>
-<div style="margin-top:18px;display:flex;gap:10px"><span class="btn2" style="background:#0d0d0d;color:#fff;border-color:#4b5563">{T('Gerenciar aplicações','Manage applications','管理应用')} ›</span><span class="btn2" style="background:#0d0d0d;color:#fff;border-color:#4b5563">{T('Remetentes','Senders','发送方')} ›</span></div></div>'''
+<div style="display:flex;gap:28px;margin-top:10px;font-size:13px;color:#a3a3a3"><span>{T('Membros','Members','成员')} <b style="color:#fff">4</b></span><span>{T('Aplicações','Applications','应用')} <b style="color:#fff">4</b></span><span>Business Accounts <b style="color:#fff">3</b></span></div>
+<div style="margin-top:18px;display:flex;gap:10px"><span class="btn2" style="background:#0d0d0d;color:#fff;border-color:#4b5563">{T('Gerenciar aplicações','Manage applications','管理应用')} ›</span><span class="btn2" style="background:#0d0d0d;color:#fff;border-color:#4b5563">Business Accounts ›</span></div></div>'''
     st = stats([('12.480', T('Mensagens enviadas','Messages sent','已发送消息'), T('Últimas 24 h · Business Messaging','Last 24 h · Business Messaging','最近 24 小时 · Business Messaging')),
                 ('98,6%', T('Entregues','Delivered','已送达'), T('12.311 de 12.480','12,311 of 12,480','12,311 / 12,480')),
                 ('37', T('Com falha','Failed','失败'), T('Principal causa: 2201 usuário bloqueou','Top cause: 2201 user blocked','主要原因：2201 用户已屏蔽')),
@@ -132,7 +134,7 @@ def s01():
 <p class="muted" style="margin:6px 0 10px">{T('Para enviar mensagens a usuários PhizChat pelo seu sistema ou por um parceiro (Blip, Salesforce).','To send messages to PhizChat users from your own system or through a partner (Blip, Salesforce).','通过自有系统或合作伙伴（Blip、Salesforce）向 PhizChat 用户发送消息。')}</p>
 {ck(True, T('Criar uma aplicação do tipo <b>Business Messaging</b>','Create a <b>Business Messaging</b> application','创建 <b>Business Messaging</b> 类型的应用'))}
 {ck(True, T('Solicitar os scopes <span class="mono">messages:send</span> e <span class="mono">messages:read</span>','Request the <span class="mono">messages:send</span> and <span class="mono">messages:read</span> scopes','申请 <span class="mono">messages:send</span> 和 <span class="mono">messages:read</span> 范围'), f'<span class="tag t-ok">{T("Aprovado","Approved","已批准")}</span>')}
-{ck(True, T('Escolher os remetentes que a aplicação pode usar','Choose which senders the application can use','选择应用可使用的发送方'))}
+{ck(True, T('Criar o Business Account da aplicação','Create the application’s Business Account','创建应用的 Business Account'))}
 {ck(False, T('Assinar os eventos <span class="mono">messages</span> e <span class="mono">message_status</span>','Subscribe to the <span class="mono">messages</span> and <span class="mono">message_status</span> events','订阅 <span class="mono">messages</span> 和 <span class="mono">message_status</span> 事件'), f'<span class="btn2" style="padding:3px 10px;font-size:13px">{T("Assinar","Subscribe","订阅")}</span>')}
 {ck(False, T('Enviar a primeira mensagem','Send the first message','发送第一条消息'))}
 <div style="margin-top:16px" class="muted">{T('URL base','Base URL','基础 URL')}</div>
@@ -149,10 +151,10 @@ def s01():
 # ------------------------------------------------------------------ Aplicações (fundo)
 def apps_page():
     rows = ''
-    for a, sc, cb, rem, stt in [(BLIP, 3, 1, 2, ('t-ok', T('Em execução', 'Running', '运行中'))),
+    for a, sc, cb, rem, stt in [(BLIP, 3, 1, 1, ('t-ok', T('Em execução', 'Running', '运行中'))),
                                  (SF, 2, 1, 1, ('t-ok', T('Em execução', 'Running', '运行中'))),
                                  (BO, 1, 0, 1, ('t-warn', T('Em análise', 'In review', '审核中')))]:
-        rows += f'<tr><td>{app_cell(*(a if isinstance(a, tuple) else (a,)))}</td><td><span class="tag t-new">Business Messaging</span></td><td class="muted" style="font-size:12.5px">Scopes {sc}<br>{T("Remetentes","Senders","发送方")} {rem}<br>Callbacks {cb}</td><td><span class="tag {stt[0]}">{stt[1]}</span></td><td class="mono muted">2026-10-20 09:12</td><td>{T("Detalhes","Details","详情")} &nbsp; {T("Editar","Edit","编辑")}</td></tr>'
+        rows += f'<tr><td>{app_cell(*(a if isinstance(a, tuple) else (a,)))}</td><td><span class="tag t-new">Business Messaging</span></td><td class="muted" style="font-size:12.5px">Scopes {sc}<br>BA {rem}<br>Callbacks {cb}</td><td><span class="tag {stt[0]}">{stt[1]}</span></td><td class="mono muted">2026-10-20 09:12</td><td>{T("Detalhes","Details","详情")} &nbsp; {T("Editar","Edit","编辑")}</td></tr>'
     return f'''<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1>{T('Aplicações','Applications','应用')}</h1><p class="sub">{T('Gerencie ciclo de vida, callbacks, listas de permissão, scopes e rotação de chaves.','Manage lifecycle, callbacks, allowlists, scopes and key rotation.','管理生命周期、回调、白名单、范围和密钥轮换。')}</p></div><span class="btn">＋ {T('Nova aplicação','New application','新建应用')}</span></div>
 {stats([('4', T('Total de aplicações','Total applications','应用总数'), ''), ('3', T('Em execução','Running','运行中'), ''), ('1', T('Em análise','In review','审核中'), ''), ('0', T('Desativadas','Disabled','已停用'), '')])}
 <div class="card" style="padding:0;overflow:hidden"><table class="tb"><tr><th>{T('Nome da aplicação','Application name','应用名称')}</th><th>{T('Tipo','Type','类型')}</th><th>{T('Acesso','Access','访问')}</th><th>Status</th><th>{T('Atualizado em','Updated at','更新时间')}</th><th>{T('Ações','Actions','操作')}</th></tr>{rows}</table></div>'''
@@ -162,23 +164,26 @@ def s02():
     cb = lambda on, t, h='', dis=False: f'<div class="cb{" dis" if dis else ""}"><span class="box{" on" if on else ""}"></span><div><div>{t}</div>{f"<div class=muted style=font-size:12.5px>{h}</div>" if h else ""}</div></div>'
     drawer = f'''<div class="overlay"></div><div class="drawer" style="width:700px"><div class="dh">✕ &nbsp;{T('Nova aplicação','New application','新建应用')}</div>
 <div class="field"><div class="fl">{T('Nome da aplicação','Application name','应用名称')}</div><div class="inp">Blip · Atendimento</div></div>
-<div class="field"><div class="fl">{T('Tipo de aplicação','Application type','应用类型')}</div><div class="seg"><span>{T('Padrão','Standard','标准')}</span><span class="a">Business Messaging</span></div><div class="hint">{T('Business Messaging libera a API de mensagens (envio para telefone ou PHIZ ID, mídia e webhooks).','Business Messaging enables the messaging API (send to phone or PHIZ ID, media and webhooks).','Business Messaging 开通消息 API（向手机号或 PHIZ ID 发送、媒体和 Webhook）。')}</div></div>
+<div class="field"><div class="fl">{T('Tipo de aplicação','Application type','应用类型')}</div><div class="seg"><span>{T('Padrão','Standard','标准')}</span><span class="a">Business Messaging</span></div><div class="hint">{T('Business Messaging libera a API de mensagens (envio para telefone ou Open ID, mídia e webhooks).','Business Messaging enables the messaging API (send to phone or Open ID, media and webhooks).','Business Messaging 开通消息 API（向手机号或 Open ID 发送、媒体和 Webhook）。')}</div></div>
 <div class="row"><div class="field" style="flex:1"><div class="fl">{T('Tipo de integração','Integration type','集成类型')}</div><div class="inp">Blip <span class="muted">▾</span></div><div class="hint">{T('Própria, Blip, Salesforce ou outra','Own, Blip, Salesforce or other','自有、Blip、Salesforce 或其他')}</div></div>
 <div class="field" style="flex:1"><div class="fl">{T('Ambiente','Environment','环境')}</div><div class="seg"><span>TEST</span><span>SANDBOX</span><span class="a">PRODUCTION</span></div><div class="hint">{T('PRODUCTION exige organização verificada','PRODUCTION requires a verified organization','PRODUCTION 需要已认证组织')}</div></div></div>
 <div class="sec">SCOPES</div>
 {cb(True, '<span class="mono">messages:send</span>', T('Enviar mensagens e mídias, marcar como lidas','Send messages and media, mark as read','发送消息和媒体，标记已读'))}
 {cb(True, '<span class="mono">messages:read</span>', T('Consultar status de mensagens','Look up message status','查询消息状态'))}
-{cb(True, '<span class="mono">account:read</span>', T('Ler dados da conta e dos remetentes','Read account and sender data','读取账户和发送方信息'))}
+{cb(True, '<span class="mono">account:read</span>', T('Ler dados da aplicação e dos Business Accounts','Read application and Business Account data','读取应用和 Business Account 信息'))}
 {cb(False, '<span class="mono">webhooks:manage</span> <span class="tag t-off">' + T('Fase 2','Phase 2','第 2 阶段') + '</span>', T('Configurar webhook pela API','Configure the webhook through the API','通过 API 配置 Webhook'), True)}
 <div class="info" style="margin-top:6px">{T('Os scopes são solicitados agora e aprovados pela plataforma. Enquanto pendentes, o token não os inclui.','Scopes are requested now and approved by the platform. While pending, the token does not include them.','范围在此申请，由平台审批。审批前令牌不包含这些范围。')}</div>
-<div class="sec">{T('REMETENTES PERMITIDOS','ALLOWED SENDERS','可用发送方')}</div>
-{cb(True, f'<b style="font-weight:600">{STORE()}</b> · ' + T('Mensagem direta','Direct message','直接消息') + f' <span class="tag t-off">{T("Padrão","Default","默认")}</span>', T('Conversa direta com a loja, sem canal','Direct conversation with the store, no channel','与商户的直接对话，无需频道'))}
+<div class="sec">BUSINESS ACCOUNT</div>
+<div class="row"><div class="field" style="flex:1"><div class="fl">{T('Nome exibido ao usuário','Name shown to the user','向用户展示的名称')}</div><div class="inp">{STORE()}</div></div>
+<div class="field" style="flex:1"><div class="fl">{T('Categoria','Category','类别')}</div><div class="inp">{T('Varejo','Retail','零售')} <span class="muted">▾</span></div></div></div>
+<div class="info">{T('O Business Account (BA ID) é criado dentro desta aplicação e é o remetente que o usuário vê e autoriza. Ele pertence só a esta aplicação; para outro sistema, crie outra aplicação com o próprio BA.','The Business Account (BA ID) is created inside this application and is the sender the user sees and authorizes. It belongs only to this application; for another system, create another application with its own BA.','Business Account（BA ID）在本应用下创建，是用户看到并授权的发送方。它只属于本应用；其他系统请另建应用及其 BA。')}</div>
+<div class="sec">{T('CANAIS (OPCIONAL)','CHANNELS (OPTIONAL)','频道（可选）')}</div>
 {cb(True, f'<b style="font-weight:600">{OFFERS()}</b>', T('Canal 1231 · 2 inscritos','Channel 1231 · 2 subscribers','频道 1231 · 2 位订阅者'))}
 {cb(False, f'<b style="font-weight:600">{NEWS()}</b>', T('Canal 1288 · 540 inscritos','Channel 1288 · 540 subscribers','频道 1288 · 540 位订阅者'))}
 <div class="sec">{T('LISTA DE IPS (OPCIONAL)','IP ALLOWLIST (OPTIONAL)','IP 白名单（可选）')}</div>
 <div class="inp mono" style="min-height:58px;align-items:flex-start">52.67.10.0/24<br>18.231.4.12</div>
 <div class="foot"><span class="btn2">{T('Cancelar','Cancel','取消')}</span><span class="btn">{T('Criar aplicação','Create application','创建应用')}</span></div></div>'''
-    return shell('apps', T('Aplicações', 'Applications', '应用'), apps_page(), drawer, 1270)
+    return shell('apps', T('Aplicações', 'Applications', '应用'), apps_page(), drawer, 1440)
 
 # ------------------------------------------------------------------ 03 Detalhes
 def detail_body():
@@ -190,9 +195,9 @@ def detail_body():
 <div class="sec">{T('Configuração de acesso','Access configuration','访问配置')}</div>
 <div class="row"><div style="flex:1"><div class="muted" style="margin-bottom:8px">{T('Permissões de scope','Scope permissions','范围权限')}</div>
 <span class="chip"><span class="mono">messages:send</span><span class="tag t-ok">{T('Aprovado','Approved','已批准')}</span></span><span class="chip"><span class="mono">messages:read</span><span class="tag t-ok">{T('Aprovado','Approved','已批准')}</span></span><span class="chip"><span class="mono">account:read</span><span class="tag t-warn">{T('Pendente de aprovação','Pending approval','待审批')}</span></span></div>
-<div style="flex:1"><div class="muted" style="margin-bottom:8px">{T('Remetentes permitidos','Allowed senders','可用发送方')} <span class="tag t-new">{T('Novo','New','新')}</span></div>
-<div class="card" style="padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b style="font-weight:600">{STORE()}</b> · {T('Mensagem direta','Direct message','直接消息')}<div class="mono muted" style="font-size:12px">sender_id 7b1e4c52-91d0-4a6e…</div></div><span class="tag t-ok">{T('Responsável pelas conversas','Owns conversations','负责会话')}</span></div>
-<div class="card" style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><div><b style="font-weight:600">{OFFERS()}</b><div class="mono muted" style="font-size:12px">sender_id 1231</div></div><span class="tag t-off">{T('Só envio','Send only','仅发送')}</span></div></div></div>
+<div style="flex:1"><div class="muted" style="margin-bottom:8px">{T('Business Accounts e canais','Business Accounts and channels','Business Account 与频道')} <span class="tag t-new">{T('Novo','New','新')}</span></div>
+<div class="card" style="padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><div><b style="font-weight:600">{STORE()}</b><div class="mono muted" style="font-size:12px">BA ID · sender_id ba_7Kq2M9xTpL</div></div><span class="tag t-new">Business Account</span></div>
+<div class="card" style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><div><b style="font-weight:600">{OFFERS()}</b><div class="mono muted" style="font-size:12px">sender_id 1231</div></div><span class="tag t-off">{T('Canal · responsável pelas conversas','Channel · owns conversations','频道 · 负责会话')}</span></div></div></div>
 <div class="sec">{T('Segredo da aplicação','Application secret','应用密钥')}</div>
 {sk('phzsk_live_••••••••3f9a', 'v2', T('Vigente desde 2026-10-20 14:30','Active since 2026-10-20 14:30','2026-10-20 14:30 起生效'), T('último uso há 2 min','last used 2 min ago','2 分钟前使用'), f'<span class="tag t-ok">{T("Em vigor","Active","生效中")}</span>')}
 {sk('phzsk_live_••••••••b27c', 'v1', T('Expira em 2026-10-27 14:30','Expires 2026-10-27 14:30','2026-10-27 14:30 过期'), T('último uso há 1 h','last used 1 h ago','1 小时前使用'), f'<span class="tag t-warn">{T("Em tolerância · 6 dias","Grace period · 6 days","宽限期 · 6 天")}</span> <span class="red">{T("Revogar agora","Revoke now","立即撤销")}</span>')}
@@ -273,20 +278,26 @@ def s06():
 
 # ------------------------------------------------------------------ 07 Remetentes
 def s07():
-    sel = lambda v: f'<div class="inp" style="min-height:30px;padding:4px 10px;width:220px">{v} <span class="muted">▾</span></div>'
-    apps = lambda *n: ''.join(f'<span class="chip" style="padding:3px 8px;margin:0 6px 6px 0;font-size:12.5px">{x}</span>' for x in n)
     av = lambda t, c='#111': f'<div class="sq" style="background:{c};border-radius:50%">{t}</div>'
-    rows = f'''<tr><td><div class="aname">{av(T("LE","ES","示"))}<div><b style="font-weight:600">{STORE()}</b><div class="id">{T('Nome e foto do comerciante','Merchant name and photo','商户名称和头像')}</div></div></div></td><td><span class="tag t-new">{T('Mensagem direta','Direct message','直接消息')}</span> <span class="tag t-off">{T('Padrão','Default','默认')}</span></td><td class="mono" style="font-size:12.5px">7b1e4c52-91d0-4a6e-<br>b3f8-2c5d9a0e7f14</td><td>{apps('Blip · Atendimento', 'Salesforce · Marketing')}</td><td>{sel('Blip · Atendimento')}</td><td><span class="tag t-ok">{T('Ativo','Active','启用')}</span><div class="muted mono" style="font-size:12px;margin-top:4px">{T('Limite','Limit','限额')} 10k/24h</div></td></tr>
-<tr><td><div class="aname">{av(T("LO","EO","优"), "#b45309")}<div><b style="font-weight:600">{OFFERS()}</b><div class="id">{T('Canal · 2 inscritos','Channel · 2 subscribers','频道 · 2 位订阅者')}</div></div></div></td><td><span class="tag t-off">{T('Canal','Channel','频道')}</span><div style="margin-top:6px;font-size:12.5px">● <span class="green">{T('Modo Phiz Business API ligado','Phiz Business API mode on','Phiz Business API 模式已开启')}</span></div></td><td class="mono">1231</td><td>{apps('Blip · Atendimento', T('Backoffice interno','Internal back office','内部后台'), T('Legado – Ofertas','Legacy – Offers','Legacy – 优惠'))}</td><td>{sel(T('Backoffice interno','Internal back office','内部后台'))}</td><td><span class="tag t-ok">{T('Ativo','Active','启用')}</span><div class="muted mono" style="font-size:12px;margin-top:4px">{T('Limite','Limit','限额')} 1k/24h</div></td></tr>
-<tr><td><div class="aname">{av(T("LN","EN","新"), "#6b7280")}<div><b style="font-weight:600">{NEWS()}</b><div class="id">{T('Canal · 540 inscritos','Channel · 540 subscribers','频道 · 540 位订阅者')}</div></div></div></td><td><span class="tag t-off">{T('Canal','Channel','频道')}</span><div style="margin-top:6px;font-size:12.5px" class="muted">○ {T('Modo Phiz Business API desligado','Phiz Business API mode off','Phiz Business API 模式未开启')}</div></td><td class="mono">1288</td><td class="muted">—</td><td class="muted">—</td><td><span class="tag t-off">{T('Sem integração','No integration','无集成')}</span></td></tr>'''
-    page = f'''<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1>{T('Remetentes','Senders','发送方')} <span class="tag t-new" style="vertical-align:middle">{T('Novo','New','新')}</span></h1><p class="sub" style="max-width:760px">{T('O remetente é quem aparece para o usuário no PhizChat. A organização envia como ela mesma (mensagem direta) e, se tiver canais, também por eles.','The sender is who the user sees in PhizChat. The organization sends as itself (direct message) and, if it has channels, through them too.','发送方是用户在 PhizChat 中看到的身份。组织可以以自身名义发送（直接消息），有频道时也可通过频道发送。')}</p></div><span class="btn2">{T('Atualizar','Refresh','刷新')}</span></div>
-<div class="card" style="padding:0;overflow:hidden;margin-top:22px"><table class="tb"><tr><th>{T('Remetente','Sender','发送方')}</th><th>{T('Tipo','Type','类型')}</th><th>sender_id</th><th>{T('Aplicações com acesso','Applications with access','有权限的应用')}</th><th>{T('Responsável pelas conversas','Owns conversations','负责会话的应用')}</th><th>Status</th></tr>{rows}</table></div>
-<div class="row" style="margin-top:16px"><div class="card" style="flex:1"><b style="font-weight:600">{T('Como o usuário vê','How the user sees it','用户看到的效果')}</b><div style="background:#f6f7f8;border-radius:8px;padding:12px 14px;margin-top:12px"><b style="font-weight:600">{STORE()}</b><div>{T('Olá! Seu pedido saiu para entrega.','Hi! Your order is out for delivery.','您好！您的订单已发货。')}</div></div><p class="muted" style="margin:10px 0 0;font-size:13px">{T('Mensagem direta: aparece como conversa com a loja, sem canal.','Direct message: shows up as a conversation with the store, no channel.','直接消息：显示为与商户的对话，无需频道。')}</p></div>
-<div class="card" style="flex:1"><b style="font-weight:600">{T('Regras','Rules','规则')}</b><ul style="margin:10px 0 0;padding-left:18px;line-height:1.8">
-<li>{T('Só a aplicação responsável recebe o evento <span class="mono">messages</span> daquele remetente.','Only the responsible application receives the <span class="mono">messages</span> event for that sender.','只有负责的应用会收到该发送方的 <span class="mono">messages</span> 事件。')}</li>
-<li>{T('Qualquer aplicação com acesso pode enviar e recebe o <span class="mono">message_status</span> do que enviou.','Any application with access can send and receives <span class="mono">message_status</span> for what it sent.','任何有权限的应用都可发送，并收到所发消息的 <span class="mono">message_status</span>。')}</li>
-<li>{T('Os canais continuam sendo criados no Open Platform, em <b>Canal › Meus Canais</b>.','Channels are still created in the Open Platform, under <b>Channel › My Channels</b>.','频道仍在开放平台的<b>频道 › 我的频道</b>中创建。')}</li></ul></div></div>'''
-    return shell('remet', T('Remetentes', 'Senders', '发送方'), page)
+    on = lambda: f'<span class="tag t-ok">{T("Ativo","Active","启用")}</span>'
+    bas = [(T("LE","ES","示"), '#111', STORE(), 'ba_7Kq2M9xTpL', BLIP[1], '1.240', on(), '10k/24h'),
+           (T("LP","ED","促"), '#7c3aed', PROMO(), 'ba_3Xm9QwR2hN', SF[1], '8.905', on(), '1k/24h'),
+           (T("ET","DL","配"), '#0f766e', ENTREG(), 'ba_9Tz4Lc8VbK', T('Backoffice interno','Internal back office','内部后台'), '0', f'<span class="tag t-warn">{T("Em análise","In review","审核中")}</span>', '—')]
+    rows = ''.join(f'<tr><td><div class="aname">{av(i, c)}<div><b style="font-weight:600">{n}</b><div class="id">{T("Varejo","Retail","零售")}</div></div></div></td><td class="mono" style="font-size:12.5px">{ba}</td><td><span class="chip" style="padding:3px 8px;margin:0;font-size:12.5px">{app}</span></td><td>{users}</td><td>{st}<div class="muted mono" style="font-size:12px;margin-top:4px">{T("Limite","Limit","限额")} {lim}</div></td></tr>' for i, c, n, ba, app, users, st, lim in bas)
+    apps = lambda *n: ''.join(f'<span class="chip" style="padding:3px 8px;margin:0 6px 6px 0;font-size:12.5px">{x}</span>' for x in n)
+    sel = lambda v: f'<div class="inp" style="min-height:30px;padding:4px 10px;width:200px">{v} <span class="muted">▾</span></div>'
+    ch = f'''<tr><td><div class="aname">{av(T("LO","EO","优"), "#b45309")}<div><b style="font-weight:600">{OFFERS()}</b><div class="id">{T('Canal · 2 inscritos','Channel · 2 subscribers','频道 · 2 位订阅者')}</div></div></div></td><td class="mono">1231</td><td>{apps('Blip · Atendimento', T('Backoffice interno','Internal back office','内部后台'), T('Legado – Ofertas','Legacy – Offers','Legacy – 优惠'))}</td><td>{sel('Blip · Atendimento')}</td><td>● <span class="green">{T('Modo Phiz Business API ligado','Phiz Business API mode on','Phiz Business API 模式已开启')}</span></td></tr>
+<tr><td><div class="aname">{av(T("LN","EN","新"), "#6b7280")}<div><b style="font-weight:600">{NEWS()}</b><div class="id">{T('Canal · 540 inscritos','Channel · 540 subscribers','频道 · 540 位订阅者')}</div></div></div></td><td class="mono">1288</td><td class="muted">—</td><td class="muted">—</td><td class="muted">○ {T('Modo Phiz Business API desligado','Phiz Business API mode off','Phiz Business API 模式未开启')}</td></tr>'''
+    page = f'''<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1>Business Accounts <span class="tag t-new" style="vertical-align:middle">{T('Novo','New','新')}</span></h1><p class="sub" style="max-width:820px">{T('O Business Account é o remetente que o usuário vê e autoriza. Cada um é criado dentro de uma aplicação e pertence só a ela; o <span class="mono">sender_id</span> da API aponta para o BA ID.','A Business Account is the sender the user sees and authorizes. Each one is created inside an application and belongs only to it; the API <span class="mono">sender_id</span> points to the BA ID.','Business Account 是用户看到并授权的发送方。每个 BA 在某个应用下创建且只属于该应用；API 中的 <span class="mono">sender_id</span> 指向 BA ID。')}</p></div><span class="btn">＋ {T('Novo Business Account','New Business Account','新建 Business Account')}</span></div>
+<div class="card" style="padding:0;overflow:hidden;margin-top:22px"><table class="tb"><tr><th>Business Account</th><th>BA ID · sender_id</th><th>{T('Aplicação','Application','应用')}</th><th>{T('Usuários autorizados','Authorized users','已授权用户')}</th><th>Status</th></tr>{rows}</table></div>
+<div class="sec">{T('Canais (opcional)','Channels (optional)','频道（可选）')}</div>
+<div class="card" style="padding:0;overflow:hidden"><table class="tb"><tr><th>{T('Canal','Channel','频道')}</th><th>sender_id</th><th>{T('Aplicações com acesso','Applications with access','有权限的应用')}</th><th>{T('Responsável pelas conversas','Owns conversations','负责会话的应用')}</th><th>{T('Modo','Mode','模式')}</th></tr>{ch}</table></div>
+<div class="row" style="margin-top:16px"><div class="card" style="flex:1"><b style="font-weight:600">{T('Como o usuário vê','How the user sees it','用户看到的效果')}</b><div style="background:#f6f7f8;border-radius:8px;padding:12px 14px;margin-top:12px"><b style="font-weight:600">{STORE()}</b> <span class="tag t-new">Business Account</span><div>{T('Olá! Seu pedido saiu para entrega.','Hi! Your order is out for delivery.','您好！您的订单已发货。')}</div></div></div>
+<div class="card" style="flex:1.3"><b style="font-weight:600">{T('Regras','Rules','规则')}</b><ul style="margin:10px 0 0;padding-left:18px;line-height:1.8">
+<li>{T('O usuário autoriza o BA, e o vínculo é com o Open ID dele nesta aplicação, não com o telefone.','The user authorizes the BA, and the binding is with the user’s Open ID in this application, not the phone number.','用户授权的是 BA，绑定关系基于用户在本应用下的 Open ID，而不是手机号。')}</li>
+<li>{T('Criptografia e isolamento são por BA.','Encryption and isolation are per BA.','加密与互不干扰以 BA 为单位。')}</li>
+<li>{T('Canais podem ser liberados para mais de uma aplicação; aí vale a aplicação responsável pelas conversas.','Channels can be released to more than one application; then the application that owns conversations applies.','频道可授权给多个应用，此时由负责会话的应用接收消息。')}</li></ul></div></div>'''
+    return shell('remet', 'Business Accounts', page)
 
 # ------------------------------------------------------------------ 08 Aplicações legadas (migração)
 def s08():
@@ -298,9 +309,9 @@ def s08():
                  f'<td style="font-size:13px">{rem}<div class="muted mono" style="font-size:12px">sender_id {aid}</div></td>'
                  f'<td class="mono" style="font-size:12.5px">/gateway/openapi/auth<div class="muted">{T("último uso","last used","最近使用")} {used}</div></td>'
                  f'<td><span class="tag t-ok">{T("Em execução","Running","运行中")}</span></td><td>{T("Detalhes","Details","详情")}<br><b style="font-weight:500">{T("Migrar para OAuth","Move to OAuth","迁移至 OAuth")}</b></td></tr>')
-    for a, rem, st in ((BLIP, STORE() + ' · ' + T("Mensagem direta","Direct message","直接消息") + ', ' + OFFERS(), ('t-ok', T("Em execução","Running","运行中"))),
-                       (SF, STORE() + ' · ' + T("Mensagem direta","Direct message","直接消息"), ('t-ok', T("Em execução","Running","运行中"))),
-                       (BO, OFFERS(), ('t-warn', T("Em análise","In review","审核中")))):
+    for a, rem, st in ((BLIP, 'BA ' + STORE() + ' · ' + T('canal','channel','频道') + ' ' + OFFERS(), ('t-ok', T("Em execução","Running","运行中"))),
+                       (SF, 'BA ' + PROMO(), ('t-ok', T("Em execução","Running","运行中"))),
+                       (BO, 'BA ' + ENTREG() + ' · ' + T('canal','channel','频道') + ' ' + OFFERS(), ('t-warn', T("Em análise","In review","审核中")))):
         rows += f'<tr><td>{app_cell(*(a if isinstance(a, tuple) else (a,)))}</td><td><span class="tag t-new">Business Messaging</span></td><td style="font-size:13px">{rem}</td><td class="mono" style="font-size:12.5px">/oauth/token</td><td><span class="tag {st[0]}">{st[1]}</span></td><td>{T("Detalhes","Details","详情")}</td></tr>'
     tl = lambda d, t, on=False: f'<div style="flex:1;border-top:3px solid {"#111" if on else "#d9dce0"};padding-top:10px"><div class="mono" style="font-size:12.5px;{"font-weight:500" if on else "color:#6e7781"}">{d}</div><div style="margin-top:3px;{"" if on else "color:#59636e"}">{t}</div></div>'
     banner = f'''<div class="card" style="margin:22px 0;border-color:#f5d39b;background:#fffbf2"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px;font-weight:600">{T('Migração das credenciais de canal','Channel credentials migration','频道凭证迁移')}</b><span class="tag t-warn">{T('1 aplicação legada','1 legacy application','1 个 Legacy 应用')}</span></div>
@@ -308,11 +319,11 @@ def s08():
 <div style="display:flex;gap:14px">{tl('2026-10-20', T('Aplicações legadas criadas; endpoints antigos funcionando','Legacy applications created; old endpoints working','已创建 Legacy 应用；旧接口继续可用'), True)}{tl('2027-01-20', T('Página do canal fica somente leitura','Channel page becomes read-only','频道页面变为只读'))}{tl('2027-04-20', T('Endpoints antigos respondem 410 Gone','Old endpoints return 410 Gone','旧接口返回 410 Gone'))}</div></div>'''
     page = f'''<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1>{T('Aplicações','Applications','应用')}</h1><p class="sub">{T('Gerencie ciclo de vida, callbacks, listas de permissão, scopes e rotação de chaves.','Manage lifecycle, callbacks, allowlists, scopes and key rotation.','管理生命周期、回调、白名单、范围和密钥轮换。')}</p></div><span class="btn">＋ {T('Nova aplicação','New application','新建应用')}</span></div>
 {banner}
-<div class="card" style="padding:0;overflow:hidden"><table class="tb"><tr><th>{T('Nome da aplicação','Application name','应用名称')}</th><th>{T('Tipo','Type','类型')}</th><th>{T('Remetentes','Senders','发送方')}</th><th>{T('Autenticação','Authentication','鉴权')}</th><th>Status</th><th>{T('Ações','Actions','操作')}</th></tr>{rows}</table></div>'''
+<div class="card" style="padding:0;overflow:hidden"><table class="tb"><tr><th>{T('Nome da aplicação','Application name','应用名称')}</th><th>{T('Tipo','Type','类型')}</th><th>{T('Business Accounts e canais','Business Accounts and channels','Business Account 与频道')}</th><th>{T('Autenticação','Authentication','鉴权')}</th><th>Status</th><th>{T('Ações','Actions','操作')}</th></tr>{rows}</table></div>'''
     return shell('apps', T('Aplicações', 'Applications', '应用'), page)
 
 SCREENS = [('01-painel', s01), ('02-nova-aplicacao', s02), ('03-detalhe-aplicacao', s03), ('04-segredo-gerado', s04),
-           ('05-assinaturas-eventos', s05), ('06-webhook-entregas', s06), ('07-remetentes', s07), ('08-aplicacoes-legadas', s08)]
+           ('05-assinaturas-eventos', s05), ('06-webhook-entregas', s06), ('07-business-accounts', s07), ('08-aplicacoes-legadas', s08)]
 
 async def main():
     from playwright.async_api import async_playwright

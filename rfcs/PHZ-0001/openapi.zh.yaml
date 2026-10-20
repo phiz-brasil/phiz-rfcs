@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: PHIZ Business Messaging API
   version: 1.0.0-draft
-  description: 'PHIZ 企业消息 API。第三方系统（CRM、Blip 和 Salesforce 等客服平台，或商户自有系统）可以通过 **手机号** 或 **PHIZ ID** 向 PHIZ 用户发送消息，并通过
+  description: 'PHIZ 企业消息 API。第三方系统（CRM、Blip 和 Salesforce 等客服平台，或商户自有系统）可以通过 **手机号** 或 **Open ID** 向 PHIZ 用户发送消息，并通过
     **Webhook** 接收用户回复和状态变更。
 
 
@@ -30,9 +30,9 @@ tags:
 - name: Auth
   description: OAuth 2.0 令牌签发与撤销（客户端凭证模式）。
 - name: Account
-  description: 商户账号、发送方与开发者应用。
+  description: 应用、Business Account 与发送方。
 - name: Messages
-  description: 向手机号或 PHIZ ID 发送消息并查询状态。
+  description: 向手机号或 Open ID 发送消息并查询状态。
 - name: Media
   description: 将媒体上传到 PHIZ 临时存储。消息中发送的所有媒体都必须经由此处上传；不接受第三方链接。
 - name: Webhooks
@@ -75,7 +75,7 @@ paths:
                 token_type: Bearer
                 expires_in: 3600
                 scope: messages:send messages:read
-                merchant_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                developer_id: dev_suPb10cTzMQ
         '400':
           description: 请求无效（`invalid_request`、`invalid_scope`、`unsupported_grant_type`）。
           content:
@@ -126,7 +126,7 @@ paths:
       tags:
       - Auth
       summary: 查看当前令牌
-      description: 返回当前令牌对应的应用、商户、范围和可用发送方，便于排查集成问题（相当于 Meta 的 debug_token）。
+      description: 返回当前令牌对应的应用、Developer ID、范围和发送方（Business Account 与频道），便于排查集成问题（相当于 Meta 的 debug_token）。
       operationId: getMe
       responses:
         '200':
@@ -137,28 +137,28 @@ paths:
                 $ref: '#/components/schemas/TokenInfo'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /v1/merchants/{merchant_id}:
+  /v1/apps/{app_id}:
     get:
       tags:
       - Account
-      summary: 查询商户账号
-      description: 应用所属商户账号的信息。
-      operationId: getMerchant
+      summary: 查询应用
+      description: 令牌所属应用的信息：Developer ID、Merchant ID、环境和状态。
+      operationId: getApp
       parameters:
-      - name: merchant_id
+      - name: app_id
         in: path
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: 商户账号 ID。
+        example: app_2Fk81PzQ
+        description: 开发者应用 ID。
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Merchant'
+                $ref: '#/components/schemas/App'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -171,21 +171,21 @@ paths:
           $ref: '#/components/responses/ServerError'
         '404':
           $ref: '#/components/responses/NotFound'
-  /v1/merchants/{merchant_id}/senders:
+  /v1/apps/{app_id}/senders:
     get:
       tags:
       - Account
       summary: 列出发送方
-      description: 集成可使用的发送方：商户本身（始终存在），以及已授权的频道（如有）。
+      description: 应用的发送方：在该应用下创建的 Business Account，以及已授权的频道（如有）。
       operationId: listSenders
       parameters:
-      - name: merchant_id
+      - name: app_id
         in: path
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: 商户账号 ID。
+        example: app_2Fk81PzQ
+        description: 开发者应用 ID。
       - name: cursor
         in: query
         schema:
@@ -226,8 +226,9 @@ paths:
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: 发送方 ID。使用 merchant_id 直接以商户名义发送（默认，无需频道），或可选地使用商户某个频道的 ID。相当于 Meta Cloud API 的 phone_number_id。
+        example: ba_7Kq2M9xTpL
+        description: 发送方 ID：映射到应用下某个 Business Account 的 BA ID 的外部引用（默认），也可选用频道 ID。它不是 merchant_id。相当于 Meta Cloud
+          API 的 phone_number_id。
       responses:
         '200':
           description: OK
@@ -252,8 +253,9 @@ paths:
       tags:
       - Messages
       summary: 发送消息
-      description: '以商户名义（`sender_id` = `merchant_id`）或可选地通过商户的某个频道，向手机号（E.164）或 PHIZ ID 发送消息。`202` 仅表示消息已被受理；最终结果（`sent`、`delivered`、`read`
-        或 `failed`）通过 `message_status` Webhook 推送。
+      description: '以应用下某个 Business Account 的名义（`sender_id` 映射到 BA ID），或可选地通过频道，向手机号（E.164）或 Open ID 发送消息。手机号会换取用户的
+        Open ID；Business Account 绑定的是 Open ID，而不是手机号。`202` 仅表示消息已被受理；最终结果（`sent`、`delivered`、`read` 或 `failed`）通过
+        `message_status` Webhook 推送。
 
 
         商户主动发送的消息需遵守选择接收（opt-in）策略，该策略由产品定义。
@@ -267,8 +269,9 @@ paths:
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: 发送方 ID。使用 merchant_id 直接以商户名义发送（默认，无需频道），或可选地使用商户某个频道的 ID。相当于 Meta Cloud API 的 phone_number_id。
+        example: ba_7Kq2M9xTpL
+        description: 发送方 ID：映射到应用下某个 Business Account 的 BA ID 的外部引用（默认），也可选用频道 ID。它不是 merchant_id。相当于 Meta Cloud
+          API 的 phone_number_id。
       - name: Idempotency-Key
         in: header
         required: false
@@ -297,11 +300,11 @@ paths:
                     body: 'Olá, Maria! Seu pedido #48213 foi enviado.'
                     preview_url: false
                   biz_opaque_callback_data: pedido=48213
-              text_phiz_id:
-                summary: 向 PHIZ ID 发送文本
+              text_open_id:
+                summary: 向 Open ID 发送文本
                 value:
-                  to: '839201447'
-                  to_type: phiz_id
+                  to: oid_Qm7f2K9xT4Lw
+                  to_type: open_id
                   type: text
                   text:
                     body: 'Seu cupom chegou: PHIZ10'
@@ -323,8 +326,8 @@ paths:
               video:
                 summary: 通过 PHIZ 链接发送视频
                 value:
-                  to: '839201447'
-                  to_type: phiz_id
+                  to: oid_Qm7f2K9xT4Lw
+                  to_type: open_id
                   type: video
                   video:
                     link: https://media.phiz.chat/biz/pmed.01JB2K5V1C
@@ -374,7 +377,7 @@ paths:
                 messaging_product: phiz
                 contacts:
                 - input: '+5511987654321'
-                  phiz_id: null
+                  open_id: null
                 messages:
                 - id: pmid.01JA9VZ6T8R3
                   message_status: accepted
@@ -414,7 +417,7 @@ paths:
       description: '将文件上传到 PHIZ 临时存储，返回发送时使用的 `id` 和 `link`。格式和大小在此校验：不符合第 09 节表格时返回 415（2304）或 413（2305）。
 
 
-        文件在 `expires_at` 之前可用（建议 30 天），可被同一商户账号下的发送方多次使用。需要 `messages:send` 范围。'
+        文件在 `expires_at` 之前可用（建议 30 天），可被同一应用下的发送方多次使用。需要 `messages:send` 范围。'
       operationId: uploadMedia
       parameters:
       - name: sender_id
@@ -422,8 +425,9 @@ paths:
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: 发送方 ID。使用 merchant_id 直接以商户名义发送（默认，无需频道），或可选地使用商户某个频道的 ID。相当于 Meta Cloud API 的 phone_number_id。
+        example: ba_7Kq2M9xTpL
+        description: 发送方 ID：映射到应用下某个 Business Account 的 BA ID 的外部引用（默认），也可选用频道 ID。它不是 merchant_id。相当于 Meta Cloud
+          API 的 phone_number_id。
       requestBody:
         required: true
         content:
@@ -821,7 +825,7 @@ webhooks:
       tags:
       - Webhooks
       summary: 收到用户消息
-      description: 当 PHIZ 用户向商户的发送方发送消息时推送。请在 10 秒内返回 2xx，并异步处理。
+      description: 当 PHIZ 用户向应用的 Business Account 或频道发送消息时推送。`from` 为用户在本应用下的 Open ID。请在 10 秒内返回 2xx，并异步处理。
       parameters:
       - name: X-Phiz-Signature-256
         in: header
@@ -850,25 +854,25 @@ webhooks:
             schema:
               $ref: '#/components/schemas/WebhookEvent'
             example:
-              object: phiz_merchant_account
+              object: phiz_business_account
               entry:
-              - id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+              - id: ba_7Kq2M9xTpL
                 changes:
                 - field: messages
                   value:
                     messaging_product: phiz
                     metadata:
-                      sender_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-                      sender_type: merchant
+                      sender_id: ba_7Kq2M9xTpL
+                      sender_type: business_account
                       conversation_type: business_account
                       display_name: Loja Exemplo
                     contacts:
                     - profile:
                         name: Maria Souza
-                      phiz_id: '839201447'
+                      open_id: oid_Qm7f2K9xT4Lw
                       phone: '+5511987654321'
                     messages:
-                    - from: '839201447'
+                    - from: oid_Qm7f2K9xT4Lw
                       id: pmid.IN_01JA9W2C
                       timestamp: '1760528527'
                       type: text
@@ -915,23 +919,23 @@ webhooks:
             examples:
               delivered:
                 value:
-                  object: phiz_merchant_account
+                  object: phiz_business_account
                   entry:
-                  - id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                  - id: ba_7Kq2M9xTpL
                     changes:
                     - field: message_status
                       value:
                         messaging_product: phiz
                         metadata:
-                          sender_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-                          sender_type: merchant
+                          sender_id: ba_7Kq2M9xTpL
+                          sender_type: business_account
                           conversation_type: business_account
                           display_name: Loja Exemplo
                         statuses:
                         - id: pmid.01JA9VZ6T8R3
                           status: delivered
                           timestamp: '1760528410'
-                          recipient_id: '839201447'
+                          recipient_id: oid_Qm7f2K9xT4Lw
                           biz_opaque_callback_data: pedido=48213
                           conversation:
                             id: conv_01JA9W
@@ -940,16 +944,16 @@ webhooks:
                             expires_at: '1760614810'
               failed:
                 value:
-                  object: phiz_merchant_account
+                  object: phiz_business_account
                   entry:
-                  - id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                  - id: ba_7Kq2M9xTpL
                     changes:
                     - field: message_status
                       value:
                         messaging_product: phiz
                         metadata:
-                          sender_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-                          sender_type: merchant
+                          sender_id: ba_7Kq2M9xTpL
+                          sender_type: business_account
                           conversation_type: business_account
                           display_name: Loja Exemplo
                         statuses:
@@ -980,7 +984,7 @@ components:
             messages:send: 发送消息和媒体
             messages:read: 读取消息状态
             webhooks:manage: 管理应用 Webhook（第 2 阶段）
-            account:read: 读取账号与发送方
+            account:read: 读取应用、Business Account 与频道
             templates:manage: 预留给 Marketing API
   schemas:
     TokenRequest:
@@ -1029,9 +1033,9 @@ components:
         scope:
           type: string
           example: messages:send messages:read webhooks:manage
-        merchant_id:
+        developer_id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: dev_suPb10cTzMQ
     TokenInfo:
       type: object
       properties:
@@ -1041,9 +1045,9 @@ components:
         app_id:
           type: string
           example: app_2Fk81PzQ
-        merchant_id:
+        developer_id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: dev_suPb10cTzMQ
         scope:
           type: string
           example: messages:send messages:read
@@ -1052,57 +1056,71 @@ components:
           items:
             type: string
           example:
-          - 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          - ba_7Kq2M9xTpL
           - '1231'
           description: 此应用可使用的发送方。
         expires_at:
           type: string
           format: date-time
           example: '2026-10-15T12:30:00Z'
-    Merchant:
+    App:
       type: object
       properties:
         id:
           type: string
+          example: app_2Fk81PzQ
+        developer_id:
+          type: string
+          example: dev_suPb10cTzMQ
+          description: Developer ID：开发者身份及资源归属方，与开放平台的 Merchant ID 同步创建。
+        merchant_id:
+          type: string
           example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
         name:
           type: string
-          example: Loja Exemplo Ltda.
+          example: Blip · Atendimento
+        environment:
+          type: string
+          enum:
+          - test
+          - sandbox
+          - production
         status:
           type: string
           enum:
-          - active
-          - restricted
-          - suspended
-        verification:
-          type: string
-          enum:
-          - unverified
-          - pending
-          - verified
-        created_at:
-          type: string
-          format: date-time
+          - running
+          - in_review
+          - disabled
     Sender:
       type: object
       properties:
         id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: ba_7Kq2M9xTpL
+          description: 路径中使用的 sender_id。Business Account 与 BA ID 一一对应。
         type:
           type: string
           enum:
-          - merchant
+          - business_account
           - channel
-          example: merchant
-          description: '`merchant`：商户本身，每个商户都有的默认发送方。`channel`：商户的频道，可选。'
+          example: business_account
+          description: '`business_account`：在应用下创建的 Business Account（默认）。`channel`：商户的频道，可选。'
+        ba_id:
+          type: string
+          nullable: true
+          example: ba_7Kq2M9xTpL
+          description: type = business_account 时有值。
+        app_id:
+          type: string
+          example: app_2Fk81PzQ
+          description: Business Account 所属的应用。
         conversation_type:
           type: string
           enum:
           - business_account
           - channel_service
           example: business_account
-          description: PhizChat 会话类型（公众号 › Service）：type = merchant 对应 `business_account`，type = channel 对应 `channel_service`。
+          description: PhizChat 会话类型：`business_account`（对外展示的产品类型，属于 公众号会话 › 企业服务会话）或 `channel_service`。
         display_name:
           type: string
           example: Loja Exemplo
@@ -1167,12 +1185,12 @@ components:
         to:
           type: string
           example: '+5511987654321'
-          description: 接收方手机号（E.164）或 PHIZ ID。
+          description: 接收方手机号（E.164）或其在本应用下的 Open ID。手机号会在发送前换取用户的 Open ID。
         to_type:
           type: string
           enum:
           - phone
-          - phiz_id
+          - open_id
           default: phone
         type:
           type: string
@@ -1365,11 +1383,11 @@ components:
               input:
                 type: string
                 example: '+5511987654321'
-              phiz_id:
+              open_id:
                 type: string
                 nullable: true
                 example: null
-                description: 仅当接收方曾与该发送方对话时返回。
+                description: 用户在本应用下的 Open ID。仅当用户已与该 Business Account 建立绑定关系时返回。
         messages:
           type: array
           items:
@@ -1390,7 +1408,7 @@ components:
           example: pmid.01JA9VZ6T8R3
         sender_id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: ba_7Kq2M9xTpL
         status:
           type: string
           enum:
@@ -1466,12 +1484,12 @@ components:
           - disabled
     WebhookEvent:
       type: object
-      description: 所有事件的外层结构，可批量包含同一商户的多个事件。
+      description: 所有事件的外层结构，`entry[].id` 为 BA ID，可批量包含同一 Business Account 的多个事件。
       properties:
         object:
           type: string
           enum:
-          - phiz_merchant_account
+          - phiz_business_account
         entry:
           type: array
           items:
@@ -1479,7 +1497,7 @@ components:
             properties:
               id:
                 type: string
-                example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                example: ba_7Kq2M9xTpL
               changes:
                 type: array
                 items:
