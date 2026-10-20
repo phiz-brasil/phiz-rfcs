@@ -4,7 +4,7 @@ info:
   version: 1.0.0-draft
   description: 'PHIZ business messaging API. It lets third-party systems (CRMs, customer-service platforms such
     as Blip and Salesforce, or the merchant''s own systems) send messages to PHIZ users identified by **phone number**
-    or **PHIZ ID**, and receive replies and status changes through a **webhook**.
+    or **Open ID**, and receive replies and status changes through a **webhook**.
 
 
     Message and webhook payloads closely follow Meta''s Cloud API (WhatsApp Business Platform) to keep the cost
@@ -32,9 +32,9 @@ tags:
 - name: Auth
   description: OAuth 2.0 token issuance and revocation (client credentials).
 - name: Account
-  description: Merchant account, senders and developer apps.
+  description: Application, Business Accounts and senders.
 - name: Messages
-  description: Send messages to a phone number or PHIZ ID and query their status.
+  description: Send messages to a phone number or Open ID and query their status.
 - name: Media
   description: Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party
     links are not accepted.
@@ -80,7 +80,7 @@ paths:
                 token_type: Bearer
                 expires_in: 3600
                 scope: messages:send messages:read
-                merchant_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                developer_id: dev_suPb10cTzMQ
         '400':
           description: Invalid request (`invalid_request`, `invalid_scope`, `unsupported_grant_type`).
           content:
@@ -132,8 +132,8 @@ paths:
       tags:
       - Auth
       summary: Inspect current token
-      description: Returns the app, merchant, scopes and allowed senders of the token in use. Useful to debug integrations
-        (equivalent to Meta's debug_token).
+      description: Returns the application, Developer ID, scopes and senders (Business Accounts and channels) of
+        the token in use. Useful to debug integrations (equivalent to Meta's debug_token).
       operationId: getMe
       responses:
         '200':
@@ -144,28 +144,28 @@ paths:
                 $ref: '#/components/schemas/TokenInfo'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /v1/merchants/{merchant_id}:
+  /v1/apps/{app_id}:
     get:
       tags:
       - Account
-      summary: Get merchant account
-      description: Details of the merchant account that owns the app.
-      operationId: getMerchant
+      summary: Get application
+      description: 'Details of the token''s application: Developer ID, Merchant ID, environment and status.'
+      operationId: getApp
       parameters:
-      - name: merchant_id
+      - name: app_id
         in: path
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: Merchant account ID.
+        example: app_2Fk81PzQ
+        description: Developer app ID.
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Merchant'
+                $ref: '#/components/schemas/App'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -178,22 +178,21 @@ paths:
           $ref: '#/components/responses/ServerError'
         '404':
           $ref: '#/components/responses/NotFound'
-  /v1/merchants/{merchant_id}/senders:
+  /v1/apps/{app_id}/senders:
     get:
       tags:
       - Account
       summary: List senders
-      description: 'Senders the integration may use: the merchant itself (always present) and, if any, the allowed
-        channels.'
+      description: 'The application''s senders: the Business Accounts created in it and, if any, the allowed channels.'
       operationId: listSenders
       parameters:
-      - name: merchant_id
+      - name: app_id
         in: path
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: Merchant account ID.
+        example: app_2Fk81PzQ
+        description: Developer app ID.
       - name: cursor
         in: query
         schema:
@@ -234,9 +233,10 @@ paths:
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: Sender ID. Use the merchant_id to send directly on behalf of the merchant (default, no channel
-          required) or, optionally, the ID of one of the merchant's channels. Equivalent to Meta Cloud API's phone_number_id.
+        example: ba_7Kq2M9xTpL
+        description: 'Sender ID: external reference mapped to the BA ID of one of the application''s Business Accounts
+          (default) or, optionally, the ID of a channel. It is not the merchant_id. Equivalent to Meta Cloud API''s
+          phone_number_id.'
       responses:
         '200':
           description: OK
@@ -261,10 +261,11 @@ paths:
       tags:
       - Messages
       summary: Send message
-      description: 'Sends a message to a phone number (E.164) or PHIZ ID, on behalf of the merchant (`sender_id`
-        = `merchant_id`) or, optionally, through one of its channels. The `202` response only confirms the message
-        was accepted; the final outcome (`sent`, `delivered`, `read` or `failed`) arrives through the `message_status`
-        webhook.
+      description: 'Sends a message to a phone number (E.164) or Open ID, on behalf of one of the application''s
+        Business Accounts (`sender_id` mapped to the BA ID) or, optionally, through a channel. The phone number
+        is converted to the user''s Open ID; the Business Account is bound to the Open ID, not to the number. The
+        `202` response only confirms the message was accepted; the final outcome (`sent`, `delivered`, `read` or
+        `failed`) arrives through the `message_status` webhook.
 
 
         Merchant-initiated messages follow the opt-in policy, to be defined by Product.
@@ -278,9 +279,10 @@ paths:
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: Sender ID. Use the merchant_id to send directly on behalf of the merchant (default, no channel
-          required) or, optionally, the ID of one of the merchant's channels. Equivalent to Meta Cloud API's phone_number_id.
+        example: ba_7Kq2M9xTpL
+        description: 'Sender ID: external reference mapped to the BA ID of one of the application''s Business Accounts
+          (default) or, optionally, the ID of a channel. It is not the merchant_id. Equivalent to Meta Cloud API''s
+          phone_number_id.'
       - name: Idempotency-Key
         in: header
         required: false
@@ -310,11 +312,11 @@ paths:
                     body: 'Olá, Maria! Seu pedido #48213 foi enviado.'
                     preview_url: false
                   biz_opaque_callback_data: pedido=48213
-              text_phiz_id:
-                summary: Text to PHIZ ID
+              text_open_id:
+                summary: Text to Open ID
                 value:
-                  to: '839201447'
-                  to_type: phiz_id
+                  to: oid_Qm7f2K9xT4Lw
+                  to_type: open_id
                   type: text
                   text:
                     body: 'Seu cupom chegou: PHIZ10'
@@ -336,8 +338,8 @@ paths:
               video:
                 summary: Video by PHIZ link
                 value:
-                  to: '839201447'
-                  to_type: phiz_id
+                  to: oid_Qm7f2K9xT4Lw
+                  to_type: open_id
                   type: video
                   video:
                     link: https://media.phiz.chat/biz/pmed.01JB2K5V1C
@@ -387,7 +389,7 @@ paths:
                 messaging_product: phiz
                 contacts:
                 - input: '+5511987654321'
-                  phiz_id: null
+                  open_id: null
                 messages:
                 - id: pmid.01JA9VZ6T8R3
                   message_status: accepted
@@ -430,7 +432,7 @@ paths:
 
 
         The file stays available until `expires_at` (proposed: 30 days) and can be used in many sends by senders
-        of the same merchant account. Requires the `messages:send` scope.'
+        of the same application. Requires the `messages:send` scope.'
       operationId: uploadMedia
       parameters:
       - name: sender_id
@@ -438,9 +440,10 @@ paths:
         required: true
         schema:
           type: string
-        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-        description: Sender ID. Use the merchant_id to send directly on behalf of the merchant (default, no channel
-          required) or, optionally, the ID of one of the merchant's channels. Equivalent to Meta Cloud API's phone_number_id.
+        example: ba_7Kq2M9xTpL
+        description: 'Sender ID: external reference mapped to the BA ID of one of the application''s Business Accounts
+          (default) or, optionally, the ID of a channel. It is not the merchant_id. Equivalent to Meta Cloud API''s
+          phone_number_id.'
       requestBody:
         required: true
         content:
@@ -841,8 +844,8 @@ webhooks:
       tags:
       - Webhooks
       summary: Message received from the user
-      description: Sent when a PHIZ user messages one of the merchant's senders. Answer 2xx within 10 s and process
-        asynchronously.
+      description: Sent when a PHIZ user messages one of the application's Business Accounts or channels. `from`
+        is the user's Open ID in this application. Answer 2xx within 10 s and process asynchronously.
       parameters:
       - name: X-Phiz-Signature-256
         in: header
@@ -871,25 +874,25 @@ webhooks:
             schema:
               $ref: '#/components/schemas/WebhookEvent'
             example:
-              object: phiz_merchant_account
+              object: phiz_business_account
               entry:
-              - id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+              - id: ba_7Kq2M9xTpL
                 changes:
                 - field: messages
                   value:
                     messaging_product: phiz
                     metadata:
-                      sender_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-                      sender_type: merchant
+                      sender_id: ba_7Kq2M9xTpL
+                      sender_type: business_account
                       conversation_type: business_account
                       display_name: Loja Exemplo
                     contacts:
                     - profile:
                         name: Maria Souza
-                      phiz_id: '839201447'
+                      open_id: oid_Qm7f2K9xT4Lw
                       phone: '+5511987654321'
                     messages:
-                    - from: '839201447'
+                    - from: oid_Qm7f2K9xT4Lw
                       id: pmid.IN_01JA9W2C
                       timestamp: '1760528527'
                       type: text
@@ -937,23 +940,23 @@ webhooks:
             examples:
               delivered:
                 value:
-                  object: phiz_merchant_account
+                  object: phiz_business_account
                   entry:
-                  - id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                  - id: ba_7Kq2M9xTpL
                     changes:
                     - field: message_status
                       value:
                         messaging_product: phiz
                         metadata:
-                          sender_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-                          sender_type: merchant
+                          sender_id: ba_7Kq2M9xTpL
+                          sender_type: business_account
                           conversation_type: business_account
                           display_name: Loja Exemplo
                         statuses:
                         - id: pmid.01JA9VZ6T8R3
                           status: delivered
                           timestamp: '1760528410'
-                          recipient_id: '839201447'
+                          recipient_id: oid_Qm7f2K9xT4Lw
                           biz_opaque_callback_data: pedido=48213
                           conversation:
                             id: conv_01JA9W
@@ -962,16 +965,16 @@ webhooks:
                             expires_at: '1760614810'
               failed:
                 value:
-                  object: phiz_merchant_account
+                  object: phiz_business_account
                   entry:
-                  - id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                  - id: ba_7Kq2M9xTpL
                     changes:
                     - field: message_status
                       value:
                         messaging_product: phiz
                         metadata:
-                          sender_id: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
-                          sender_type: merchant
+                          sender_id: ba_7Kq2M9xTpL
+                          sender_type: business_account
                           conversation_type: business_account
                           display_name: Loja Exemplo
                         statuses:
@@ -1002,7 +1005,7 @@ components:
             messages:send: Send messages and media
             messages:read: Read message statuses
             webhooks:manage: Manage app webhook (Phase 2)
-            account:read: Read account and senders
+            account:read: Read application, Business Accounts and channels
             templates:manage: Reserved for the Marketing API
   schemas:
     TokenRequest:
@@ -1051,9 +1054,9 @@ components:
         scope:
           type: string
           example: messages:send messages:read webhooks:manage
-        merchant_id:
+        developer_id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: dev_suPb10cTzMQ
     TokenInfo:
       type: object
       properties:
@@ -1063,9 +1066,9 @@ components:
         app_id:
           type: string
           example: app_2Fk81PzQ
-        merchant_id:
+        developer_id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: dev_suPb10cTzMQ
         scope:
           type: string
           example: messages:send messages:read
@@ -1074,59 +1077,74 @@ components:
           items:
             type: string
           example:
-          - 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          - ba_7Kq2M9xTpL
           - '1231'
           description: Senders this app may use.
         expires_at:
           type: string
           format: date-time
           example: '2026-10-15T12:30:00Z'
-    Merchant:
+    App:
       type: object
       properties:
         id:
           type: string
+          example: app_2Fk81PzQ
+        developer_id:
+          type: string
+          example: dev_suPb10cTzMQ
+          description: 'Developer ID: developer identity and owner of the resources. Created in sync with the Open
+            Platform Merchant ID.'
+        merchant_id:
+          type: string
           example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
         name:
           type: string
-          example: Loja Exemplo Ltda.
+          example: Blip · Atendimento
+        environment:
+          type: string
+          enum:
+          - test
+          - sandbox
+          - production
         status:
           type: string
           enum:
-          - active
-          - restricted
-          - suspended
-        verification:
-          type: string
-          enum:
-          - unverified
-          - pending
-          - verified
-        created_at:
-          type: string
-          format: date-time
+          - running
+          - in_review
+          - disabled
     Sender:
       type: object
       properties:
         id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: ba_7Kq2M9xTpL
+          description: sender_id used in the path. For a Business Account, mapped 1:1 to the BA ID.
         type:
           type: string
           enum:
-          - merchant
+          - business_account
           - channel
-          example: merchant
-          description: '`merchant`: the merchant itself, the default sender every merchant has. `channel`: one of
-            the merchant''s channels, optional.'
+          example: business_account
+          description: '`business_account`: a Business Account created in the application (default). `channel`:
+            one of the merchant''s channels, optional.'
+        ba_id:
+          type: string
+          nullable: true
+          example: ba_7Kq2M9xTpL
+          description: Filled when type = business_account.
+        app_id:
+          type: string
+          example: app_2Fk81PzQ
+          description: Application that owns the Business Account.
         conversation_type:
           type: string
           enum:
           - business_account
           - channel_service
           example: business_account
-          description: 'PhizChat conversation type (Public Accounts › Service): `business_account` for type = merchant,
-            `channel_service` for type = channel.'
+          description: 'PhizChat conversation type: `business_account` (product shown to the user, under Business
+            service session › Public account session) or `channel_service`.'
         display_name:
           type: string
           example: Loja Exemplo
@@ -1191,12 +1209,13 @@ components:
         to:
           type: string
           example: '+5511987654321'
-          description: Recipient phone number (E.164) or PHIZ ID.
+          description: Recipient phone number (E.164) or Open ID in this application. The phone number is converted
+            to the user's Open ID before sending.
         to_type:
           type: string
           enum:
           - phone
-          - phiz_id
+          - open_id
           default: phone
         type:
           type: string
@@ -1390,11 +1409,12 @@ components:
               input:
                 type: string
                 example: '+5511987654321'
-              phiz_id:
+              open_id:
                 type: string
                 nullable: true
                 example: null
-                description: Filled only if the recipient has already talked to this sender.
+                description: The user's Open ID in this application. Filled only if the user is already bound to
+                  this Business Account.
         messages:
           type: array
           items:
@@ -1415,7 +1435,7 @@ components:
           example: pmid.01JA9VZ6T8R3
         sender_id:
           type: string
-          example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+          example: ba_7Kq2M9xTpL
         status:
           type: string
           enum:
@@ -1491,12 +1511,13 @@ components:
           - disabled
     WebhookEvent:
       type: object
-      description: Envelope for every event. May batch several events of the same merchant.
+      description: Envelope for every event. `entry[].id` is the BA ID. May batch several events of the same Business
+        Account.
       properties:
         object:
           type: string
           enum:
-          - phiz_merchant_account
+          - phiz_business_account
         entry:
           type: array
           items:
@@ -1504,7 +1525,7 @@ components:
             properties:
               id:
                 type: string
-                example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+                example: ba_7Kq2M9xTpL
               changes:
                 type: array
                 items:

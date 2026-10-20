@@ -47,15 +47,15 @@ curl -X POST "$PHIZ_API_BASE/oauth/token" \\
   -d "scope=messages:send messages:read\""""),
 "token_resp": ("json", J({"access_token": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBoei0yMDI2LTEwIn0…", "token_type": "Bearer",
                            "expires_in": 3600, "scope": "messages:send messages:read",
-                           "merchant_id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"})),
+                           "developer_id": "dev_suPb10cTzMQ"})),
 "token_err": ("json", J({"error": "invalid_client", "error_description": "Client authentication failed."})),
 "jwt_claims": ("json", J({"iss": "https://gateway.phiz.chat/gateway/business", "sub": "app_2Fk81PzQ", "aud": "phiz-business-api",
-                           "mid": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "scope": "messages:send messages:read",
-                           "snd": ["7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "1231"], "env": "live", "iat": 1760527800, "exp": 1760531400, "jti": "tok_01JA9VQ4N2"})),
-"me_resp": ("json", J({"active": True, "app_id": "app_2Fk81PzQ", "merchant_id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57",
-                        "scope": "messages:send messages:read", "senders": ["7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "1231"], "expires_at": "2026-10-15T12:30:00Z"})),
-"send_curl": ("bash", """# sender_id = merchant_id: direct message from the merchant, no channel needed
-curl -X POST "$PHIZ_API_BASE/v1/7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57/messages" \\
+                           "did": "dev_suPb10cTzMQ", "scope": "messages:send messages:read",
+                           "snd": ["ba_7Kq2M9xTpL", "1231"], "env": "live", "iat": 1760527800, "exp": 1760531400, "jti": "tok_01JA9VQ4N2"})),
+"me_resp": ("json", J({"active": True, "app_id": "app_2Fk81PzQ", "developer_id": "dev_suPb10cTzMQ",
+                        "scope": "messages:send messages:read", "senders": ["ba_7Kq2M9xTpL", "1231"], "expires_at": "2026-10-15T12:30:00Z"})),
+"send_curl": ("bash", """# sender_id = BA ID: message from the Business Account (default), no channel needed
+curl -X POST "$PHIZ_API_BASE/v1/ba_7Kq2M9xTpL/messages" \\
   -H "Authorization: Bearer $PHIZ_TOKEN" \\
   -H "Content-Type: application/json" \\
   -H "Idempotency-Key: pedido-48213-envio" \\
@@ -72,26 +72,26 @@ curl -X POST "$PHIZ_API_BASE/v1/1231/messages" \\
   -H "Authorization: Bearer $PHIZ_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "to": "+5511987654321", "type": "text", "text": { "body": "Novidades da semana na Loja Exemplo - Ofertas" } }'"""),
-"send_resp": ("json", J({"messaging_product": "phiz", "contacts": [{"input": "+5511987654321", "phiz_id": None}],
+"send_resp": ("json", J({"messaging_product": "phiz", "contacts": [{"input": "+5511987654321", "open_id": None}],
                           "messages": [{"id": "pmid.01JA9VZ6T8R3", "message_status": "accepted"}]})),
-"send_phiz_id": ("json", J({"to": "839201447", "to_type": "phiz_id", "type": "text", "text": {"body": "Seu cupom chegou: PHIZ10"}})),
+"send_phiz_id": ("json", J({"to": "oid_Qm7f2K9xT4Lw", "to_type": "open_id", "type": "text", "text": {"body": "Seu cupom chegou: PHIZ10"}})),
 "send_buttons": ("json", J({"to": "+5511987654321", "type": "interactive", "interactive": {"type": "button",
                     "body": {"text": "Confirma a entrega amanhã entre 9h e 12h?"},
                     "action": {"buttons": [{"type": "reply", "reply": {"id": "confirmar", "title": "Confirmar"}},
                                             {"type": "reply", "reply": {"id": "reagendar", "title": "Reagendar"}}]}}})),
 "media_upload": ("bash", """# 1. Upload the file to PHIZ (multipart/form-data). Third-party URLs are not accepted when sending.
-curl -X POST "$PHIZ_API_BASE/v1/7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57/media" \\
+curl -X POST "$PHIZ_API_BASE/v1/ba_7Kq2M9xTpL/media" \\
   -H "Authorization: Bearer $PHIZ_TOKEN" \\
   -F messaging_product=phiz \\
   -F type=application/pdf \\
   -F file=@nota-fiscal-48213.pdf"""),
 "media_upload_resp": ("json", J(MEDIA_EXAMPLE)),
 "send_audio": ("json", J({"to": "+5511987654321", "type": "audio", "audio": {"id": "pmed.01JB2K4M7A"}})),
-"send_video": ("json", J({"to": "839201447", "to_type": "phiz_id", "type": "video",
+"send_video": ("json", J({"to": "oid_Qm7f2K9xT4Lw", "to_type": "open_id", "type": "video",
                            "video": {"link": "https://media.phiz.chat/biz/pmed.01JB2K5V1C", "caption": "Como montar seu produto"}})),
 "send_document": ("json", J({"to": "+5511987654321", "type": "document",
                               "document": {"id": "pmed.01JB2K7Q9X", "filename": "nota-fiscal-48213.pdf", "caption": "Nota fiscal do pedido #48213"}})),
-"wh_inbound_media": ("json", J({"from": "839201447", "id": "pmid.IN_01JA9W7R", "timestamp": "1760528731", "type": "audio",
+"wh_inbound_media": ("json", J({"from": "oid_Qm7f2K9xT4Lw", "id": "pmid.IN_01JA9W7R", "timestamp": "1760528731", "type": "audio",
                                  "audio": {"url": "https://media.phiz.chat/in/9xT2…?expires=1760615131&sig=…", "mime_type": "audio/ogg; codecs=opus", "sha256": "3f9a…", "voice": True}})),
 "mark_read": ("json", J({"messaging_product": "phiz", "status": "read", "message_id": "pmid.IN_01JA9W2C"})),
 "error_env": ("json", J({"error": {"code": 1003, "type": "invalid_parameter",

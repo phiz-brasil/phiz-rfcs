@@ -54,11 +54,11 @@ SENDER_ID = {
     "in": "path",
     "required": True,
     "schema": {"type": "string"},
-    "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57",
+    "example": "ba_7Kq2M9xTpL",
     "description": T(
-        "ID do remetente. Use o merchant_id para enviar diretamente em nome do comerciante (padrão, não exige canal) ou, opcionalmente, o ID de um canal do comerciante. Equivale ao phone_number_id da Cloud API da Meta.",
-        "Sender ID. Use the merchant_id to send directly on behalf of the merchant (default, no channel required) or, optionally, the ID of one of the merchant's channels. Equivalent to Meta Cloud API's phone_number_id.",
-        "发送方 ID。使用 merchant_id 直接以商户名义发送（默认，无需频道），或可选地使用商户某个频道的 ID。相当于 Meta Cloud API 的 phone_number_id。",
+        "ID do remetente: referência externa mapeada para o BA ID de um Business Account da aplicação (padrão) ou, opcionalmente, o ID de um canal. Não é o merchant_id. Equivale ao phone_number_id da Cloud API da Meta.",
+        "Sender ID: external reference mapped to the BA ID of one of the application's Business Accounts (default) or, optionally, the ID of a channel. It is not the merchant_id. Equivalent to Meta Cloud API's phone_number_id.",
+        "发送方 ID：映射到应用下某个 Business Account 的 BA ID 的外部引用（默认），也可选用频道 ID。它不是 merchant_id。相当于 Meta Cloud API 的 phone_number_id。",
     ),
 }
 
@@ -86,13 +86,13 @@ TAGS = [
         "OAuth 2.0 token issuance and revocation (client credentials).",
         "OAuth 2.0 令牌签发与撤销（客户端凭证模式）。")},
     {"name": "Account", "description": T(
-        "Conta de comerciante, remetentes e apps de desenvolvedor.",
-        "Merchant account, senders and developer apps.",
-        "商户账号、发送方与开发者应用。")},
+        "Aplicação, Business Accounts e remetentes.",
+        "Application, Business Accounts and senders.",
+        "应用、Business Account 与发送方。")},
     {"name": "Messages", "description": T(
-        "Envio de mensagens para um número de telefone ou PHIZ ID e consulta de status.",
-        "Send messages to a phone number or PHIZ ID and query their status.",
-        "向手机号或 PHIZ ID 发送消息并查询状态。")},
+        "Envio de mensagens para um número de telefone ou Open ID e consulta de status.",
+        "Send messages to a phone number or Open ID and query their status.",
+        "向手机号或 Open ID 发送消息并查询状态。")},
     {"name": "Media", "description": T(
         "Upload de mídia para o armazenamento temporário da PHIZ. Toda mídia enviada em mensagens precisa passar por aqui; links de terceiros não são aceitos.",
         "Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party links are not accepted.",
@@ -104,17 +104,17 @@ TAGS = [
 ]
 
 INFO_DESC = T(
-    """API de mensageria empresarial da PHIZ. Permite que sistemas de terceiros (CRMs, plataformas de atendimento como Blip e Salesforce, ou sistemas próprios do comerciante) enviem mensagens a usuários PHIZ identificados por **número de telefone** ou **PHIZ ID**, e recebam por **webhook** as mensagens de resposta e as mudanças de status.
+    """API de mensageria empresarial da PHIZ. Permite que sistemas de terceiros (CRMs, plataformas de atendimento como Blip e Salesforce, ou sistemas próprios do comerciante) enviem mensagens a usuários PHIZ identificados por **número de telefone** ou **Open ID**, e recebam por **webhook** as mensagens de resposta e as mudanças de status.
 
 O formato das mensagens e dos webhooks segue de perto a Cloud API da Meta (WhatsApp Business Platform), para reduzir o custo de adaptação de integrações existentes.
 
 **Status:** proposta (RFC PHZ-0001). Nada aqui está implementado.""",
-    """PHIZ business messaging API. It lets third-party systems (CRMs, customer-service platforms such as Blip and Salesforce, or the merchant's own systems) send messages to PHIZ users identified by **phone number** or **PHIZ ID**, and receive replies and status changes through a **webhook**.
+    """PHIZ business messaging API. It lets third-party systems (CRMs, customer-service platforms such as Blip and Salesforce, or the merchant's own systems) send messages to PHIZ users identified by **phone number** or **Open ID**, and receive replies and status changes through a **webhook**.
 
 Message and webhook payloads closely follow Meta's Cloud API (WhatsApp Business Platform) to keep the cost of adapting existing integrations low.
 
 **Status:** proposal (RFC PHZ-0001). Nothing here is implemented yet.""",
-    """PHIZ 企业消息 API。第三方系统（CRM、Blip 和 Salesforce 等客服平台，或商户自有系统）可以通过 **手机号** 或 **PHIZ ID** 向 PHIZ 用户发送消息，并通过 **Webhook** 接收用户回复和状态变更。
+    """PHIZ 企业消息 API。第三方系统（CRM、Blip 和 Salesforce 等客服平台，或商户自有系统）可以通过 **手机号** 或 **Open ID** 向 PHIZ 用户发送消息，并通过 **Webhook** 接收用户回复和状态变更。
 
 消息与 Webhook 的数据结构尽量对齐 Meta Cloud API（WhatsApp Business Platform），以降低现有集成的改造成本。
 
@@ -150,7 +150,7 @@ SCHEMAS = {
             "expires_in": {"type": "integer", "example": 3600,
                            "description": T("Validade em segundos.", "Lifetime in seconds.", "有效期（秒）。")},
             "scope": {"type": "string", "example": "messages:send messages:read webhooks:manage"},
-            "merchant_id": {"type": "string", "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"},
+            "developer_id": {"type": "string", "example": "dev_suPb10cTzMQ"},
         },
     },
     "TokenInfo": {
@@ -158,35 +158,46 @@ SCHEMAS = {
         "properties": {
             "active": {"type": "boolean", "example": True},
             "app_id": {"type": "string", "example": "app_2Fk81PzQ"},
-            "merchant_id": {"type": "string", "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"},
+            "developer_id": {"type": "string", "example": "dev_suPb10cTzMQ"},
             "scope": {"type": "string", "example": "messages:send messages:read"},
-            "senders": {"type": "array", "items": {"type": "string"}, "example": ["7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "1231"],
+            "senders": {"type": "array", "items": {"type": "string"}, "example": ["ba_7Kq2M9xTpL", "1231"],
                         "description": T("Remetentes que este app pode usar.", "Senders this app may use.", "此应用可使用的发送方。")},
             "expires_at": {"type": "string", "format": "date-time", "example": "2026-10-15T12:30:00Z"},
         },
     },
-    "Merchant": {
+    "App": {
         "type": "object",
         "properties": {
-            "id": {"type": "string", "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"},
-            "name": {"type": "string", "example": "Loja Exemplo Ltda."},
-            "status": {"type": "string", "enum": ["active", "restricted", "suspended"]},
-            "verification": {"type": "string", "enum": ["unverified", "pending", "verified"]},
-            "created_at": {"type": "string", "format": "date-time"},
+            "id": {"type": "string", "example": "app_2Fk81PzQ"},
+            "developer_id": {"type": "string", "example": "dev_suPb10cTzMQ",
+                             "description": T("Developer ID: identidade do desenvolvedor e dono dos recursos. Criado em sincronia com o Merchant ID do Open Platform.",
+                                              "Developer ID: developer identity and owner of the resources. Created in sync with the Open Platform Merchant ID.",
+                                              "Developer ID：开发者身份及资源归属方，与开放平台的 Merchant ID 同步创建。")},
+            "merchant_id": {"type": "string", "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"},
+            "name": {"type": "string", "example": "Blip · Atendimento"},
+            "environment": {"type": "string", "enum": ["test", "sandbox", "production"]},
+            "status": {"type": "string", "enum": ["running", "in_review", "disabled"]},
         },
     },
     "Sender": {
         "type": "object",
         "properties": {
-            "id": {"type": "string", "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"},
-            "type": {"type": "string", "enum": ["merchant", "channel"], "example": "merchant",
-                      "description": T("`merchant`: o próprio comerciante, remetente padrão que todo comerciante tem. `channel`: um canal do comerciante, opcional.",
-                                       "`merchant`: the merchant itself, the default sender every merchant has. `channel`: one of the merchant's channels, optional.",
-                                       "`merchant`：商户本身，每个商户都有的默认发送方。`channel`：商户的频道，可选。")},
+            "id": {"type": "string", "example": "ba_7Kq2M9xTpL",
+                   "description": T("sender_id usado na rota. Para Business Account, mapeado 1:1 para o BA ID.",
+                                    "sender_id used in the path. For a Business Account, mapped 1:1 to the BA ID.",
+                                    "路径中使用的 sender_id。Business Account 与 BA ID 一一对应。")},
+            "type": {"type": "string", "enum": ["business_account", "channel"], "example": "business_account",
+                      "description": T("`business_account`: Business Account criado na aplicação (padrão). `channel`: um canal do comerciante, opcional.",
+                                       "`business_account`: a Business Account created in the application (default). `channel`: one of the merchant's channels, optional.",
+                                       "`business_account`：在应用下创建的 Business Account（默认）。`channel`：商户的频道，可选。")},
+            "ba_id": {"type": "string", "nullable": True, "example": "ba_7Kq2M9xTpL",
+                      "description": T("Preenchido quando type = business_account.", "Filled when type = business_account.", "type = business_account 时有值。")},
+            "app_id": {"type": "string", "example": "app_2Fk81PzQ",
+                       "description": T("Aplicação dona do Business Account.", "Application that owns the Business Account.", "Business Account 所属的应用。")},
             "conversation_type": {"type": "string", "enum": ["business_account", "channel_service"], "example": "business_account",
-                                  "description": T("Tipo de conversa no PhizChat (Contas públicas › Service): `business_account` para type = merchant, `channel_service` para type = channel.",
-                                                   "PhizChat conversation type (Public Accounts › Service): `business_account` for type = merchant, `channel_service` for type = channel.",
-                                                   "PhizChat 会话类型（公众号 › Service）：type = merchant 对应 `business_account`，type = channel 对应 `channel_service`。")},
+                                  "description": T("Tipo de conversa no PhizChat: `business_account` (produto exibido ao usuário, dentro de Conversa de serviço empresarial › Conversa de conta pública) ou `channel_service`.",
+                                                   "PhizChat conversation type: `business_account` (product shown to the user, under Business service session › Public account session) or `channel_service`.",
+                                                   "PhizChat 会话类型：`business_account`（对外展示的产品类型，属于 公众号会话 › 企业服务会话）或 `channel_service`。")},
             "display_name": {"type": "string", "example": "Loja Exemplo"},
             "channel_id": {"type": "string", "nullable": True, "example": None,
                            "description": T("Preenchido apenas quando type = channel.", "Filled only when type = channel.", "仅当 type = channel 时有值。")},
@@ -217,10 +228,10 @@ SCHEMAS = {
                                                    "可选；为兼容 Cloud API 而保留。")},
             "recipient_type": {"type": "string", "enum": ["individual"], "default": "individual"},
             "to": {"type": "string", "example": "+5511987654321",
-                   "description": T("Telefone E.164 ou PHIZ ID do destinatário.",
-                                    "Recipient phone number (E.164) or PHIZ ID.",
-                                    "接收方手机号（E.164）或 PHIZ ID。")},
-            "to_type": {"type": "string", "enum": ["phone", "phiz_id"], "default": "phone"},
+                   "description": T("Telefone E.164 ou Open ID do destinatário nesta aplicação. O telefone é convertido no Open ID do usuário antes do envio.",
+                                    "Recipient phone number (E.164) or Open ID in this application. The phone number is converted to the user's Open ID before sending.",
+                                    "接收方手机号（E.164）或其在本应用下的 Open ID。手机号会在发送前换取用户的 Open ID。")},
+            "to_type": {"type": "string", "enum": ["phone", "open_id"], "default": "phone"},
             "type": {"type": "string",
                      "enum": ["text", "image", "video", "audio", "document", "location", "interactive", "reaction", "template"],
                      "description": T("`template` fica reservado para a futura Marketing API.",
@@ -294,10 +305,10 @@ SCHEMAS = {
             "messaging_product": {"type": "string", "example": "phiz"},
             "contacts": {"type": "array", "items": {"type": "object", "properties": {
                 "input": {"type": "string", "example": "+5511987654321"},
-                "phiz_id": {"type": "string", "nullable": True, "example": None,
-                            "description": T("Preenchido apenas se o destinatário já conversou com este remetente.",
-                                             "Filled only if the recipient has already talked to this sender.",
-                                             "仅当接收方曾与该发送方对话时返回。")}}}},
+                "open_id": {"type": "string", "nullable": True, "example": None,
+                            "description": T("Open ID do usuário nesta aplicação. Preenchido apenas se o usuário já tem vínculo com este Business Account.",
+                                             "The user's Open ID in this application. Filled only if the user is already bound to this Business Account.",
+                                             "用户在本应用下的 Open ID。仅当用户已与该 Business Account 建立绑定关系时返回。")}}}},
             "messages": {"type": "array", "items": {"type": "object", "properties": {
                 "id": {"type": "string", "example": "pmid.01JA9VZ6T8R3"},
                 "message_status": {"type": "string", "enum": ["accepted"]}}}},
@@ -307,7 +318,7 @@ SCHEMAS = {
         "type": "object",
         "properties": {
             "id": {"type": "string", "example": "pmid.01JA9VZ6T8R3"},
-            "sender_id": {"type": "string", "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"},
+            "sender_id": {"type": "string", "example": "ba_7Kq2M9xTpL"},
             "status": {"type": "string", "enum": ["accepted", "sent", "delivered", "read", "failed"]},
             "updated_at": {"type": "string", "format": "date-time"},
             "biz_opaque_callback_data": {"type": "string", "nullable": True},
@@ -335,13 +346,13 @@ SCHEMAS = {
     },
     "WebhookEvent": {
         "type": "object",
-        "description": T("Envelope de todos os eventos. Pode agrupar vários eventos do mesmo comerciante.",
-                         "Envelope for every event. May batch several events of the same merchant.",
-                         "所有事件的外层结构，可批量包含同一商户的多个事件。"),
+        "description": T("Envelope de todos os eventos. `entry[].id` é o BA ID. Pode agrupar vários eventos do mesmo Business Account.",
+                         "Envelope for every event. `entry[].id` is the BA ID. May batch several events of the same Business Account.",
+                         "所有事件的外层结构，`entry[].id` 为 BA ID，可批量包含同一 Business Account 的多个事件。"),
         "properties": {
-            "object": {"type": "string", "enum": ["phiz_merchant_account"]},
+            "object": {"type": "string", "enum": ["phiz_business_account"]},
             "entry": {"type": "array", "items": {"type": "object", "properties": {
-                "id": {"type": "string", "example": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"},
+                "id": {"type": "string", "example": "ba_7Kq2M9xTpL"},
                 "changes": {"type": "array", "items": {"type": "object", "properties": {
                     "field": {"type": "string", "enum": ["messages", "message_status", "sender_update", "account_update"]},
                     "value": {"type": "object"}}}}}}},
@@ -412,7 +423,7 @@ PATHS = {
             "application/json": {"schema": ref("TokenRequest"),
                                  "example": {"grant_type": "client_credentials", "client_id": "app_2Fk81PzQ", "client_secret": "phzsk_live_9c1f…", "scope": "messages:send messages:read"}}}},
         responses={"200": resp(T("Token emitido.", "Token issued.", "令牌已签发。"), ref("TokenResponse"),
-                               {"access_token": "eyJhbGciOiJFUzI1NiIs…", "token_type": "Bearer", "expires_in": 3600, "scope": "messages:send messages:read", "merchant_id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57"}),
+                               {"access_token": "eyJhbGciOiJFUzI1NiIs…", "token_type": "Bearer", "expires_in": 3600, "scope": "messages:send messages:read", "developer_id": "dev_suPb10cTzMQ"}),
                    "400": resp(T("Pedido inválido (`invalid_request`, `invalid_scope`, `unsupported_grant_type`).", "Invalid request (`invalid_request`, `invalid_scope`, `unsupported_grant_type`).", "请求无效（`invalid_request`、`invalid_scope`、`unsupported_grant_type`）。"), ref("OAuthError")),
                    "401": resp(T("Credenciais inválidas (`invalid_client`).", "Invalid credentials (`invalid_client`).", "凭证无效（`invalid_client`）。"), ref("OAuthError"), {"error": "invalid_client", "error_description": "Client authentication failed."}),
                    "429": err("TooManyRequests")})},
@@ -427,21 +438,21 @@ PATHS = {
         responses={"200": {"description": "OK"}})},
     "/v1/me": {"get": op("Auth",
         T("Inspecionar token atual", "Inspect current token", "查看当前令牌"),
-        T("Retorna app, comerciante, escopos e remetentes autorizados do token usado. Útil para diagnosticar integrações (equivale ao debug_token da Meta).",
-          "Returns the app, merchant, scopes and allowed senders of the token in use. Useful to debug integrations (equivalent to Meta's debug_token).",
-          "返回当前令牌对应的应用、商户、范围和可用发送方，便于排查集成问题（相当于 Meta 的 debug_token）。"),
+        T("Retorna aplicação, Developer ID, escopos e remetentes (Business Accounts e canais) do token usado. Útil para diagnosticar integrações (equivale ao debug_token da Meta).",
+          "Returns the application, Developer ID, scopes and senders (Business Accounts and channels) of the token in use. Useful to debug integrations (equivalent to Meta's debug_token).",
+          "返回当前令牌对应的应用、Developer ID、范围和发送方（Business Account 与频道），便于排查集成问题（相当于 Meta 的 debug_token）。"),
         "getMe", responses={"200": resp("OK", ref("TokenInfo")), "401": err("Unauthorized")})},
-    "/v1/merchants/{merchant_id}": {"get": op("Account",
-        T("Consultar conta de comerciante", "Get merchant account", "查询商户账号"),
-        T("Dados da conta de comerciante dona do app.", "Details of the merchant account that owns the app.", "应用所属商户账号的信息。"),
-        "getMerchant", parameters=[MERCHANT_ID],
-        responses={"200": resp("OK", ref("Merchant")), **STD_ERRORS, "404": err("NotFound")})},
-    "/v1/merchants/{merchant_id}/senders": {"get": op("Account",
+    "/v1/apps/{app_id}": {"get": op("Account",
+        T("Consultar aplicação", "Get application", "查询应用"),
+        T("Dados da aplicação do token: Developer ID, Merchant ID, ambiente e status.", "Details of the token's application: Developer ID, Merchant ID, environment and status.", "令牌所属应用的信息：Developer ID、Merchant ID、环境和状态。"),
+        "getApp", parameters=[APP_ID],
+        responses={"200": resp("OK", ref("App")), **STD_ERRORS, "404": err("NotFound")})},
+    "/v1/apps/{app_id}/senders": {"get": op("Account",
         T("Listar remetentes", "List senders", "列出发送方"),
-        T("Remetentes que a integração pode usar: o próprio comerciante (sempre presente) e, se houver, os canais liberados.",
-          "Senders the integration may use: the merchant itself (always present) and, if any, the allowed channels.",
-          "集成可使用的发送方：商户本身（始终存在），以及已授权的频道（如有）。"),
-        "listSenders", parameters=[MERCHANT_ID,
+        T("Remetentes da aplicação: os Business Accounts criados nela e, se houver, os canais liberados.",
+          "The application's senders: the Business Accounts created in it and, if any, the allowed channels.",
+          "应用的发送方：在该应用下创建的 Business Account，以及已授权的频道（如有）。"),
+        "listSenders", parameters=[APP_ID,
             {"name": "cursor", "in": "query", "schema": {"type": "string"}},
             {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 25, "maximum": 100}}],
         responses={"200": resp("OK", ref("SenderList")), **STD_ERRORS})},
@@ -452,17 +463,17 @@ PATHS = {
         responses={"200": resp("OK", ref("Sender")), **STD_ERRORS, "404": err("NotFound")})},
     "/v1/{sender_id}/messages": {"post": op("Messages",
         T("Enviar mensagem", "Send message", "发送消息"),
-        T("""Envia uma mensagem para um telefone (E.164) ou PHIZ ID, em nome do comerciante (`sender_id` = `merchant_id`) ou, opcionalmente, por um de seus canais. A resposta `202` só confirma que a mensagem foi aceita; o resultado final (`sent`, `delivered`, `read` ou `failed`) chega pelo webhook `message_status`.
+        T("""Envia uma mensagem para um telefone (E.164) ou Open ID, em nome de um Business Account da aplicação (`sender_id` mapeado para o BA ID) ou, opcionalmente, por um canal. O telefone é convertido no Open ID do usuário; o vínculo do Business Account é com o Open ID, não com o número. A resposta `202` só confirma que a mensagem foi aceita; o resultado final (`sent`, `delivered`, `read` ou `failed`) chega pelo webhook `message_status`.
 
 Mensagens iniciadas pelo comerciante seguem a política de opt-in, que será definida por Produto.
 
 O mesmo endpoint com `status: read` marca uma mensagem recebida como lida (compatível com a Cloud API).""",
-          """Sends a message to a phone number (E.164) or PHIZ ID, on behalf of the merchant (`sender_id` = `merchant_id`) or, optionally, through one of its channels. The `202` response only confirms the message was accepted; the final outcome (`sent`, `delivered`, `read` or `failed`) arrives through the `message_status` webhook.
+          """Sends a message to a phone number (E.164) or Open ID, on behalf of one of the application's Business Accounts (`sender_id` mapped to the BA ID) or, optionally, through a channel. The phone number is converted to the user's Open ID; the Business Account is bound to the Open ID, not to the number. The `202` response only confirms the message was accepted; the final outcome (`sent`, `delivered`, `read` or `failed`) arrives through the `message_status` webhook.
 
 Merchant-initiated messages follow the opt-in policy, to be defined by Product.
 
 The same endpoint with `status: read` marks an inbound message as read (Cloud API compatible).""",
-          """以商户名义（`sender_id` = `merchant_id`）或可选地通过商户的某个频道，向手机号（E.164）或 PHIZ ID 发送消息。`202` 仅表示消息已被受理；最终结果（`sent`、`delivered`、`read` 或 `failed`）通过 `message_status` Webhook 推送。
+          """以应用下某个 Business Account 的名义（`sender_id` 映射到 BA ID），或可选地通过频道，向手机号（E.164）或 Open ID 发送消息。手机号会换取用户的 Open ID；Business Account 绑定的是 Open ID，而不是手机号。`202` 仅表示消息已被受理；最终结果（`sent`、`delivered`、`read` 或 `failed`）通过 `message_status` Webhook 推送。
 
 商户主动发送的消息需遵守选择接收（opt-in）策略，该策略由产品定义。
 
@@ -475,14 +486,14 @@ The same endpoint with `status: read` marks an inbound message as read (Cloud AP
                     "messaging_product": "phiz", "to": "+5511987654321", "to_type": "phone", "type": "text",
                     "text": {"body": "Olá, Maria! Seu pedido #48213 foi enviado.", "preview_url": False},
                     "biz_opaque_callback_data": "pedido=48213"}},
-                "text_phiz_id": {"summary": T("Texto para PHIZ ID", "Text to PHIZ ID", "向 PHIZ ID 发送文本"), "value": {
-                    "to": "839201447", "to_type": "phiz_id", "type": "text", "text": {"body": "Seu cupom chegou: PHIZ10"}}},
+                "text_open_id": {"summary": T("Texto para Open ID", "Text to Open ID", "向 Open ID 发送文本"), "value": {
+                    "to": "oid_Qm7f2K9xT4Lw", "to_type": "open_id", "type": "text", "text": {"body": "Seu cupom chegou: PHIZ10"}}},
                 "image": {"summary": T("Imagem pelo id da mídia", "Image by media id", "通过媒体 id 发送图片"), "value": {
                     "to": "+5511987654321", "type": "image", "image": {"id": "pmed.01JB2K3H2D", "caption": "Nota fiscal"}}},
                 "audio": {"summary": T("Áudio pelo id da mídia", "Audio by media id", "通过媒体 id 发送音频"), "value": {
                     "to": "+5511987654321", "type": "audio", "audio": {"id": "pmed.01JB2K4M7A"}}},
                 "video": {"summary": T("Vídeo pelo link PHIZ", "Video by PHIZ link", "通过 PHIZ 链接发送视频"), "value": {
-                    "to": "839201447", "to_type": "phiz_id", "type": "video",
+                    "to": "oid_Qm7f2K9xT4Lw", "to_type": "open_id", "type": "video",
                     "video": {"link": "https://media.phiz.chat/biz/pmed.01JB2K5V1C", "caption": "Como montar seu produto"}}},
                 "document": {"summary": T("Documento", "Document", "文档"), "value": {
                     "to": "+5511987654321", "type": "document",
@@ -496,7 +507,7 @@ The same endpoint with `status: read` marks an inbound message as read (Cloud AP
                     "messaging_product": "phiz", "status": "read", "message_id": "pmid.IN_01JA9W2C"}},
             }}}},
         responses={"202": resp(T("Mensagem aceita para envio.", "Message accepted for delivery.", "消息已受理。"), ref("SendMessageResponse"),
-                               {"messaging_product": "phiz", "contacts": [{"input": "+5511987654321", "phiz_id": None}],
+                               {"messaging_product": "phiz", "contacts": [{"input": "+5511987654321", "open_id": None}],
                                 "messages": [{"id": "pmid.01JA9VZ6T8R3", "message_status": "accepted"}]}),
                    **STD_ERRORS,
                    "409": resp(T("Idempotency-Key reutilizada com corpo diferente.", "Idempotency-Key reused with a different body.", "Idempotency-Key 被用于不同的请求体。"), ref("Error")),
@@ -506,13 +517,13 @@ The same endpoint with `status: read` marks an inbound message as read (Cloud AP
         T("Enviar mídia (upload)", "Upload media", "上传媒体"),
         T("""Envia um arquivo para o armazenamento temporário da PHIZ e devolve `id` e `link` para usar no envio. Formato e tamanho são checados aqui: fora da tabela da seção 09, responde 415 (2304) ou 413 (2305).
 
-O arquivo fica disponível até `expires_at` (proposta: 30 dias) e pode ser usado em vários envios de remetentes da mesma conta de comerciante. Requer o escopo `messages:send`.""",
+O arquivo fica disponível até `expires_at` (proposta: 30 dias) e pode ser usado em vários envios de remetentes da mesma aplicação. Requer o escopo `messages:send`.""",
           """Uploads a file to PHIZ temporary storage and returns the `id` and `link` to use when sending. Format and size are checked here: outside the table in section 09, it answers 415 (2304) or 413 (2305).
 
-The file stays available until `expires_at` (proposed: 30 days) and can be used in many sends by senders of the same merchant account. Requires the `messages:send` scope.""",
+The file stays available until `expires_at` (proposed: 30 days) and can be used in many sends by senders of the same application. Requires the `messages:send` scope.""",
           """将文件上传到 PHIZ 临时存储，返回发送时使用的 `id` 和 `link`。格式和大小在此校验：不符合第 09 节表格时返回 415（2304）或 413（2305）。
 
-文件在 `expires_at` 之前可用（建议 30 天），可被同一商户账号下的发送方多次使用。需要 `messages:send` 范围。"""),
+文件在 `expires_at` 之前可用（建议 30 天），可被同一应用下的发送方多次使用。需要 `messages:send` 范围。"""),
         "uploadMedia", parameters=[SENDER_ID],
         requestBody={"required": True, "content": {"multipart/form-data": {"schema": ref("MediaUploadRequest")}}},
         responses={"200": resp(T("Mídia armazenada.", "Media stored.", "媒体已存储。"), ref("Media"), MEDIA_EXAMPLE),
@@ -573,28 +584,28 @@ The file stays available until `expires_at` (proposed: 30 days) and can be used 
 }
 
 INBOUND_EXAMPLE = {
-    "object": "phiz_merchant_account",
-    "entry": [{"id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "changes": [{"field": "messages", "value": {
+    "object": "phiz_business_account",
+    "entry": [{"id": "ba_7Kq2M9xTpL", "changes": [{"field": "messages", "value": {
         "messaging_product": "phiz",
-        "metadata": {"sender_id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "sender_type": "merchant", "conversation_type": "business_account", "display_name": "Loja Exemplo"},
-        "contacts": [{"profile": {"name": "Maria Souza"}, "phiz_id": "839201447", "phone": "+5511987654321"}],
-        "messages": [{"from": "839201447", "id": "pmid.IN_01JA9W2C", "timestamp": "1760528527", "type": "text",
+        "metadata": {"sender_id": "ba_7Kq2M9xTpL", "sender_type": "business_account", "conversation_type": "business_account", "display_name": "Loja Exemplo"},
+        "contacts": [{"profile": {"name": "Maria Souza"}, "open_id": "oid_Qm7f2K9xT4Lw", "phone": "+5511987654321"}],
+        "messages": [{"from": "oid_Qm7f2K9xT4Lw", "id": "pmid.IN_01JA9W2C", "timestamp": "1760528527", "type": "text",
                       "text": {"body": "Quero reagendar a entrega"}, "context": {"id": "pmid.01JA9VZ6T8R3"}}]}}]}],
 }
 STATUS_EXAMPLE = {
-    "object": "phiz_merchant_account",
-    "entry": [{"id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "changes": [{"field": "message_status", "value": {
+    "object": "phiz_business_account",
+    "entry": [{"id": "ba_7Kq2M9xTpL", "changes": [{"field": "message_status", "value": {
         "messaging_product": "phiz",
-        "metadata": {"sender_id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "sender_type": "merchant", "conversation_type": "business_account", "display_name": "Loja Exemplo"},
+        "metadata": {"sender_id": "ba_7Kq2M9xTpL", "sender_type": "business_account", "conversation_type": "business_account", "display_name": "Loja Exemplo"},
         "statuses": [{"id": "pmid.01JA9VZ6T8R3", "status": "delivered", "timestamp": "1760528410",
-                      "recipient_id": "839201447", "biz_opaque_callback_data": "pedido=48213",
+                      "recipient_id": "oid_Qm7f2K9xT4Lw", "biz_opaque_callback_data": "pedido=48213",
                       "conversation": {"id": "conv_01JA9W", "origin": {"type": "service"}, "expires_at": "1760614810"}}]}}]}],
 }
 FAILED_EXAMPLE = {
-    "object": "phiz_merchant_account",
-    "entry": [{"id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "changes": [{"field": "message_status", "value": {
+    "object": "phiz_business_account",
+    "entry": [{"id": "ba_7Kq2M9xTpL", "changes": [{"field": "message_status", "value": {
         "messaging_product": "phiz",
-        "metadata": {"sender_id": "7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57", "sender_type": "merchant", "conversation_type": "business_account", "display_name": "Loja Exemplo"},
+        "metadata": {"sender_id": "ba_7Kq2M9xTpL", "sender_type": "business_account", "conversation_type": "business_account", "display_name": "Loja Exemplo"},
         "statuses": [{"id": "pmid.01JA9X0QW1", "status": "failed", "timestamp": "1760528600", "recipient_id": "+5511900000000",
                       "errors": [{"code": 2104, "title": "recipient_not_reachable",
                                   "message": "The phone number is not linked to a PHIZ account or blocked this sender.",
@@ -630,9 +641,9 @@ WEBHOOKS = {
     "messages": {"post": {
         "tags": ["Webhooks"],
         "summary": T("Mensagem recebida do usuário", "Message received from the user", "收到用户消息"),
-        "description": T("Enviado quando um usuário PHIZ manda mensagem para um remetente do comerciante. Responda 2xx em até 10 s e processe de forma assíncrona.",
-                         "Sent when a PHIZ user messages one of the merchant's senders. Answer 2xx within 10 s and process asynchronously.",
-                         "当 PHIZ 用户向商户的发送方发送消息时推送。请在 10 秒内返回 2xx，并异步处理。"),
+        "description": T("Enviado quando um usuário PHIZ manda mensagem para um Business Account ou canal da aplicação. `from` é o Open ID do usuário nesta aplicação. Responda 2xx em até 10 s e processe de forma assíncrona.",
+                         "Sent when a PHIZ user messages one of the application's Business Accounts or channels. `from` is the user's Open ID in this application. Answer 2xx within 10 s and process asynchronously.",
+                         "当 PHIZ 用户向应用的 Business Account 或频道发送消息时推送。`from` 为用户在本应用下的 Open ID。请在 10 秒内返回 2xx，并异步处理。"),
         "parameters": [{"name": k, "in": "header", "required": True, **{kk: vv for kk, vv in v.items()}} for k, v in SIG_HEADERS.items()],
         "requestBody": {"content": {"application/json": {"schema": ref("WebhookEvent"), "example": INBOUND_EXAMPLE}}},
         "responses": {"200": {"description": "OK"}}}},
@@ -670,7 +681,7 @@ SPEC = {
                 "messages:send": T("Enviar mensagens e mídias", "Send messages and media", "发送消息和媒体"),
                 "messages:read": T("Ler status de mensagens", "Read message statuses", "读取消息状态"),
                 "webhooks:manage": T("Gerenciar webhook do app (Fase 2)", "Manage app webhook (Phase 2)", "管理应用 Webhook（第 2 阶段）"),
-                "account:read": T("Ler conta e remetentes", "Read account and senders", "读取账号与发送方"),
+                "account:read": T("Ler aplicação, Business Accounts e canais", "Read application, Business Accounts and channels", "读取应用、Business Account 与频道"),
                 "templates:manage": T("Reservado para a Marketing API", "Reserved for the Marketing API", "预留给 Marketing API")}}}}},
         "schemas": SCHEMAS,
         "responses": RESPONSES,

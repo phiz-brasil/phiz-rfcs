@@ -6,9 +6,9 @@
     "zh": "PHIZ 商家消息 API"
   },
   "summary": {
-    "pt": "Autenticação OAuth, envio de mensagens para telefone ou PHIZ ID, webhooks assinados e configuração na Central do Desenvolvedor PHIZ.",
-    "en": "OAuth authentication, sending messages to a phone number or PHIZ ID, signed webhooks and setup in the PHIZ Developer Center.",
-    "zh": "OAuth 认证、向手机号或 PHIZ ID 发送消息、签名 Webhook，以及在 PHIZ开发者中心中的配置。"
+    "pt": "Autenticação OAuth por aplicação, envio de mensagens de um Business Account para telefone ou Open ID, webhooks assinados e configuração na Central do Desenvolvedor PHIZ.",
+    "en": "Application-level OAuth authentication, sending messages from a Business Account to a phone number or Open ID, signed webhooks and setup in the PHIZ Developer Center.",
+    "zh": "基于应用的 OAuth 认证、以 Business Account 身份向手机号或 Open ID 发送消息、签名 Webhook，以及在 PHIZ开发者中心中的配置。"
   },
   "status": "in-review",
   "authors": [
@@ -19,8 +19,17 @@
     "Vitor Mozer",
     "Richard Liang"
   ],
-  "version": "1.5",
+  "version": "1.6",
   "changelog": [
+    {
+      "version": "1.6",
+      "date": "2026-10-20",
+      "note": {
+        "pt": "Modelo de identidades conforme o time técnico da PHIZ: Merchant ID gera o Developer ID; sob ele ficam as aplicações (App ID) e, em cada aplicação, os Business Accounts (BA ID). O sender_id passa a ser mapeado para o BA ID, e não mais o merchant_id; canais continuam como remetente opcional. Envio pelo Open ID do usuário por aplicação (telefone convertido em Open ID). Definição dos tipos de conversa (conta pública › serviço empresarial › Business Account). Mídia: formatos e tamanhos definidos pela RFC, upload na primeira fase e URLs de terceiros depois, por cliente. Q2, Q3 e Q5 respondidas; Q4, Q8 e Q10 respondidas em parte; Q6 reescrita. OpenAPI, exemplos e telas da Central atualizados (nova tela Business Accounts).",
+        "en": "Identity model from the PHIZ technical team: the Merchant ID creates the Developer ID; under it live the applications (App ID) and, in each application, the Business Accounts (BA ID). The sender_id is now mapped to the BA ID instead of the merchant_id; channels remain an optional sender. Sending by the user’s per-application Open ID (phone numbers converted to Open ID). Conversation type definitions (public account › business service › Business Account). Media: formats and sizes set by the RFC, upload in the first phase and third-party URLs later, per customer. Q2, Q3 and Q5 answered; Q4, Q8 and Q10 partly answered; Q6 rewritten. OpenAPI, examples and Developer Center screens updated (new Business Accounts screen).",
+        "zh": "按 PHIZ 技术团队建议调整身份模型：Merchant ID 同步生成 Developer ID；其下为应用（App ID），每个应用下为 Business Account（BA ID）。sender_id 改为映射 BA ID，不再使用 merchant_id；频道仍为可选发送方。按应用的用户 Open ID 发送（手机号换取 Open ID）。明确会话类型（公众号会话 › 企业服务会话 › Business Account）。媒体：格式和大小由 RFC 定义，第一阶段上传，之后按客户开放第三方 URL。Q2、Q3、Q5 已答复；Q4、Q8、Q10 部分答复；重写 Q6。更新 OpenAPI、示例和开发者中心页面（新增 Business Accounts 页面）。"
+      }
+    },
     {
       "version": "1.5",
       "date": "2026-10-20",
