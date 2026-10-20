@@ -6,7 +6,7 @@
     "zh": "PHIZ 商家消息 API"
   },
   "summary": {
-    "pt": "Autenticação OAuth, envio de mensagens para telefone ou PHIZ ID, webhooks assinados e Área do Desenvolvedor construída sobre o Developer Center existente.",
+    "pt": "Autenticação OAuth, envio de mensagens para telefone ou PHIZ ID, webhooks assinados e Área do Desenvolvedor construída sobre a Central do Desenvolvedor PHIZ existente.",
     "en": "OAuth authentication, sending messages to a phone number or PHIZ ID, signed webhooks and a Developer area built on the existing Developer Center.",
     "zh": "OAuth 认证、向手机号或 PHIZ ID 发送消息、签名 Webhook，以及建立在现有开发者中心之上的开发者区域。"
   },
@@ -25,9 +25,9 @@
       "version": "1.5",
       "date": "2026-10-20",
       "note": {
-        "pt": "Seção 12 refeita sobre o PHIZ Developer Center existente, com tabela DE-PARA das funcionalidades (reaproveita, adapta, novo). Papéis do Developer Center no lugar das permissões developer.*; mockups da v1.4 retirados. Webhook: a Fase 1 passa a usar Assinaturas de eventos em autoatendimento, no lugar do cadastro manual, e as retentativas, dead letters e reenvio da plataforma são reaproveitados (seção 10). Ajustes nas seções 01, 06, 08, 13 e 15. Q9 reescrita e nova Q10.",
-        "en": "Section 12 rebuilt on the existing PHIZ Developer Center, with a DE-PARA table of features (reuse, adapt, new). Developer Center roles replace the developer.* permissions; v1.4 mockups removed. Webhook: Phase 1 now uses self-service Event subscriptions instead of manual registration, and the platform’s retries, dead letters and replay are reused (section 10). Adjustments to sections 01, 06, 08, 13 and 15. Q9 rewritten and new Q10.",
-        "zh": "第 12 节基于现有 PHIZ 开发者中心重写，并新增功能 DE-PARA 对照表（沿用、调整、新增）。以开发者中心的角色取代 developer.* 权限；移除 v1.4 原型。Webhook：第 1 阶段改用自助的事件订阅，取代手工登记，并沿用平台的重试、死信和重放（第 10 节）。调整第 01、06、08、13、15 节。重写 Q9，新增 Q10。"
+        "pt": "Seção 12 migrada para a Central do Desenvolvedor PHIZ existente: novas telas (painel, nova aplicação Business Messaging, detalhes com scopes, remetentes e segredos, segredo gerado, assinaturas de eventos, webhook, remetentes e aviso no canal), no visual da Central e em PT/EN/ZH. Integração vira aplicação Business Messaging e as permissões viram os papéis da organização. Webhook: a Fase 1 passa a usar Assinaturas de eventos em autoatendimento, no lugar do cadastro manual, e as retentativas, dead letters e reenvio da plataforma são reaproveitados (seção 10). Ajustes nas seções 01, 06, 08, 13 e 15. Q9 reescrita e nova Q10.",
+        "en": "Section 12 moved into the existing PHIZ Developer Center: new screens (dashboard, new Business Messaging application, details with scopes, senders and secrets, generated secret, event subscriptions, webhook, senders and the channel notice), in the Developer Center look and in PT/EN/ZH. An integration becomes a Business Messaging application and permissions become the organization roles. Webhook: Phase 1 now uses self-service Event subscriptions instead of manual registration, and the platform’s retries, dead letters and replay are reused (section 10). Adjustments to sections 01, 06, 08, 13 and 15. Q9 rewritten and new Q10.",
+        "zh": "第 12 节迁移至现有的 PHIZ开发者中心：按开发者中心的视觉风格重新绘制页面（仪表盘、新建 Business Messaging 应用、含范围/发送方/密钥的应用详情、新密钥、事件订阅、Webhook、发送方及频道提示），提供 PT/EN/ZH 三种语言。集成改为 Business Messaging 应用，权限改为组织角色。Webhook：第 1 阶段改用自助的事件订阅，取代手工登记，并沿用平台的重试、死信和重放（第 10 节）。调整第 01、06、08、13、15 节。重写 Q9，新增 Q10。"
       }
     },
     {

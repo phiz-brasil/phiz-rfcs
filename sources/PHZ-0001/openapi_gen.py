@@ -98,7 +98,7 @@ TAGS = [
         "Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party links are not accepted.",
         "将媒体上传到 PHIZ 临时存储。消息中发送的所有媒体都必须经由此处上传；不接受第三方链接。")},
     {"name": "Webhooks", "description": T(
-        "Eventos enviados ao seu servidor. Na Fase 1, o parceiro cadastra a URL em Assinaturas de eventos, no Developer Center; os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.",
+        "Eventos enviados ao seu servidor. Na Fase 1, o parceiro cadastra a URL em Assinaturas de eventos, na Central do Desenvolvedor; os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.",
         "Events delivered to your server. In Phase 1, the partner registers the webhook URL under Event subscriptions in the Developer Center; the app setup endpoints (`/v1/apps/{app_id}/webhook…`) belong to Phase 2.",
         "推送到您服务器的事件。第 1 阶段由合作方在开发者中心的事件订阅中登记 Webhook URL；应用配置接口（`/v1/apps/{app_id}/webhook…`）属于第 2 阶段。")},
 ]
@@ -128,7 +128,7 @@ SCHEMAS = {
         "properties": {
             "grant_type": {"type": "string", "enum": ["client_credentials"]},
             "client_id": {"type": "string", "example": "app_2Fk81PzQ",
-                           "description": T("ID do app (client_id) gerado no Developer Center.",
+                           "description": T("ID do app (client_id) gerado na Central do Desenvolvedor.",
                                             "App ID (client_id) issued in the Developer Center.",
                                             "在开发者中心生成的应用 ID（client_id）。")},
             "client_secret": {"type": "string", "format": "password", "example": "phzsk_live_9c1f…",

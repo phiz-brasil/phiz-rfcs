@@ -41,7 +41,8 @@ tags:
     passar por aqui; links de terceiros não são aceitos.
 - name: Webhooks
   description: Eventos enviados ao seu servidor. Na Fase 1, o parceiro cadastra a URL em Assinaturas de eventos,
-    no Developer Center; os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.
+    na Central do Desenvolvedor; os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase
+    2.
 security:
 - bearerAuth: []
 paths:
@@ -1022,7 +1023,7 @@ components:
         client_id:
           type: string
           example: app_2Fk81PzQ
-          description: ID do app (client_id) gerado no Developer Center.
+          description: ID do app (client_id) gerado na Central do Desenvolvedor.
         client_secret:
           type: string
           format: password
