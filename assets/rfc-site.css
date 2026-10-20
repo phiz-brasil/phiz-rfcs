@@ -112,3 +112,9 @@ mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transpar
 .pill[data-st="implemented"] { background: var(--info-soft); color: var(--info); }
 .pill[data-st="rejected"] { background: var(--bad-soft); color: var(--bad); }
 .pill[data-st="superseded"] { background: var(--line); color: var(--muted); text-decoration: line-through; }
+/* Delete comment */
+.cmt-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.cmt-del { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.cmt-del .cmt-note { margin: 0; }
+.cmt-link.cmt-danger { color: var(--bad, #b3261e); }
+.cmt-link:disabled { opacity: .6; cursor: progress; }

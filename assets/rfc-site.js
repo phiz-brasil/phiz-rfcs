@@ -18,7 +18,8 @@
           noReplies: "Sem resposta", none: "Nenhum comentário nesta RFC ainda.", noneF: "Nada neste filtro.",
           central: "Ver comentários de todas as RFCs →", close: "Fechar",
           newHint: "“Novos” = desde a última vez que você abriu esta lista.",
-          auto: "Tradução automática", from: "de", orig: "Ver original", showTr: "Ver tradução" },
+          auto: "Tradução automática", from: "de", orig: "Ver original", showTr: "Ver tradução",
+          del: "Excluir", delSure: "Excluir este comentário?", delYes: "Sim, excluir", delNo: "Não", delErr: "Não foi possível excluir. Tente de novo." },
     en: { btn: "Comment", fallback: "Open on GitHub", need: "Comments use your GitHub account.",
           name: "Your name", body: "Write a comment", send: "Comment", sending: "Sending…", reply: "Reply",
           replyTo: "Replying to", cancel: "Cancel", empty: "No comments on this section yet.", quote: "Comment on selection",
@@ -31,7 +32,8 @@
           noReplies: "No reply yet", none: "No comments on this RFC yet.", noneF: "Nothing in this filter.",
           central: "See comments on all RFCs →", close: "Close",
           newHint: "“New” = since you last opened this list.",
-          auto: "Machine translation", from: "from", orig: "Show original", showTr: "Show translation" },
+          auto: "Machine translation", from: "from", orig: "Show original", showTr: "Show translation",
+          del: "Delete", delSure: "Delete this comment?", delYes: "Yes, delete", delNo: "No", delErr: "Could not delete. Please try again." },
     zh: { btn: "评论", fallback: "在 GitHub 打开", need: "评论需要使用 GitHub 账号。",
           name: "你的名字", body: "写下评论", send: "评论", sending: "发送中…", reply: "回复",
           replyTo: "回复", cancel: "取消", empty: "本节还没有评论。", quote: "评论所选内容",
@@ -44,7 +46,8 @@
           noReplies: "尚无回复", none: "本 RFC 还没有评论。", noneF: "此筛选下没有内容。",
           central: "查看所有 RFC 的评论 →", close: "关闭",
           newHint: "“新评论”指自你上次打开此列表以来的评论。",
-          auto: "机器翻译", from: "原文", orig: "查看原文", showTr: "查看译文" }
+          auto: "机器翻译", from: "原文", orig: "查看原文", showTr: "查看译文",
+          del: "删除", delSure: "删除这条评论？", delYes: "确认删除", delNo: "取消", delErr: "无法删除，请重试。" }
   };
   const LANG_TAG = { pt: "PT", en: "EN", zh: "中文" };
   const lang = () => document.documentElement.dataset.lang || "pt";
@@ -108,6 +111,16 @@
     paintCounts(); paintMarks(); paintAllBtn();
     document.querySelectorAll(".cmt-panel[data-key]").forEach(renderThreads);
     openFromLink();
+  }
+
+  async function hideComment(id) {
+    const r = await fetch(sb.url.replace(/rfc_comments$/, "rpc/hide_rfc_comment"), {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, sb.headers),
+      body: JSON.stringify({ p_id: id, p_by: store.get("phiz-rfc-author") || null })
+    });
+    if (r.status === 429) throw Object.assign(new Error("rate"), { code: "rate" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
   }
 
   async function addComment(row) {
@@ -226,13 +239,46 @@
     box.append(el("p", "cmt-body", x.body));
     const note = trNote(c, x, () => renderThreads(panel));
     if (note) box.append(note);
+    const acts = el("div", "cmt-acts");
     if (!isReply) {
       const rb = el("button", "cmt-link", L().reply);
       rb.type = "button";
       rb.addEventListener("click", () => setReply(panel, c));
-      box.append(rb);
+      acts.append(rb);
     }
+    acts.append(deleteControl(c, panel));
+    box.append(acts);
     return box;
+  }
+
+  // "Delete" asks once, then hides the comment (and its replies) for everyone
+  function deleteControl(c, panel) {
+    const wrap = el("span", "cmt-del");
+    const btn = el("button", "cmt-link cmt-danger", L().del); btn.type = "button";
+    btn.addEventListener("click", () => {
+      const msg = el("span", "cmt-note", L().delSure);
+      const yes = el("button", "cmt-link cmt-danger", L().delYes); yes.type = "button";
+      const no = el("button", "cmt-link", L().delNo); no.type = "button";
+      no.addEventListener("click", () => wrap.replaceChildren(btn));
+      yes.addEventListener("click", async () => {
+        yes.disabled = no.disabled = true;
+        try {
+          await hideComment(c.id);
+          all = (all || []).filter(r => r.id !== c.id && r.parent_id !== c.id);
+          const f = panel._form;
+          if (f && f.dataset.parent === c.id) setReply(panel, null);
+          renderThreads(panel); paintCounts(); paintMarks(); paintAllBtn();
+          if (drawer) renderDrawer();
+        } catch (e) {
+          console.warn("delete comment", e);
+          msg.textContent = e.code === "rate" ? L().rate : L().delErr;
+          yes.disabled = no.disabled = false;
+        }
+      });
+      wrap.replaceChildren(msg, yes, no);
+    });
+    wrap.append(btn);
+    return wrap;
   }
 
   function setReply(panel, c) {

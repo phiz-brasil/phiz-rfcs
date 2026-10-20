@@ -72,6 +72,13 @@ The status badge in the header of each RFC is a button (`EM REVISÃO ▾`): pick
 2. Nothing else to configure; the page uses the same Supabase keys as the comments. Until step 1 is done, the page shows the status from `rfcs/<ID>/rfc.json` and changing it fails with an error message.
 3. **Undo a wrong change**: **Table Editor → rfc_status_log**, delete the row; the previous one becomes current. The `status` in `rfc.json` is only the starting value (before the first change in the page).
 
+### Deleting comments
+
+Every comment (and reply) has a **Excluir / Delete / 删除** link; it asks once and then removes the comment for everyone. Deleting a comment also removes its replies. There is no login: anyone with the link can delete, so “delete” only **hides** the comment (`hidden = true`, with `hidden_at`, `hidden_by` and an origin rate limit of 10 a minute); nothing is erased from the database.
+
+1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run) or only its last block, “Excluir comentários”. It adds the columns `hidden_at` and `hidden_by` and the function `hide_rfc_comment`, which is the only way the page can hide a comment. Until this is done, the button shows “Could not delete”.
+2. **Restore a comment**: **Table Editor → rfc_comments**, set `hidden = false` on the comment and on its replies (they are hidden together).
+
 ## Add a new RFC
 
 ```bash
