@@ -308,7 +308,7 @@ sequenceDiagram
 <div class="tbl"><table><thead><tr><th>范围</th><th>允许的操作</th></tr></thead><tbody>
 <tr><td><code>messages:send</code></td><td>发送消息、上传和管理媒体、标记已读</td></tr>
 <tr><td><code>messages:read</code></td><td>查询消息状态</td></tr>
-<tr><td><code>webhooks:manage</code></td><td>配置、测试和重放本应用的 Webhook</td></tr>
+<tr><td><code>webhooks:manage</code></td><td>配置、测试和重放本应用的 Webhook（第 2 阶段）</td></tr>
 <tr><td><code>account:read</code></td><td>读取商户账号和发送方信息</td></tr>
 <tr><td><code>templates:manage</code></td><td>预留给 Marketing API</td></tr>
 </tbody></table></div>
@@ -422,15 +422,25 @@ sequenceDiagram
 
 <section>
 <h2 id="§webhooks"><span class="n">10</span>Webhook</h2>
-<p>每个应用有一个 Webhook 订阅，包含 URL、<code>verify_token</code> 和事件列表，可在开发者中心或通过 API 配置。</p>
+<p>每个应用有一个 Webhook 订阅，包含 URL、<code>verify_token</code> 和事件列表。</p>
+<div class="note-box decision"><span class="lbl">决定（v1.4）</span><p><strong>第 1 阶段：</strong>Webhook URL 由 <strong>PHIZ 手工配置</strong>，依托与商户或合作方的商务关系。通过开发者中心和 API 配置（下列接口）在 <strong>第 2 阶段</strong> 开放平台开放时提供。已与 Henry Wu 在本节评论中达成一致。</p></div>
+<h3>第 1 阶段：手工配置</h3>
+<ul>
+  <li>商户或合作方通过与 PHIZ 的商务对接人申请配置，并提供 Webhook URL 和想接收的事件（<code>messages</code>、<code>message_status</code>）。</li>
+  <li>PHIZ 在服务端登记该 URL，并用下文相同的 <code>GET</code> 握手进行验证（提议）。</li>
+  <li>事件格式、签名和握手与第 2 阶段相同，只是配置的人不同。</li>
+</ul>
+<h3>通过 API 配置（第 2 阶段）</h3>
+<p>以下接口将在第 2 阶段与开发者中心一并开放。</p>
 <div class="eps">
-  <div class="ep"><span class="m m-put">PUT</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">设置 URL、verify_token 和事件</span></div>
-  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">配置与健康状态</span></div>
-  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/test</code><span class="d">推送带签名的测试事件</span></div>
-  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook/deliveries</code><span class="d">投递记录（72 小时）</span></div>
-  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/deliveries/{id}/replay</code><span class="d">重放某次投递</span></div>
+  <div class="ep"><span class="m m-put">PUT</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">设置 URL、verify_token 和事件（第 2 阶段）</span></div>
+  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">配置与健康状态（第 2 阶段）</span></div>
+  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/test</code><span class="d">推送带签名的测试事件（第 2 阶段）</span></div>
+  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook/deliveries</code><span class="d">投递记录，72 小时（第 2 阶段）</span></div>
+  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/deliveries/{id}/replay</code><span class="d">重放某次投递（第 2 阶段）</span></div>
 </div>
 {CODE:webhook_put}
+<p class="cap">第 2 阶段的配置调用示例。</p>
 <h3>事件</h3>
 <div class="tbl"><table><thead><tr><th>field</th><th>触发时机</th></tr></thead><tbody>
 <tr><td><code>messages</code></td><td>用户发送消息、点击按钮或回应表情</td></tr>
@@ -467,12 +477,19 @@ stateDiagram-v2
 </pre></div>
 <p class="cap">状态生命周期。<code>accepted</code> 只出现在 API 响应和 <code>GET /v1/messages/{id}</code> 中，其余状态通过 Webhook 推送。</p>
 <h3>投递保证</h3>
+<p><strong>第 1 阶段。</strong>目标是让关键节点上线并可用；下列保障机制在后续阶段实现。</p>
 <ul>
-  <li><strong>至少一次。</strong>同一事件可能多次到达，请用 <code>X-Phiz-Delivery-Id</code> 去重。</li>
+  <li><strong>可能重复。</strong>同一事件可能多次到达，请用 <code>X-Phiz-Delivery-Id</code> 去重。</li>
   <li><strong>不保证顺序。</strong><code>read</code> 可能早于 <code>delivered</code> 到达；请按 <code>timestamp</code> 排序，状态不可回退。</li>
   <li><strong>10 秒内返回</strong> 2xx，再异步处理。其他响应或超时均视为失败。</li>
-  <li><strong>重试</strong>采用指数退避（10 秒、30 秒、1 分钟、5 分钟、15 分钟、1 小时，之后每小时一次），最长 24 小时。之后事件在 72 小时内可手动重放。</li>
-  <li>若 URL 连续 24 小时失败，Webhook 状态变为 <code>failing</code>，并通知商户管理员。</li>
+  <li>已发送消息的状态，如果 Webhook 丢失，可用 <code>GET /v1/messages/{message_id}</code> 兜底查询。</li>
+</ul>
+<div class="note-box risk"><span class="lbl">第 1 阶段风险</span><p>没有完整的重试策略时，投递失败的事件可能不会再次发送，收到的消息也没有兜底查询。第 1 阶段的最低要求由技术评审确定（见 Q9）。</p></div>
+<p><strong>第 2 阶段（保障机制）。</strong>留待后续开发实现的保障机制：</p>
+<ul>
+  <li><strong>至少一次。</strong>带<strong>重试</strong>的投递，采用指数退避（10 秒、30 秒、1 分钟、5 分钟、15 分钟、1 小时，之后每小时一次），最长 24 小时。</li>
+  <li><strong>手动重放。</strong>24 小时之后，事件在 72 小时内可手动重放，并提供投递记录（<code>/webhook/deliveries</code>）。</li>
+  <li><strong><code>failing</code> 状态。</strong>若 URL 连续 24 小时失败，Webhook 状态变为 <code>failing</code>，并通知商户管理员。</li>
 </ul>
 </section>
 
@@ -533,15 +550,15 @@ stateDiagram-v2
 <div class="shot"><a href="mocks/zh/02-nova-integracao.png" target="_blank" rel="noopener"><img src="mocks/zh/02-nova-integracao.png" alt="新建集成：名称、范围、可用发送方和环境" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 2.</b> 新建集成：名称、范围、可用发送方和环境</p></div>
 <div class="shot"><a href="mocks/zh/03-detalhe-integracao.png" target="_blank" rel="noopener"><img src="mocks/zh/03-detalhe-integracao.png" alt="集成详情：凭证、可轮换的密钥和范围" width="1440" height="1023" loading="lazy"></a><p class="cap"><b>界面 3.</b> 集成详情：凭证、可轮换的密钥和范围</p></div>
 <div class="shot"><a href="mocks/zh/04-segredo-criado.png" target="_blank" rel="noopener"><img src="mocks/zh/04-segredo-criado.png" alt="密钥已创建，仅显示一次" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 4.</b> 密钥已创建，仅显示一次</p></div>
-<div class="shot"><a href="mocks/zh/05-webhooks.png" target="_blank" rel="noopener"><img src="mocks/zh/05-webhooks.png" alt="Webhook：配置、事件和最近投递记录" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 5.</b> Webhook：配置、事件和最近投递记录</p></div>
+<div class="shot"><a href="mocks/zh/05-webhooks.png" target="_blank" rel="noopener"><img src="mocks/zh/05-webhooks.png" alt="Webhook：配置、事件和最近投递记录" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 5.</b> Webhook：配置、事件和最近投递记录（第 2 阶段）</p></div>
 <div class="shot"><a href="mocks/zh/06-remetentes.png" target="_blank" rel="noopener"><img src="mocks/zh/06-remetentes.png" alt="发送方：直接消息和频道，以及使用它们的集成" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>界面 6.</b> 发送方：直接消息和频道，以及使用它们的集成</p></div>
 <div class="shot"><a href="mocks/zh/07-canal-migracao.png" target="_blank" rel="noopener"><img src="mocks/zh/07-canal-migracao.png" alt="带凭证迁移提示的频道页面" width="1440" height="760" loading="lazy"></a><p class="cap"><b>界面 7.</b> 带凭证迁移提示的频道页面</p></div>
 </div>
 <h3>页面</h3>
 <div class="screens">
-  <div class="screen"><h5>概览</h5><span class="path">/developer</span><ul><li>最近 24 小时已发送、已送达和失败的消息数</li><li>Webhook 健康状态</li><li>提醒：旧密钥仍在使用、Webhook 失败</li></ul></div>
+  <div class="screen"><h5>概览</h5><span class="path">/developer</span><ul><li>最近 24 小时已发送、已送达和失败的消息数</li><li>Webhook 健康状态（第 2 阶段）</li><li>提醒：旧密钥仍在使用；Webhook 失败（第 2 阶段）</li></ul></div>
   <div class="screen"><h5>应用</h5><span class="path">/developer/apps</span><ul><li>创建应用：名称、集成类型（自有、Blip、Salesforce、其他）、环境</li><li>范围和可用发送方</li><li>Client ID、可轮换的密钥及最近使用时间</li><li>IP 白名单（可选）</li><li>停用或删除应用</li></ul></div>
-  <div class="screen"><h5>应用 Webhook</h5><span class="path">/developer/apps/:id/webhook</span><ul><li>URL、verify token 和事件</li><li>可轮换的 webhook secret</li><li>验证并发送测试</li><li>最近 72 小时投递记录：HTTP 状态、重试次数、延迟、重放</li></ul></div>
+  <div class="screen"><h5>应用 Webhook（第 2 阶段）</h5><span class="path">/developer/apps/:id/webhook</span><ul><li>第 1 阶段由 PHIZ 手工登记 URL（第 10 节）</li><li>URL、verify token 和事件</li><li>可轮换的 webhook secret</li><li>验证并发送测试</li><li>最近 72 小时投递记录：HTTP 状态、重试次数、延迟、重放</li></ul></div>
   <div class="screen"><h5>发送方</h5><span class="path">/developer/senders</span><ul><li>商户本身（始终存在），以及已有的频道</li><li>每个发送方的 <code>sender_id</code>、状态、额度和质量</li><li>为每个发送方指定接收会话的集成</li><li>频道可开启 “Phiz Business API” 模式</li></ul></div>
   <div class="screen"><h5>API 日志</h5><span class="path">/developer/logs</span><ul><li>最近 7 天的请求：方法、路由、状态、延迟、<code>trace_id</code></li><li>按应用和错误码筛选</li></ul></div>
   <div class="screen"><h5>沙箱</h5><span class="path">/developer/sandbox</span><ul><li>测试发送方</li><li>最多 5 个测试接收方</li><li><code>phzsk_test_</code> 凭证</li></ul></div>
@@ -552,7 +569,7 @@ stateDiagram-v2
 <tr><td><code>developer.view</code></td><td>查看集成、发送方、日志和投递记录（不含密钥）</td></tr>
 <tr><td><code>developer.apps.manage</code></td><td>创建、编辑和停用集成；设置范围和发送方</td></tr>
 <tr><td><code>developer.secrets.manage</code></td><td>生成、轮换和撤销密钥</td></tr>
-<tr><td><code>developer.webhooks.manage</code></td><td>配置 Webhook、测试及重放投递</td></tr>
+<tr><td><code>developer.webhooks.manage</code></td><td>配置 Webhook、测试及重放投递（第 2 阶段）</td></tr>
 </tbody></table></div>
 <p>创建、轮换或撤销密钥，修改范围和 Webhook，都会写入 <em>操作记录</em> 并邮件通知管理员。</p>
 <h3>一个发送方对应多个集成</h3>
@@ -568,7 +585,7 @@ stateDiagram-v2
 
 <section>
 <h2 id="§partners"><span class="n">13</span>合作伙伴集成</h2>
-<p><strong>MVP 阶段</strong>，商户在开发者中心创建应用，把 <code>client_id</code> 和密钥填入 Blip、Salesforce 或自有系统，Webhook URL 由合作方提供。由于契约沿用 Cloud API，已有 WhatsApp 连接器的合作方可以复用大部分实现。</p>
+<p><strong>MVP 阶段</strong>，商户在开发者中心创建应用，把 <code>client_id</code> 和密钥填入 Blip、Salesforce 或自有系统，Webhook URL 由合作方提供，第 1 阶段由 PHIZ 手工登记（第 10 节）。由于契约沿用 Cloud API，已有 WhatsApp 连接器的合作方可以复用大部分实现。</p>
 <p><strong>后续阶段</strong>推出<em>技术合作伙伴</em>计划，对应 Meta 的 Embedded Signup：</p>
 <ul>
   <li>合作伙伴在 PHIZ 注册平台应用。</li>
@@ -592,7 +609,8 @@ stateDiagram-v2
 <section>
 <h2 id="§plan"><span class="n">15</span>交付计划</h2>
 <div class="phases">
-  <div class="phase first"><span class="tag">第 1 阶段 · MVP</span><h5>鉴权与发送</h5><ul><li><code>/oauth/token</code>、<code>/oauth/revoke</code>、<code>/v1/me</code></li><li>向手机号和 PHIZ ID 发送 <code>text</code>、<code>image</code>、<code>audio</code>、<code>video</code> 和 <code>document</code></li><li>媒体上传（<code>/v1/{sender_id}/media</code>）并临时存储；不支持第三方链接</li><li>带签名的 <code>messages</code> 和 <code>message_status</code> Webhook</li><li>开发者中心：应用、密钥、Webhook</li><li>所有商户的默认发送方（商户本身）；频道作为可选发送方</li><li>频道凭证自动迁移</li></ul></div>
+  <div class="phase first"><span class="tag">第 1 阶段 · MVP</span><h5>鉴权与发送</h5><ul><li><code>/oauth/token</code>、<code>/oauth/revoke</code>、<code>/v1/me</code></li><li>向手机号和 PHIZ ID 发送 <code>text</code>、<code>image</code>、<code>audio</code>、<code>video</code> 和 <code>document</code></li><li>媒体上传（<code>/v1/{sender_id}/media</code>）并临时存储；不支持第三方链接</li><li>带签名的 <code>messages</code> 和 <code>message_status</code> Webhook，URL 由 PHIZ 手工登记</li><li>开发者中心：应用和密钥</li><li>所有商户的默认发送方（商户本身）；频道作为可选发送方</li><li>频道凭证自动迁移</li></ul></div>
+  <div class="phase"><span class="tag">第 2 阶段</span><h5>自助配置 Webhook 与保障机制</h5><ul><li>通过开发者中心和 API 配置 Webhook（<code>PUT /v1/apps/{app_id}/webhook</code>、测试和健康状态）</li><li>指数退避重试，最长 24 小时</li><li>投递记录与 72 小时内手动重放</li><li><code>failing</code> 状态并通知管理员</li></ul></div>
 </div>
 <p>具体时间将在与中国团队评审本 RFC 后确定。</p>
 </section>
@@ -608,6 +626,7 @@ stateDiagram-v2
   <li><strong>每个发送方一个负责集成是否足够</strong>，还是第 2 阶段就需要应用间会话移交（机器人 → 人工客服）？</li>
   <li><strong>现有 Business Message API。</strong>AI 机器人的 “Phiz Business API” 模式已有发送和回调接口，似乎对应带 Channel Bot 的 Channel Service。本 RFC 是替代、扩展还是封装这套 API？</li>
   <li><strong>媒体。</strong>v1.3 已决定：媒体只能上传至 PHIZ 并临时存储，第 1 阶段不接受第三方链接（第 09 节）。仍需确定：PHIZ App 能否播放媒体表中的所有格式，支持多大的文件？30 天的保存期是否合适，还是应更短？投递后媒体是否转入聊天的常规存储，还是到期后从用户的聊天记录中消失？何时、对哪些客户开放第三方 URL？收到的媒体 <code>url</code> 有效期多长？</li>
+  <li><strong>第 1 阶段的 Webhook。</strong>v1.4 已决定：由 PHIZ 手工登记 URL，重试、手动重放和 <code>failing</code> 状态留待第 2 阶段（第 10 节）。仍需确定：申请配置的方式、由 PHIZ 哪个团队执行以及时效；webhook secret 如何交给合作方；第 1 阶段的最低重试要求（不重试或短时间窗口）；合作方如何找回丢失的收到消息（目前只有状态可查询）；以及什么条件触发第 2 阶段。</li>
 </ol>
 </section>
 

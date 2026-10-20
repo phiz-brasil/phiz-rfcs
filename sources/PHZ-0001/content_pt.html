@@ -309,7 +309,7 @@ sequenceDiagram
 <div class="tbl"><table><thead><tr><th>Escopo</th><th>Permite</th></tr></thead><tbody>
 <tr><td><code>messages:send</code></td><td>Enviar mensagens, enviar e gerenciar mídias e marcar mensagens como lidas</td></tr>
 <tr><td><code>messages:read</code></td><td>Consultar status de mensagens</td></tr>
-<tr><td><code>webhooks:manage</code></td><td>Configurar, testar e reenviar o webhook do próprio app</td></tr>
+<tr><td><code>webhooks:manage</code></td><td>Configurar, testar e reenviar o webhook do próprio app (Fase 2)</td></tr>
 <tr><td><code>account:read</code></td><td>Ler dados da conta de comerciante e dos remetentes</td></tr>
 <tr><td><code>templates:manage</code></td><td>Reservado para a Marketing API</td></tr>
 </tbody></table></div>
@@ -423,15 +423,25 @@ sequenceDiagram
 
 <section>
 <h2 id="§webhooks"><span class="n">10</span>Webhooks</h2>
-<p>Cada app tem uma assinatura de webhook com URL, <code>verify_token</code> e lista de eventos. A configuração é feita na Área do Desenvolvedor ou pela API.</p>
+<p>Cada app tem uma assinatura de webhook com URL, <code>verify_token</code> e lista de eventos.</p>
+<div class="note-box decision"><span class="lbl">Decisão (v1.4)</span><p><strong>Fase 1:</strong> a URL do webhook é configurada <strong>manualmente pela PHIZ</strong>, a partir da relação comercial com o comerciante ou parceiro. A configuração pela Área do Desenvolvedor e pela API (os endpoints abaixo) entra na <strong>Fase 2</strong>, quando o Open Platform for aberto. Combinado com Henry Wu nos comentários desta seção.</p></div>
+<h3>Configuração manual na Fase 1</h3>
+<ul>
+  <li>O comerciante ou parceiro pede o cadastro pelo contato comercial com a PHIZ e informa a URL do webhook e os eventos que quer receber (<code>messages</code>, <code>message_status</code>).</li>
+  <li>A PHIZ cadastra a URL no servidor e a confere com o mesmo handshake <code>GET</code> descrito abaixo (proposta).</li>
+  <li>O formato dos eventos, a assinatura e o handshake são os mesmos da Fase 2; só muda quem configura.</li>
+</ul>
+<h3>Configuração por API (Fase 2)</h3>
+<p>Estes endpoints só serão expostos na Fase 2, junto com a Área do Desenvolvedor.</p>
 <div class="eps">
-  <div class="ep"><span class="m m-put">PUT</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">Define URL, verify_token e eventos</span></div>
-  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">Configuração e saúde</span></div>
-  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/test</code><span class="d">Dispara evento de teste assinado</span></div>
-  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook/deliveries</code><span class="d">Histórico de entregas (72 h)</span></div>
-  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/deliveries/{id}/replay</code><span class="d">Reenvia uma entrega</span></div>
+  <div class="ep"><span class="m m-put">PUT</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">Define URL, verify_token e eventos (Fase 2)</span></div>
+  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">Configuração e saúde (Fase 2)</span></div>
+  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/test</code><span class="d">Dispara evento de teste assinado (Fase 2)</span></div>
+  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/webhook/deliveries</code><span class="d">Histórico de entregas, 72 h (Fase 2)</span></div>
+  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/apps/{app_id}/webhook/deliveries/{id}/replay</code><span class="d">Reenvia uma entrega (Fase 2)</span></div>
 </div>
 {CODE:webhook_put}
+<p class="cap">Exemplo da chamada de configuração da Fase 2.</p>
 <h3>Eventos</h3>
 <div class="tbl"><table><thead><tr><th>field</th><th>Quando</th></tr></thead><tbody>
 <tr><td><code>messages</code></td><td>O usuário enviou mensagem, clicou num botão ou reagiu</td></tr>
@@ -468,12 +478,19 @@ stateDiagram-v2
 </pre></div>
 <p class="cap">Ciclo de vida do status. <code>accepted</code> só aparece na resposta da API e no <code>GET /v1/messages/{id}</code>; os demais chegam por webhook.</p>
 <h3>Garantias de entrega</h3>
+<p><strong>Fase 1.</strong> O objetivo é colocar no ar e usar os pontos principais; as proteções abaixo entram depois.</p>
 <ul>
-  <li><strong>Pelo menos uma vez.</strong> O mesmo evento pode chegar mais de uma vez; use <code>X-Phiz-Delivery-Id</code> para descartar duplicados.</li>
+  <li><strong>Duplicados são possíveis.</strong> O mesmo evento pode chegar mais de uma vez; use <code>X-Phiz-Delivery-Id</code> para descartar duplicados.</li>
   <li><strong>Sem ordem garantida.</strong> Um <code>read</code> pode chegar antes do <code>delivered</code>; ordene por <code>timestamp</code> e nunca regrida status.</li>
   <li><strong>Responda em até 10 s</strong> com 2xx e processe depois. Qualquer outra resposta, ou timeout, conta como falha.</li>
-  <li><strong>Retentativas</strong> com backoff exponencial (10 s, 30 s, 1 min, 5 min, 15 min, 1 h e depois a cada hora) por até 24 h. Depois disso o evento fica disponível para reenvio manual por 72 h.</li>
-  <li>Se a URL falhar continuamente por 24 h, o webhook passa para <code>failing</code> e os administradores do comerciante recebem um aviso.</li>
+  <li>Para status de mensagens enviadas, <code>GET /v1/messages/{message_id}</code> serve de contingência se um webhook se perder.</li>
+</ul>
+<div class="note-box risk"><span class="lbl">Risco da Fase 1</span><p>Sem a política completa de retentativas, um evento que falhar na entrega pode não ser reenviado, e mensagens recebidas não têm consulta de contingência. O mínimo para a Fase 1 será definido pela revisão técnica (ver Q9).</p></div>
+<p><strong>Fase 2 (proteções).</strong> Mecanismos de garantia que ficam para o desenvolvimento futuro:</p>
+<ul>
+  <li><strong>Pelo menos uma vez.</strong> Entrega com <strong>retentativas</strong> e backoff exponencial (10 s, 30 s, 1 min, 5 min, 15 min, 1 h e depois a cada hora) por até 24 h.</li>
+  <li><strong>Reenvio manual.</strong> Depois das 24 h, o evento fica disponível para reenvio por 72 h, com o histórico de entregas (<code>/webhook/deliveries</code>).</li>
+  <li><strong>Webhook <code>failing</code>.</strong> Se a URL falhar continuamente por 24 h, o webhook passa para <code>failing</code> e os administradores do comerciante recebem um aviso.</li>
 </ul>
 </section>
 
@@ -534,15 +551,15 @@ stateDiagram-v2
 <div class="shot"><a href="mocks/pt/02-nova-integracao.png" target="_blank" rel="noopener"><img src="mocks/pt/02-nova-integracao.png" alt="Nova integração: nome, escopos, remetentes permitidos e ambiente" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>Tela 2.</b> Nova integração: nome, escopos, remetentes permitidos e ambiente</p></div>
 <div class="shot"><a href="mocks/pt/03-detalhe-integracao.png" target="_blank" rel="noopener"><img src="mocks/pt/03-detalhe-integracao.png" alt="Detalhe da integração: credenciais, segredos com rotação e escopos" width="1440" height="1031" loading="lazy"></a><p class="cap"><b>Tela 3.</b> Detalhe da integração: credenciais, segredos com rotação e escopos</p></div>
 <div class="shot"><a href="mocks/pt/04-segredo-criado.png" target="_blank" rel="noopener"><img src="mocks/pt/04-segredo-criado.png" alt="Segredo criado, exibido uma única vez" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>Tela 4.</b> Segredo criado, exibido uma única vez</p></div>
-<div class="shot"><a href="mocks/pt/05-webhooks.png" target="_blank" rel="noopener"><img src="mocks/pt/05-webhooks.png" alt="Webhooks: configuração, eventos e entregas recentes" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>Tela 5.</b> Webhooks: configuração, eventos e entregas recentes</p></div>
+<div class="shot"><a href="mocks/pt/05-webhooks.png" target="_blank" rel="noopener"><img src="mocks/pt/05-webhooks.png" alt="Webhooks: configuração, eventos e entregas recentes" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>Tela 5.</b> Webhooks: configuração, eventos e entregas recentes (Fase 2)</p></div>
 <div class="shot"><a href="mocks/pt/06-remetentes.png" target="_blank" rel="noopener"><img src="mocks/pt/06-remetentes.png" alt="Remetentes: mensagem direta e canais, com as integrações que os usam" width="1440" height="1000" loading="lazy"></a><p class="cap"><b>Tela 6.</b> Remetentes: mensagem direta e canais, com as integrações que os usam</p></div>
 <div class="shot"><a href="mocks/pt/07-canal-migracao.png" target="_blank" rel="noopener"><img src="mocks/pt/07-canal-migracao.png" alt="Página do canal com aviso de migração das credenciais" width="1440" height="760" loading="lazy"></a><p class="cap"><b>Tela 7.</b> Página do canal com aviso de migração das credenciais</p></div>
 </div>
 <h3>Telas</h3>
 <div class="screens">
-  <div class="screen"><h5>Visão geral</h5><span class="path">/developer</span><ul><li>Mensagens enviadas, entregues e com falha nas últimas 24 h</li><li>Saúde dos webhooks</li><li>Alertas: secret antigo em uso, webhook falhando</li></ul></div>
+  <div class="screen"><h5>Visão geral</h5><span class="path">/developer</span><ul><li>Mensagens enviadas, entregues e com falha nas últimas 24 h</li><li>Saúde dos webhooks (Fase 2)</li><li>Alertas: secret antigo em uso; webhook falhando (Fase 2)</li></ul></div>
   <div class="screen"><h5>Apps</h5><span class="path">/developer/apps</span><ul><li>Criar app: nome, tipo de integração (própria, Blip, Salesforce, outra), ambiente</li><li>Escopos e remetentes permitidos</li><li>Client ID, secrets com rotação e último uso</li><li>Lista de IPs permitidos (opcional)</li><li>Desativar ou excluir app</li></ul></div>
-  <div class="screen"><h5>Webhook do app</h5><span class="path">/developer/apps/:id/webhook</span><ul><li>URL, verify token e eventos</li><li>Webhook secret com rotação</li><li>Verificar e enviar teste</li><li>Entregas das últimas 72 h com status HTTP, tentativas, latência e reenviar</li></ul></div>
+  <div class="screen"><h5>Webhook do app (Fase 2)</h5><span class="path">/developer/apps/:id/webhook</span><ul><li>Na Fase 1, a URL é cadastrada manualmente pela PHIZ (seção 10)</li><li>URL, verify token e eventos</li><li>Webhook secret com rotação</li><li>Verificar e enviar teste</li><li>Entregas das últimas 72 h com status HTTP, tentativas, latência e reenviar</li></ul></div>
   <div class="screen"><h5>Remetentes</h5><span class="path">/developer/senders</span><ul><li>O próprio comerciante, sempre presente, e os canais, se houver</li><li>Cada um com <code>sender_id</code>, status, limite e qualidade</li><li>Escolhe a integração que recebe as conversas de cada remetente</li><li>Para canais, liga o modo “Phiz Business API”</li></ul></div>
   <div class="screen"><h5>Logs de API</h5><span class="path">/developer/logs</span><ul><li>Requisições dos últimos 7 dias: método, rota, status, latência, <code>trace_id</code></li><li>Filtro por app e por código de erro</li></ul></div>
   <div class="screen"><h5>Sandbox</h5><span class="path">/developer/sandbox</span><ul><li>Remetente de teste</li><li>Cadastro de até 5 destinatários de teste</li><li>Credenciais <code>phzsk_test_</code></li></ul></div>
@@ -553,7 +570,7 @@ stateDiagram-v2
 <tr><td><code>developer.view</code></td><td>Ver integrações, remetentes, logs e entregas (sem secrets)</td></tr>
 <tr><td><code>developer.apps.manage</code></td><td>Criar, editar e desativar integrações; definir escopos e remetentes</td></tr>
 <tr><td><code>developer.secrets.manage</code></td><td>Gerar, rotacionar e revogar secrets</td></tr>
-<tr><td><code>developer.webhooks.manage</code></td><td>Configurar webhook, testar e reenviar entregas</td></tr>
+<tr><td><code>developer.webhooks.manage</code></td><td>Configurar webhook, testar e reenviar entregas (Fase 2)</td></tr>
 </tbody></table></div>
 <p>Criar, rotacionar ou revogar um secret, mudar escopos e alterar o webhook gera registro em <em>Registro de operações</em> e um e-mail para os administradores.</p>
 <h3>Remetente com mais de uma integração</h3>
@@ -569,7 +586,7 @@ stateDiagram-v2
 
 <section>
 <h2 id="§partners"><span class="n">13</span>Integração com parceiros</h2>
-<p><strong>No MVP</strong>, o comerciante cria um app na Área do Desenvolvedor e cola <code>client_id</code> e secret na Blip, no Salesforce ou no próprio sistema. As URLs de webhook vêm do parceiro. Como os contratos seguem a Cloud API, parceiros que já têm conector de WhatsApp reaproveitam a maior parte dele.</p>
+<p><strong>No MVP</strong>, o comerciante cria um app na Área do Desenvolvedor e cola <code>client_id</code> e secret na Blip, no Salesforce ou no próprio sistema. As URLs de webhook vêm do parceiro e, na Fase 1, a PHIZ as cadastra manualmente (seção 10). Como os contratos seguem a Cloud API, parceiros que já têm conector de WhatsApp reaproveitam a maior parte dele.</p>
 <p><strong>Numa fase seguinte</strong>, criamos o programa de <em>parceiros de tecnologia</em>, equivalente ao Embedded Signup da Meta:</p>
 <ul>
   <li>O parceiro registra um app de plataforma na PHIZ.</li>
@@ -593,7 +610,8 @@ stateDiagram-v2
 <section>
 <h2 id="§plan"><span class="n">15</span>Plano de entrega</h2>
 <div class="phases">
-  <div class="phase first"><span class="tag">FASE 1 · MVP</span><h5>Autenticar e enviar</h5><ul><li><code>/oauth/token</code>, <code>/oauth/revoke</code>, <code>/v1/me</code></li><li>Envio de <code>text</code>, <code>image</code>, <code>audio</code>, <code>video</code> e <code>document</code> para telefone e PHIZ ID</li><li>Upload de mídia (<code>/v1/{sender_id}/media</code>) com armazenamento temporário; sem links de terceiros</li><li>Webhooks <code>messages</code> e <code>message_status</code> com assinatura</li><li>Área do Desenvolvedor: apps, secrets, webhook</li><li>Remetente padrão (o próprio comerciante) para todos; canais como remetentes opcionais</li><li>Migração automática das credenciais de canal</li></ul></div>
+  <div class="phase first"><span class="tag">FASE 1 · MVP</span><h5>Autenticar e enviar</h5><ul><li><code>/oauth/token</code>, <code>/oauth/revoke</code>, <code>/v1/me</code></li><li>Envio de <code>text</code>, <code>image</code>, <code>audio</code>, <code>video</code> e <code>document</code> para telefone e PHIZ ID</li><li>Upload de mídia (<code>/v1/{sender_id}/media</code>) com armazenamento temporário; sem links de terceiros</li><li>Webhooks <code>messages</code> e <code>message_status</code> com assinatura, com a URL cadastrada manualmente pela PHIZ</li><li>Área do Desenvolvedor: apps e secrets</li><li>Remetente padrão (o próprio comerciante) para todos; canais como remetentes opcionais</li><li>Migração automática das credenciais de canal</li></ul></div>
+  <div class="phase"><span class="tag">FASE 2</span><h5>Webhook por conta própria e proteções</h5><ul><li>Configuração do webhook pela Área do Desenvolvedor e pela API (<code>PUT /v1/apps/{app_id}/webhook</code>, teste e saúde)</li><li>Retentativas com backoff exponencial por até 24 h</li><li>Histórico de entregas e reenvio manual por 72 h</li><li>Status <code>failing</code> com aviso aos administradores</li></ul></div>
 </div>
 <p>Datas serão definidas após a revisão desta RFC com o time da China.</p>
 </section>
@@ -609,6 +627,7 @@ stateDiagram-v2
   <li><strong>Uma integração responsável por remetente</strong> é suficiente, ou precisamos de passagem de conversa entre apps (bot → atendente humano) já na Fase 2?</li>
   <li><strong>Business Message API existente.</strong> O modo “Phiz Business API” do Robô de IA já tem endpoints de envio e callback e parece corresponder ao Channel Service com Channel Bot. Esta RFC substitui, estende ou encapsula essa API?</li>
   <li><strong>Mídia.</strong> Decidido na v1.3: mídia só por upload na PHIZ, com armazenamento temporário, e sem links de terceiros na Fase 1 (seção 09). Falta definir: o app PHIZ reproduz todos os formatos da tabela de mídia, e com quais tamanhos? O prazo de 30 dias serve, ou deve ser menor? Depois da entrega, a mídia passa para o armazenamento normal do chat, ou some do histórico do usuário quando expira? Quando e para quais clientes liberar URLs de terceiros? Por quanto tempo o <code>url</code> das mídias recebidas fica válido?</li>
+  <li><strong>Webhook na Fase 1.</strong> Decidido na v1.4: a PHIZ cadastra a URL manualmente, e retentativas, reenvio manual e status <code>failing</code> ficam para a Fase 2 (seção 10). Falta definir: como o pedido de cadastro é feito, qual time da PHIZ o executa e em quanto tempo; como o webhook secret chega ao parceiro; qual o mínimo de retentativa da Fase 1 (nenhuma ou uma janela curta); como o parceiro recupera mensagens recebidas que se perderam, já que só o status tem consulta; e o que dispara a Fase 2.</li>
 </ol>
 </section>
 

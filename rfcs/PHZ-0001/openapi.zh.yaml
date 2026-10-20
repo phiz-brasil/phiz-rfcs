@@ -36,7 +36,7 @@ tags:
 - name: Media
   description: 将媒体上传到 PHIZ 临时存储。消息中发送的所有媒体都必须经由此处上传；不接受第三方链接。
 - name: Webhooks
-  description: 应用的 Webhook 订阅配置以及推送到您服务器的事件。
+  description: 推送到您服务器的事件。第 1 阶段由 PHIZ 手工登记 Webhook URL；应用配置接口（`/v1/apps/{app_id}/webhook…`）属于第 2 阶段。
 security:
 - bearerAuth: []
 paths:
@@ -579,7 +579,7 @@ paths:
       tags:
       - Webhooks
       summary: 查询 Webhook
-      description: 应用 Webhook 订阅配置及健康状态。
+      description: '**第 2 阶段。**应用 Webhook 订阅配置及健康状态。'
       operationId: getWebhook
       parameters:
       - name: app_id
@@ -610,7 +610,7 @@ paths:
       tags:
       - Webhooks
       summary: 配置 Webhook
-      description: 设置 URL、verify_token 和订阅事件。PHIZ 会先对 URL 发起 GET 握手，失败则返回 422。
+      description: '**第 2 阶段。**设置 URL、verify_token 和订阅事件。PHIZ 会先对 URL 发起 GET 握手，失败则返回 422。第 1 阶段由 PHIZ 手工登记 URL。'
       operationId: setWebhook
       parameters:
       - name: app_id
@@ -653,7 +653,7 @@ paths:
       tags:
       - Webhooks
       summary: 删除 Webhook
-      description: 停止向应用推送事件。
+      description: '**第 2 阶段。**停止向应用推送事件。'
       operationId: deleteWebhook
       parameters:
       - name: app_id
@@ -681,7 +681,7 @@ paths:
       tags:
       - Webhooks
       summary: 发送测试事件
-      description: 向已配置的 URL 推送一条已签名的 `messages` 示例事件。
+      description: '**第 2 阶段。**向已配置的 URL 推送一条已签名的 `messages` 示例事件。'
       operationId: testWebhook
       parameters:
       - name: app_id
@@ -720,7 +720,7 @@ paths:
       tags:
       - Webhooks
       summary: 列出 Webhook 投递记录
-      description: 最近 72 小时的投递记录，含 HTTP 状态、重试次数与延迟，可重放失败的投递。
+      description: '**第 2 阶段。**最近 72 小时的投递记录，含 HTTP 状态、重试次数与延迟，可重放失败的投递。'
       operationId: listDeliveries
       parameters:
       - name: app_id
@@ -756,7 +756,7 @@ paths:
       tags:
       - Webhooks
       summary: 重放投递
-      description: 使用相同 `X-Phiz-Delivery-Id` 重新推送事件。
+      description: '**第 2 阶段。**使用相同 `X-Phiz-Delivery-Id` 重新推送事件。'
       operationId: replayDelivery
       parameters:
       - name: app_id
@@ -979,7 +979,7 @@ components:
           scopes:
             messages:send: 发送消息和媒体
             messages:read: 读取消息状态
-            webhooks:manage: 管理应用 Webhook
+            webhooks:manage: 管理应用 Webhook（第 2 阶段）
             account:read: 读取账号与发送方
             templates:manage: 预留给 Marketing API
   schemas:

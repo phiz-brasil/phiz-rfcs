@@ -39,7 +39,8 @@ tags:
   description: Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party
     links are not accepted.
 - name: Webhooks
-  description: App webhook subscription setup and events delivered to your server.
+  description: Events delivered to your server. In Phase 1, PHIZ registers the webhook URL manually; the app setup
+    endpoints (`/v1/apps/{app_id}/webhook…`) belong to Phase 2.
 security:
 - bearerAuth: []
 paths:
@@ -596,7 +597,7 @@ paths:
       tags:
       - Webhooks
       summary: Get webhook
-      description: App webhook subscription settings and health.
+      description: '**Phase 2.** App webhook subscription settings and health.'
       operationId: getWebhook
       parameters:
       - name: app_id
@@ -627,8 +628,8 @@ paths:
       tags:
       - Webhooks
       summary: Set webhook
-      description: Sets URL, verify_token and events. PHIZ performs the GET handshake on the URL before activating;
-        if it fails, returns 422.
+      description: '**Phase 2.** Sets URL, verify_token and events. PHIZ performs the GET handshake on the URL before
+        activating; if it fails, returns 422. In Phase 1, PHIZ registers the URL manually.'
       operationId: setWebhook
       parameters:
       - name: app_id
@@ -671,7 +672,7 @@ paths:
       tags:
       - Webhooks
       summary: Remove webhook
-      description: Stops delivering events to the app.
+      description: '**Phase 2.** Stops delivering events to the app.'
       operationId: deleteWebhook
       parameters:
       - name: app_id
@@ -699,7 +700,7 @@ paths:
       tags:
       - Webhooks
       summary: Send test event
-      description: Fires a signed sample `messages` event to the configured URL.
+      description: '**Phase 2.** Fires a signed sample `messages` event to the configured URL.'
       operationId: testWebhook
       parameters:
       - name: app_id
@@ -738,7 +739,8 @@ paths:
       tags:
       - Webhooks
       summary: List webhook deliveries
-      description: History of the last 72 h with HTTP status, attempts and latency. Failed deliveries can be replayed.
+      description: '**Phase 2.** History of the last 72 h with HTTP status, attempts and latency. Failed deliveries
+        can be replayed.'
       operationId: listDeliveries
       parameters:
       - name: app_id
@@ -774,7 +776,7 @@ paths:
       tags:
       - Webhooks
       summary: Replay delivery
-      description: Re-sends an event with the same `X-Phiz-Delivery-Id`.
+      description: '**Phase 2.** Re-sends an event with the same `X-Phiz-Delivery-Id`.'
       operationId: replayDelivery
       parameters:
       - name: app_id
@@ -999,7 +1001,7 @@ components:
           scopes:
             messages:send: Send messages and media
             messages:read: Read message statuses
-            webhooks:manage: Manage app webhook
+            webhooks:manage: Manage app webhook (Phase 2)
             account:read: Read account and senders
             templates:manage: Reserved for the Marketing API
   schemas:
