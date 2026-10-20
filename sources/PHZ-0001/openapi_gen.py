@@ -93,6 +93,10 @@ TAGS = [
         "Envio de mensagens para um número de telefone ou PHIZ ID e consulta de status.",
         "Send messages to a phone number or PHIZ ID and query their status.",
         "向手机号或 PHIZ ID 发送消息并查询状态。")},
+    {"name": "Media", "description": T(
+        "Upload de mídia para o armazenamento temporário da PHIZ. Toda mídia enviada em mensagens precisa passar por aqui; links de terceiros não são aceitos.",
+        "Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party links are not accepted.",
+        "将媒体上传到 PHIZ 临时存储。消息中发送的所有媒体都必须经由此处上传；不接受第三方链接。")},
     {"name": "Webhooks", "description": T(
         "Configuração da assinatura de webhook do app e eventos enviados ao seu servidor.",
         "App webhook subscription setup and events delivered to your server.",
@@ -241,13 +245,38 @@ SCHEMAS = {
     "TextContent": {"type": "object", "required": ["body"], "properties": {
         "body": {"type": "string", "maxLength": 4096, "example": "Olá, Maria! Seu pedido #48213 foi enviado."},
         "preview_url": {"type": "boolean", "default": False}}},
-    "MediaContent": {"type": "object", "required": ["link"], "properties": {
-        "link": {"type": "string", "format": "uri", "example": "https://cdn.lojaexemplo.com.br/nf/48213.pdf",
-                 "description": T("URL HTTPS pública, hospedada pelo comerciante ou parceiro. A PHIZ não processa nem armazena a mídia; o app do usuário baixa direto deste link, que deve continuar acessível após o envio.",
-                                  "Public HTTPS URL hosted by the merchant or partner. PHIZ does not process or store the media; the user's app downloads it straight from this link, which must stay reachable after sending.",
-                                  "由商户或合作方托管的公开 HTTPS 链接。PHIZ 不处理也不存储媒体，用户 App 直接从该链接下载，发送后需保持可访问。")},
+    "MediaContent": {"type": "object",
+        "description": T("Informe `id` (recomendado) ou `link`, ambos devolvidos pelo upload em `POST /v1/{sender_id}/media`.",
+                         "Provide `id` (recommended) or `link`, both returned by the upload to `POST /v1/{sender_id}/media`.",
+                         "提供 `id`（推荐）或 `link`，二者均由 `POST /v1/{sender_id}/media` 上传后返回。"),
+        "anyOf": [{"required": ["id"]}, {"required": ["link"]}], "properties": {
+        "id": {"type": "string", "example": "pmed.01JB2K7Q9X",
+               "description": T("ID da mídia devolvido pelo upload. Válido até `expires_at`.",
+                                "Media ID returned by the upload. Valid until `expires_at`.",
+                                "上传后返回的媒体 ID，在 `expires_at` 之前有效。")},
+        "link": {"type": "string", "format": "uri", "example": "https://media.phiz.chat/biz/pmed.01JB2K7Q9X",
+                 "description": T("Link PHIZ devolvido pelo upload. URLs de terceiros são recusadas com erro 2302.",
+                                  "PHIZ link returned by the upload. Third-party URLs are rejected with error 2302.",
+                                  "上传后返回的 PHIZ 链接。第三方 URL 会被拒绝并返回错误 2302。")},
         "caption": {"type": "string", "maxLength": 1024, "description": T("Não se aplica a áudio.", "Not used for audio.", "音频不适用。")},
         "filename": {"type": "string", "description": T("Só para document.", "Document only.", "仅适用于 document。")}}},
+    "MediaUploadRequest": {"type": "object", "required": ["file", "type"], "properties": {
+        "messaging_product": {"type": "string", "enum": ["phiz"]},
+        "type": {"type": "string", "example": "application/pdf",
+                 "description": T("Tipo MIME do arquivo. Precisa estar na tabela de formatos da seção 09.",
+                                  "MIME type of the file. Must be in the formats table in section 09.",
+                                  "文件的 MIME 类型，须在第 09 节的格式表中。")},
+        "file": {"type": "string", "format": "binary"}}},
+    "Media": {"type": "object", "properties": {
+        "id": {"type": "string", "example": "pmed.01JB2K7Q9X"},
+        "link": {"type": "string", "format": "uri", "example": "https://media.phiz.chat/biz/pmed.01JB2K7Q9X"},
+        "mime_type": {"type": "string", "example": "application/pdf"},
+        "file_size": {"type": "integer", "example": 184320},
+        "sha256": {"type": "string", "example": "9b1f…"},
+        "expires_at": {"type": "string", "format": "date-time", "example": "2026-11-19T14:00:00Z",
+                       "description": T("Fim do armazenamento temporário (proposta: 30 dias após o upload). Depois disso, `id` e `link` deixam de valer.",
+                                        "End of temporary storage (proposed: 30 days after upload). After it, `id` and `link` stop working.",
+                                        "临时存储截止时间（建议：上传后 30 天）。到期后 `id` 和 `link` 失效。")}}},
     "LocationContent": {"type": "object", "required": ["latitude", "longitude"], "properties": {
         "latitude": {"type": "number", "example": -23.5614}, "longitude": {"type": "number", "example": -46.6559},
         "name": {"type": "string", "example": "Loja Paulista"}, "address": {"type": "string"}}},
@@ -334,6 +363,10 @@ SCHEMAS = {
             "trace_id": {"type": "string", "example": "trc_9f2c41ab"}}}},
     },
 }
+
+
+MEDIA_EXAMPLE = {"id": "pmed.01JB2K7Q9X", "link": "https://media.phiz.chat/biz/pmed.01JB2K7Q9X", "mime_type": "application/pdf",
+                 "file_size": 184320, "sha256": "9b1f…", "expires_at": "2026-11-19T14:00:00Z"}
 
 
 def resp(desc, schema=None, example=None, headers=None):
@@ -444,16 +477,16 @@ The same endpoint with `status: read` marks an inbound message as read (Cloud AP
                     "biz_opaque_callback_data": "pedido=48213"}},
                 "text_phiz_id": {"summary": T("Texto para PHIZ ID", "Text to PHIZ ID", "向 PHIZ ID 发送文本"), "value": {
                     "to": "839201447", "to_type": "phiz_id", "type": "text", "text": {"body": "Seu cupom chegou: PHIZ10"}}},
-                "image": {"summary": T("Imagem por link", "Image by link", "通过链接发送图片"), "value": {
-                    "to": "+5511987654321", "type": "image", "image": {"link": "https://cdn.lojaexemplo.com.br/nf/48213.jpg", "caption": "Nota fiscal"}}},
-                "audio": {"summary": T("Áudio por link", "Audio by link", "通过链接发送音频"), "value": {
-                    "to": "+5511987654321", "type": "audio", "audio": {"link": "https://cdn.lojaexemplo.com.br/audios/aviso-entrega-48213.mp3"}}},
-                "video": {"summary": T("Vídeo por link", "Video by link", "通过链接发送视频"), "value": {
+                "image": {"summary": T("Imagem pelo id da mídia", "Image by media id", "通过媒体 id 发送图片"), "value": {
+                    "to": "+5511987654321", "type": "image", "image": {"id": "pmed.01JB2K3H2D", "caption": "Nota fiscal"}}},
+                "audio": {"summary": T("Áudio pelo id da mídia", "Audio by media id", "通过媒体 id 发送音频"), "value": {
+                    "to": "+5511987654321", "type": "audio", "audio": {"id": "pmed.01JB2K4M7A"}}},
+                "video": {"summary": T("Vídeo pelo link PHIZ", "Video by PHIZ link", "通过 PHIZ 链接发送视频"), "value": {
                     "to": "839201447", "to_type": "phiz_id", "type": "video",
-                    "video": {"link": "https://cdn.lojaexemplo.com.br/videos/montagem-48213.mp4", "caption": "Como montar seu produto"}}},
+                    "video": {"link": "https://media.phiz.chat/biz/pmed.01JB2K5V1C", "caption": "Como montar seu produto"}}},
                 "document": {"summary": T("Documento", "Document", "文档"), "value": {
                     "to": "+5511987654321", "type": "document",
-                    "document": {"link": "https://cdn.lojaexemplo.com.br/nf/48213.pdf", "filename": "nota-fiscal-48213.pdf", "caption": "Nota fiscal do pedido #48213"}}},
+                    "document": {"id": "pmed.01JB2K7Q9X", "filename": "nota-fiscal-48213.pdf", "caption": "Nota fiscal do pedido #48213"}}},
                 "buttons": {"summary": T("Botões de resposta", "Reply buttons", "快捷回复按钮"), "value": {
                     "to": "+5511987654321", "type": "interactive", "interactive": {"type": "button",
                         "body": {"text": "Confirma a entrega amanhã entre 9h e 12h?"},
@@ -467,8 +500,34 @@ The same endpoint with `status: read` marks an inbound message as read (Cloud AP
                                 "messages": [{"id": "pmid.01JA9VZ6T8R3", "message_status": "accepted"}]}),
                    **STD_ERRORS,
                    "409": resp(T("Idempotency-Key reutilizada com corpo diferente.", "Idempotency-Key reused with a different body.", "Idempotency-Key 被用于不同的请求体。"), ref("Error")),
-                   "422": resp(T("Envio não permitido pela política de opt-in, ou tipo não permitido para o remetente.", "Sending not allowed by the opt-in policy, or type not allowed for the sender.", "选择接收策略不允许此次发送，或该发送方不允许此类型。"), ref("Error"),
+                   "422": resp(T("Envio não permitido pela política de opt-in, tipo não permitido para o remetente, ou mídia expirada (2303).", "Sending not allowed by the opt-in policy, type not allowed for the sender, or media expired (2303).", "选择接收策略不允许此次发送、该发送方不允许此类型，或媒体已过期（2303）。"), ref("Error"),
                                {"error": {"code": 2201, "type": "policy_violation", "message": "Sending to this recipient is not allowed by the opt-in policy.", "trace_id": "trc_77ac"}})})},
+    "/v1/{sender_id}/media": {"post": op("Media",
+        T("Enviar mídia (upload)", "Upload media", "上传媒体"),
+        T("""Envia um arquivo para o armazenamento temporário da PHIZ e devolve `id` e `link` para usar no envio. Formato e tamanho são checados aqui: fora da tabela da seção 09, responde 415 (2304) ou 413 (2305).
+
+O arquivo fica disponível até `expires_at` (proposta: 30 dias) e pode ser usado em vários envios de remetentes da mesma conta de comerciante. Requer o escopo `messages:send`.""",
+          """Uploads a file to PHIZ temporary storage and returns the `id` and `link` to use when sending. Format and size are checked here: outside the table in section 09, it answers 415 (2304) or 413 (2305).
+
+The file stays available until `expires_at` (proposed: 30 days) and can be used in many sends by senders of the same merchant account. Requires the `messages:send` scope.""",
+          """将文件上传到 PHIZ 临时存储，返回发送时使用的 `id` 和 `link`。格式和大小在此校验：不符合第 09 节表格时返回 415（2304）或 413（2305）。
+
+文件在 `expires_at` 之前可用（建议 30 天），可被同一商户账号下的发送方多次使用。需要 `messages:send` 范围。"""),
+        "uploadMedia", parameters=[SENDER_ID],
+        requestBody={"required": True, "content": {"multipart/form-data": {"schema": ref("MediaUploadRequest")}}},
+        responses={"200": resp(T("Mídia armazenada.", "Media stored.", "媒体已存储。"), ref("Media"), MEDIA_EXAMPLE),
+                   **STD_ERRORS,
+                   "413": resp(T("Arquivo acima do tamanho máximo do tipo (2305).", "File above the maximum size for its type (2305).", "文件超过该类型的大小上限（2305）。"), ref("Error")),
+                   "415": resp(T("Formato não aceito (2304).", "Format not accepted (2304).", "格式不受支持（2304）。"), ref("Error"))})},
+    "/v1/media/{media_id}": {
+        "get": op("Media", T("Consultar mídia", "Get media", "查询媒体"),
+                  T("Link, tipo, tamanho e validade de uma mídia enviada por upload.", "Link, type, size and expiry of an uploaded media file.", "查询已上传媒体的链接、类型、大小和有效期。"),
+                  "getMedia", parameters=[{"name": "media_id", "in": "path", "required": True, "schema": {"type": "string"}, "example": "pmed.01JB2K7Q9X"}],
+                  responses={"200": resp("OK", ref("Media"), MEDIA_EXAMPLE), **STD_ERRORS, "404": err("NotFound")}),
+        "delete": op("Media", T("Remover mídia", "Delete media", "删除媒体"),
+                     T("Apaga a mídia antes do prazo. Envios que ainda usem o `id` ou o `link` falham com 2303.", "Deletes the media before it expires. Sends that still use the `id` or `link` fail with 2303.", "在到期前删除媒体。仍使用该 `id` 或 `link` 的发送将返回 2303。"),
+                     "deleteMedia", parameters=[{"name": "media_id", "in": "path", "required": True, "schema": {"type": "string"}, "example": "pmed.01JB2K7Q9X"}],
+                     responses={"204": {"description": T("Mídia removida.", "Media deleted.", "媒体已删除。")}, **STD_ERRORS, "404": err("NotFound")})},
     "/v1/messages/{message_id}": {"get": op("Messages",
         T("Consultar status da mensagem", "Get message status", "查询消息状态"),
         T("Último status conhecido de uma mensagem enviada. Use como contingência; o webhook continua sendo a fonte principal. Dados retidos por 30 dias.",
@@ -608,7 +667,7 @@ SPEC = {
         "securitySchemes": {
             "bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"},
             "oauth2": {"type": "oauth2", "flows": {"clientCredentials": {"tokenUrl": "https://gateway.phiz.chat/gateway/business/oauth/token", "scopes": {
-                "messages:send": T("Enviar mensagens", "Send messages", "发送消息"),
+                "messages:send": T("Enviar mensagens e mídias", "Send messages and media", "发送消息和媒体"),
                 "messages:read": T("Ler status de mensagens", "Read message statuses", "读取消息状态"),
                 "webhooks:manage": T("Gerenciar webhook do app", "Manage app webhook", "管理应用 Webhook"),
                 "account:read": T("Ler conta e remetentes", "Read account and senders", "读取账号与发送方"),
