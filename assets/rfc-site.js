@@ -188,6 +188,7 @@
 
   function renderThreads(panel) {
     const list = panel.querySelector(".cmt-list");
+    if (panel._form) panel.append(panel._form);   // park the form outside the list, which is rebuilt below
     list.replaceChildren();
     if (!all) { list.append(el("p", "cmt-note", "…")); return; }
     if (loadFailed) { list.append(el("p", "cmt-note cmt-err", L().load)); return; }
@@ -196,10 +197,21 @@
     if (!tops.length) { list.append(el("p", "cmt-note", L().empty)); return; }
     for (const c of tops) {
       const th = el("div", "cmt-thread");
+      th.dataset.id = c.id;
       th.append(card(c, panel, false));
       items.filter(r => r.parent_id === c.id).forEach(r => th.append(card(r, panel, true)));
       list.append(th);
     }
+    placeForm(panel);
+  }
+
+  // the form sits under the comment being answered (after its replies); without a reply target it stays at the end
+  function placeForm(panel) {
+    const f = panel._form;
+    if (!f) return;
+    const pid = f.dataset.parent;
+    const th = pid && panel.querySelector(`.cmt-thread[data-id="${CSS.escape(pid)}"]`);
+    (th || panel).append(f);
   }
 
   function card(c, panel, isReply) {
@@ -224,16 +236,18 @@
   }
 
   function setReply(panel, c) {
-    const f = panel.querySelector("form");
+    const f = panel._form;
     f.dataset.parent = c ? c.id : "";
     const tag = f.querySelector(".cmt-replying");
     tag.hidden = !c;
     if (c) { tag.querySelector("span").textContent = `${L().replyTo} ${c.author}`; setQuote(panel, ""); }
-    f.querySelector("textarea").focus();
+    placeForm(panel);
+    f.querySelector("textarea").focus({ preventScroll: true });
+    f.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   function setQuote(panel, text) {
-    const f = panel.querySelector("form");
+    const f = panel._form;
     f.dataset.quote = text || "";
     const q = f.querySelector(".cmt-quote-pre");
     q.hidden = !text;
@@ -298,7 +312,8 @@
       panel = el("div", "cmt-panel");
       if (sb) {
         panel.dataset.key = key;
-        panel.append(el("div", "cmt-list"), buildForm(panel));
+        panel._form = buildForm(panel);
+        panel.append(el("div", "cmt-list"), panel._form);
         renderThreads(panel);
       } else if (giscusReady()) {
         const s = document.createElement("script");

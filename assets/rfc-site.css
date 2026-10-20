@@ -87,3 +87,5 @@ mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transpar
 .cmt-d-end a { color: var(--accent-ink); font-weight: 600; font-size: .86rem; }
 .cmt-tr { margin: 2px 0 4px; font-size: .76rem; color: var(--muted); }
 .cmt-tr .cmt-link { font-size: .76rem; }
+/* Reply form opens under the comment being answered, aligned with the replies */
+.cmt-thread > .cmt-form { margin-left: 22px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 12px; background: var(--bg); }
