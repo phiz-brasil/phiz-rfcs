@@ -89,3 +89,26 @@ mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transpar
 .cmt-tr .cmt-link { font-size: .76rem; }
 /* Reply form opens under the comment being answered, aligned with the replies */
 .cmt-thread > .cmt-form { margin-left: 22px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 12px; background: var(--bg); }
+/* Live status: clickable badge with a picker, and pill colours that follow the status */
+.rfcno.st.st-btn { cursor: pointer; user-select: none; }
+.rfcno.st.st-btn::after { content: " ▾"; font-size: .7em; }
+.rfcno.st.st-btn:hover, .rfcno.st.st-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent-ink); }
+.rfcno.st.st-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.st-pop { position: absolute; z-index: 60; top: 52px; left: 16px; width: min(320px, 88vw); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: 0 8px 28px rgba(0,0,0,.18); font: 400 .85rem/1.45 var(--f-body, system-ui); display: grid; gap: 8px; }
+.st-pop[hidden] { display: none; }
+.st-title { margin: 0; font: 600 .72rem var(--f-body, system-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.st-pop input { width: 100%; box-sizing: border-box; font: 400 .9rem var(--f-body, system-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.st-pop input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+.st-err { margin: 0; color: var(--bad, #b3261e); font-size: .82rem; }
+.st-err[hidden] { display: none; }
+.st-list { display: grid; gap: 4px; }
+.st-opt { text-align: left; font: 500 .85rem var(--f-body, system-ui); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+.st-opt:hover:not(:disabled) { border-color: var(--accent); }
+.st-opt[aria-current="true"] { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+.st-opt:disabled { opacity: .6; cursor: progress; }
+.st-note { margin: 0; color: var(--muted); font-size: .78rem; }
+.pill[data-st="in-review"] { background: var(--accent-soft); color: var(--accent-ink); }
+.pill[data-st="approved"] { background: var(--ok-soft); color: var(--ok); }
+.pill[data-st="implemented"] { background: var(--info-soft); color: var(--info); }
+.pill[data-st="rejected"] { background: var(--bad-soft); color: var(--bad); }
+.pill[data-st="superseded"] { background: var(--line); color: var(--muted); text-decoration: line-through; }

@@ -115,7 +115,7 @@ def render_rfc(d, meta, text, out, shown, frozen, status, up):
     cfg = {"repo": CFG["repo"], "giscus": CFG["giscus"], "comments": CFG.get("comments", {})}
     inject = (f'<script>window.PHIZ_SITE={json.dumps(cfg)};window.PHIZ_RFC_ID={json.dumps(meta["id"])};'
               f'window.PHIZ_FROZEN={json.dumps(frozen)};</script>\n'
-              f'<script src="{up}assets/mermaid.min.js"></script>\n<script src="{up}assets/rfc-site.js"></script>\n</body>')
+              f'<script src="{up}assets/mermaid.min.js"></script>\n<script src="{up}assets/rfc-site.js"></script>\n<script src="{up}assets/status.js"></script>\n</body>')
     page = page.replace("</body>", inject, 1) if "</body>" in page else page + inject
     out.write_text(page, encoding="utf-8")
 
@@ -184,9 +184,10 @@ INDEX_JS = """
 function set(l){document.documentElement.dataset.lang=l;document.documentElement.lang={pt:"pt-BR",en:"en",zh:"zh-CN"}[l];try{localStorage.setItem("phiz-rfc-lang",l)}catch(e){}
 document.querySelectorAll("[data-set-lang]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.setLang===l))})}
 document.querySelectorAll("[data-set-lang]").forEach(function(b){b.onclick=function(){set(b.dataset.setLang)}});set(g());
-var f=document.querySelectorAll("[data-filter]"),cards=document.querySelectorAll(".card-li");
-f.forEach(function(b){b.onclick=function(){f.forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});
-cards.forEach(function(c){c.hidden=b.dataset.filter!=="all"&&c.dataset.status!==b.dataset.filter})}})})();
+var fl=document.querySelector(".filters");
+fl.addEventListener("click",function(e){var b=e.target.closest("[data-filter]");if(!b)return;
+fl.querySelectorAll("[data-filter]").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});
+document.querySelectorAll(".card-li").forEach(function(c){c.hidden=b.dataset.filter!=="all"&&c.dataset.status!==b.dataset.filter})})})();
 """
 
 
@@ -295,7 +296,7 @@ def build_index(items):
         st = m["status"]
         authors = ", ".join(m.get("authors", [])) or "—"
         revs = ", ".join(m.get("reviewers", [])) or "—"
-        lis.append(f'''<li class="card-li" data-status="{st}"><a class="card" href="rfcs/{e(d.name)}/">
+        lis.append(f'''<li class="card-li" data-status="{st}" data-rfc="{e(m["id"])}"><a class="card" href="rfcs/{e(d.name)}/">
 <div class="top"><span class="id">{e(m["id"])}</span><span class="ver">v{e(versions_of(d, m)[0])}</span><span class="badge" data-st="{st}">{spans(STATUS[st])}</span></div>
 <h2>{spans(m["title"])}</h2><p>{spans(m["summary"])}</p>
 <div class="meta"><span>{e(authors)}</span><span>Reviewers: {e(revs)}</span><span>{e(m.get("updated", ""))}</span><span class="cc" data-rfc="{e(m["id"])}" hidden></span></div></a></li>''')
@@ -314,7 +315,8 @@ def build_index(items):
 <main class="wrap"><h1>RFCs</h1>
 <p class="lead">{spans({"pt": "Propostas técnicas da plataforma, com status e comentários por seção.", "en": "Platform technical proposals, with status and per-section comments.", "zh": "平台技术提案，含状态与分节评论。"})}</p>
 <div class="filters" role="group">{fl}</div>
-<ul class="list">{"".join(lis)}</ul></main><script>window.PHIZ_CMT={json.dumps(CFG.get("comments", {}))};{INDEX_JS}{INDEX_COUNTS_JS}</script></body></html>'''
+<ul class="list">{"".join(lis)}</ul></main><script>window.PHIZ_CMT={json.dumps(CFG.get("comments", {}))};{INDEX_JS}{INDEX_COUNTS_JS}window.PHIZ_STATUS_INDEX=true;</script>
+<script src="assets/status.js"></script></body></html>'''
 
 
 def main():

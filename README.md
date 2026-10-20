@@ -64,6 +64,14 @@ Comments are shown in the language selected on the page (PT-BR, EN-US or 中文)
 
 The model (`m2m100`) does not detect the source language, so the function guesses it (Chinese characters, or Portuguese vs English by accents and common words) and falls back to the page language the author was using; a very short comment such as “ok” stays untranslated. A new comment shows in its original language for a second or two, then in translation on the next load. Check the function's **Logs** in Supabase if translations do not appear (wrong token or account id, missing secret, or the daily Workers AI allowance).
 
+### Changing the status from the page
+
+The status badge in the header of each RFC is a button (`EM REVISÃO ▾`): pick a status, type your name once (remembered in the browser) and it changes for everyone, with no rebuild. The index, the header badge and the status pill and eyebrow in the three languages all follow the live status. There is no login: anyone with the link can change it, so every change is kept in `rfc_status_log` with the name typed, an origin rate limit (10 a minute) applies, and archived versions (`v1.0.html`) keep the status they had.
+
+1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run) or only its last block, “Status das RFCs”. It creates `rfc_status_log` (append-only) and the view `rfc_status_current`.
+2. Nothing else to configure; the page uses the same Supabase keys as the comments. Until step 1 is done, the page shows the status from `rfcs/<ID>/rfc.json` and changing it fails with an error message.
+3. **Undo a wrong change**: **Table Editor → rfc_status_log**, delete the row; the previous one becomes current. The `status` in `rfc.json` is only the starting value (before the first change in the page).
+
 ## Add a new RFC
 
 ```bash
@@ -97,7 +105,7 @@ Notes: archived pages reuse the RFC's current `mocks/` and OpenAPI files. Commen
 
 ## Status
 
-Change `status` in `rfc.json` and push. Allowed values:
+The starting status is `status` in `rfc.json`; after the first change made on the page (see above) the live status in Supabase wins. Allowed values:
 `draft` · `in-review` · `approved` · `implemented` · `rejected` · `superseded`
 
 ## Preview locally
