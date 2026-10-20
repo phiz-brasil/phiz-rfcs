@@ -33,6 +33,8 @@ tags:
   description: 商户账号、发送方与开发者应用。
 - name: Messages
   description: 向手机号或 PHIZ ID 发送消息并查询状态。
+- name: Media
+  description: 将媒体上传到 PHIZ 临时存储。消息中发送的所有媒体都必须经由此处上传；不接受第三方链接。
 - name: Webhooks
   description: 应用的 Webhook 订阅配置以及推送到您服务器的事件。
 security:
@@ -304,28 +306,28 @@ paths:
                   text:
                     body: 'Seu cupom chegou: PHIZ10'
               image:
-                summary: 通过链接发送图片
+                summary: 通过媒体 id 发送图片
                 value:
                   to: '+5511987654321'
                   type: image
                   image:
-                    link: https://cdn.lojaexemplo.com.br/nf/48213.jpg
+                    id: pmed.01JB2K3H2D
                     caption: Nota fiscal
               audio:
-                summary: 通过链接发送音频
+                summary: 通过媒体 id 发送音频
                 value:
                   to: '+5511987654321'
                   type: audio
                   audio:
-                    link: https://cdn.lojaexemplo.com.br/audios/aviso-entrega-48213.mp3
+                    id: pmed.01JB2K4M7A
               video:
-                summary: 通过链接发送视频
+                summary: 通过 PHIZ 链接发送视频
                 value:
                   to: '839201447'
                   to_type: phiz_id
                   type: video
                   video:
-                    link: https://cdn.lojaexemplo.com.br/videos/montagem-48213.mp4
+                    link: https://media.phiz.chat/biz/pmed.01JB2K5V1C
                     caption: Como montar seu produto
               document:
                 summary: 文档
@@ -333,7 +335,7 @@ paths:
                   to: '+5511987654321'
                   type: document
                   document:
-                    link: https://cdn.lojaexemplo.com.br/nf/48213.pdf
+                    id: pmed.01JB2K7Q9X
                     filename: nota-fiscal-48213.pdf
                     caption: 'Nota fiscal do pedido #48213'
               buttons:
@@ -393,7 +395,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: 选择接收策略不允许此次发送，或该发送方不允许此类型。
+          description: 选择接收策略不允许此次发送、该发送方不允许此类型，或媒体已过期（2303）。
           content:
             application/json:
               schema:
@@ -404,6 +406,134 @@ paths:
                   type: policy_violation
                   message: Sending to this recipient is not allowed by the opt-in policy.
                   trace_id: trc_77ac
+  /v1/{sender_id}/media:
+    post:
+      tags:
+      - Media
+      summary: 上传媒体
+      description: '将文件上传到 PHIZ 临时存储，返回发送时使用的 `id` 和 `link`。格式和大小在此校验：不符合第 09 节表格时返回 415（2304）或 413（2305）。
+
+
+        文件在 `expires_at` 之前可用（建议 30 天），可被同一商户账号下的发送方多次使用。需要 `messages:send` 范围。'
+      operationId: uploadMedia
+      parameters:
+      - name: sender_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+        description: 发送方 ID。使用 merchant_id 直接以商户名义发送（默认，无需频道），或可选地使用商户某个频道的 ID。相当于 Meta Cloud API 的 phone_number_id。
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaUploadRequest'
+      responses:
+        '200':
+          description: 媒体已存储。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+              example:
+                id: pmed.01JB2K7Q9X
+                link: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+                mime_type: application/pdf
+                file_size: 184320
+                sha256: 9b1f…
+                expires_at: '2026-11-19T14:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '413':
+          description: 文件超过该类型的大小上限（2305）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: 格式不受支持（2304）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/media/{media_id}:
+    get:
+      tags:
+      - Media
+      summary: 查询媒体
+      description: 查询已上传媒体的链接、类型、大小和有效期。
+      operationId: getMedia
+      parameters:
+      - name: media_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: pmed.01JB2K7Q9X
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+              example:
+                id: pmed.01JB2K7Q9X
+                link: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+                mime_type: application/pdf
+                file_size: 184320
+                sha256: 9b1f…
+                expires_at: '2026-11-19T14:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Media
+      summary: 删除媒体
+      description: 在到期前删除媒体。仍使用该 `id` 或 `link` 的发送将返回 2303。
+      operationId: deleteMedia
+      parameters:
+      - name: media_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: pmed.01JB2K7Q9X
+      responses:
+        '204':
+          description: 媒体已删除。
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /v1/messages/{message_id}:
     get:
       tags:
@@ -847,7 +977,7 @@ components:
         clientCredentials:
           tokenUrl: https://gateway.phiz.chat/gateway/business/oauth/token
           scopes:
-            messages:send: 发送消息
+            messages:send: 发送消息和媒体
             messages:read: 读取消息状态
             webhooks:manage: 管理应用 Webhook
             account:read: 读取账号与发送方
@@ -1098,14 +1228,22 @@ components:
           default: false
     MediaContent:
       type: object
-      required:
-      - link
+      description: 提供 `id`（推荐）或 `link`，二者均由 `POST /v1/{sender_id}/media` 上传后返回。
+      anyOf:
+      - required:
+        - id
+      - required:
+        - link
       properties:
+        id:
+          type: string
+          example: pmed.01JB2K7Q9X
+          description: 上传后返回的媒体 ID，在 `expires_at` 之前有效。
         link:
           type: string
           format: uri
-          example: https://cdn.lojaexemplo.com.br/nf/48213.pdf
-          description: 由商户或合作方托管的公开 HTTPS 链接。PHIZ 不处理也不存储媒体，用户 App 直接从该链接下载，发送后需保持可访问。
+          example: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+          description: 上传后返回的 PHIZ 链接。第三方 URL 会被拒绝并返回错误 2302。
         caption:
           type: string
           maxLength: 1024
@@ -1113,6 +1251,47 @@ components:
         filename:
           type: string
           description: 仅适用于 document。
+    MediaUploadRequest:
+      type: object
+      required:
+      - file
+      - type
+      properties:
+        messaging_product:
+          type: string
+          enum:
+          - phiz
+        type:
+          type: string
+          example: application/pdf
+          description: 文件的 MIME 类型，须在第 09 节的格式表中。
+        file:
+          type: string
+          format: binary
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+          example: pmed.01JB2K7Q9X
+        link:
+          type: string
+          format: uri
+          example: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+        mime_type:
+          type: string
+          example: application/pdf
+        file_size:
+          type: integer
+          example: 184320
+        sha256:
+          type: string
+          example: 9b1f…
+        expires_at:
+          type: string
+          format: date-time
+          example: '2026-11-19T14:00:00Z'
+          description: 临时存储截止时间（建议：上传后 30 天）。到期后 `id` 和 `link` 失效。
     LocationContent:
       type: object
       required:

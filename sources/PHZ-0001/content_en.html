@@ -244,12 +244,12 @@ flowchart LR
 <ol>
   <li><strong>Integration.</strong> The business (for example PicPay or Ambar) uses a BSP for customer service. In the Developer area, the merchant creates an integration for that BSP and hands over the <code>client_id</code> and secret.</li>
   <li><strong>Token.</strong> The BSP calls <code>/oauth/token</code>. Auth checks the integration in the Merchant Account (secret, scopes and allowed senders) and returns a 1-hour JWT.</li>
-  <li><strong>Send.</strong> The BSP calls <code>POST /v1/{sender_id}/messages</code>. The API validates the token, scope, sender, opt-in policy and <code>Idempotency-Key</code>, answers <code>202</code> and queues the message.</li>
+  <li><strong>Send.</strong> The BSP calls <code>POST /v1/{sender_id}/messages</code>. The API validates the token, scope, sender, opt-in policy and <code>Idempotency-Key</code>, answers <code>202</code> and queues the message. For media, the BSP first uploads the file to <code>POST /v1/{sender_id}/media</code> and uses the returned <code>id</code> or PHIZ link in the send.</li>
   <li><strong>Routing.</strong> With <code>sender_id = merchant_id</code> the message goes out as a Direct Message (default). With a channel ID it goes out as a Channel Message (optional).</li>
-  <li><strong>Delivery.</strong> The Phiz App shows the message to the user and downloads media straight from the given link.</li>
+  <li><strong>Delivery.</strong> The Phiz App shows the message to the user and downloads media from PHIZ storage, through the link generated at upload.</li>
   <li><strong>Return.</strong> User replies and statuses (<code>sent</code>, <code>delivered</code>, <code>read</code>, <code>failed</code>) become events that the Webhooks service delivers, signed, to the integration that owns the sender.</li>
 </ol>
-<div class="tbl"><table><thead><tr><th>Component</th><th>Responsibility</th><th>Status</th></tr></thead><tbody><tr><td>BSP / business system</td><td>Calls the API, hosts media by link and receives the webhook.</td><td>External</td></tr><tr><td>PHIZ Business API · Auth</td><td>Issues and revokes JWTs; validates <code>client_id</code> and secret.</td><td>New</td></tr><tr><td>PHIZ Business API · Messages</td><td>Validates and accepts sends (<code>202</code>), applies idempotency and limits, queues and routes by <code>sender_id</code>.</td><td>New</td></tr><tr><td>PHIZ Business API · Webhooks</td><td>Consumes app events, signs and delivers them with retries; keeps 72 h of delivery history.</td><td>New</td></tr><tr><td>Open Platform · Merchant Account</td><td>Stores integrations, secrets (hashed), scopes, allowed senders and webhook settings. Hosts the Developer area.</td><td>Changed: credentials move from the channel to the merchant</td></tr><tr><td>Direct Message</td><td>Direct conversation between merchant and user in the app.</td><td>New (see Q3)</td></tr><tr><td>Channel / Channel Message</td><td>Sending through the merchant's channel.</td><td>Existing</td></tr><tr><td>Phiz App</td><td>Shows messages, downloads media by link and emits delivery, read and reply events.</td><td>Changed</td></tr></tbody></table></div>
+<div class="tbl"><table><thead><tr><th>Component</th><th>Responsibility</th><th>Status</th></tr></thead><tbody><tr><td>BSP / business system</td><td>Calls the API, uploads media and receives the webhook.</td><td>External</td></tr><tr><td>PHIZ Business API · Auth</td><td>Issues and revokes JWTs; validates <code>client_id</code> and secret.</td><td>New</td></tr><tr><td>PHIZ Business API · Messages</td><td>Validates and accepts sends (<code>202</code>), applies idempotency and limits, queues and routes by <code>sender_id</code>.</td><td>New</td></tr><tr><td>PHIZ Business API · Media</td><td>Receives uploads, checks format and size, stores the file for a limited time and generates the <code>id</code> and PHIZ link used in the send.</td><td>New</td></tr><tr><td>PHIZ Business API · Webhooks</td><td>Consumes app events, signs and delivers them with retries; keeps 72 h of delivery history.</td><td>New</td></tr><tr><td>Open Platform · Merchant Account</td><td>Stores integrations, secrets (hashed), scopes, allowed senders and webhook settings. Hosts the Developer area.</td><td>Changed: credentials move from the channel to the merchant</td></tr><tr><td>Direct Message</td><td>Direct conversation between merchant and user in the app.</td><td>New (see Q3)</td></tr><tr><td>Channel / Channel Message</td><td>Sending through the merchant's channel.</td><td>Existing</td></tr><tr><td>Phiz App</td><td>Shows messages, downloads media by PHIZ link and emits delivery, read and reply events.</td><td>Changed</td></tr></tbody></table></div>
 <h3>Mapping to Meta's Cloud API</h3>
 <div class="tbl"><table><thead><tr><th>Meta (WhatsApp Cloud API)</th><th>PHIZ (this proposal)</th></tr></thead><tbody>
 <tr><td>WhatsApp Business Account (WABA)</td><td>Merchant account · <code>merchant_id</code></td></tr>
@@ -257,6 +257,7 @@ flowchart LR
 <tr><td>Meta app + System User token</td><td>Developer app + OAuth client credentials</td></tr>
 <tr><td><code>wa_id</code></td><td><code>phiz_id</code></td></tr>
 <tr><td><code>POST /{phone-number-id}/messages</code></td><td><code>POST /v1/{sender_id}/messages</code></td></tr>
+<tr><td><code>POST /{phone-number-id}/media</code> · media by <code>id</code> or third-party <code>link</code></td><td><code>POST /v1/{sender_id}/media</code> · media only by <code>id</code> or PHIZ link; third-party links are not accepted</td></tr>
 <tr><td><code>object: whatsapp_business_account</code></td><td><code>object: phiz_merchant_account</code></td></tr>
 <tr><td><code>X-Hub-Signature-256</code></td><td><code>X-Phiz-Signature-256</code> + <code>X-Phiz-Timestamp</code></td></tr>
 <tr><td><code>hub.mode</code> / <code>hub.verify_token</code> / <code>hub.challenge</code></td><td>Unchanged</td></tr>
@@ -266,7 +267,7 @@ flowchart LR
 <section>
 <h2 id="§principles"><span class="n">07</span>Design principles</h2>
 <ul>
-  <li><strong>Same shape as the Cloud API.</strong> Send bodies, responses and webhooks follow Meta's structure. We diverge only for a clear gain in security (timestamp in the signature) or clarity (<code>to_type</code>).</li>
+  <li><strong>Same shape as the Cloud API.</strong> Send bodies, responses and webhooks follow Meta's structure. We diverge only for a clear gain in security (timestamp in the signature, media only through PHIZ storage) or clarity (<code>to_type</code>).</li>
   <li>HTTP status codes, a single error envelope and a <code>trace_id</code> in every error response.</li>
   <li>Sending is asynchronous and returns <code>202 Accepted</code>; the outcome arrives by webhook.</li>
   <li><strong>Idempotency.</strong> The <code>Idempotency-Key</code> header prevents duplicate messages when a client retries.</li>
@@ -305,7 +306,7 @@ sequenceDiagram
 {CODE:jwt_claims}
 <h3>Scopes</h3>
 <div class="tbl"><table><thead><tr><th>Scope</th><th>Allows</th></tr></thead><tbody>
-<tr><td><code>messages:send</code></td><td>Send messages and mark them as read</td></tr>
+<tr><td><code>messages:send</code></td><td>Send messages, upload and manage media, and mark messages as read</td></tr>
 <tr><td><code>messages:read</code></td><td>Query message status</td></tr>
 <tr><td><code>webhooks:manage</code></td><td>Set up, test and replay the app's own webhook</td></tr>
 <tr><td><code>account:read</code></td><td>Read merchant account and sender data</td></tr>
@@ -335,6 +336,9 @@ sequenceDiagram
 <h2 id="§messages"><span class="n">09</span>Sending messages</h2>
 <div class="eps">
   <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/{sender_id}/messages</code><span class="d">Sends a message or marks one as read</span></div>
+  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/{sender_id}/media</code><span class="d">Uploads a media file and returns its <code>id</code> and PHIZ link</span></div>
+  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/media/{media_id}</code><span class="d">Media details: link, type, size and expiry</span></div>
+  <div class="ep"><span class="m m-delete">DELETE</span><code class="p">/v1/media/{media_id}</code><span class="d">Deletes the media before it expires</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/messages/{message_id}</code><span class="d">Latest known status (fallback)</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/merchants/{merchant_id}/senders</code><span class="d">Senders (merchant and channels) the integration may use</span></div>
 </div>
@@ -361,9 +365,12 @@ sequenceDiagram
 {CODE:send_curl_channel}
 <h4>Text to a PHIZ ID</h4>
 {CODE:send_phiz_id}
-<h4>Audio by link</h4>
+<h4>Media upload</h4>
+{CODE:media_upload}
+{CODE:media_upload_resp}
+<h4>Audio by media <code>id</code></h4>
 {CODE:send_audio}
-<h4>Video by link, to a PHIZ ID</h4>
+<h4>Video by PHIZ link, to a PHIZ ID</h4>
 {CODE:send_video}
 <h4>Document with a file name</h4>
 {CODE:send_document}
@@ -374,21 +381,32 @@ sequenceDiagram
 <h3>Supported types</h3>
 <div class="tbl"><table><thead><tr><th>type</th><th>Content</th><th>Phase</th></tr></thead><tbody>
 <tr><td><code>text</code></td><td>Up to 4,096 characters; optional <code>preview_url</code></td><td>MVP</td></tr>
-<tr><td><code>image</code></td><td>By HTTPS <code>link</code>; optional caption</td><td>MVP</td></tr><tr><td><code>audio</code></td><td>By HTTPS <code>link</code>; no caption</td><td>MVP</td></tr><tr><td><code>video</code></td><td>By HTTPS <code>link</code>; optional caption</td><td>MVP</td></tr><tr><td><code>document</code></td><td>By HTTPS <code>link</code>; optional caption and file name</td><td>MVP</td></tr>
+<tr><td><code>image</code></td><td>By <code>id</code> or PHIZ link (upload first); optional caption</td><td>MVP</td></tr><tr><td><code>audio</code></td><td>By <code>id</code> or PHIZ link (upload first); no caption</td><td>MVP</td></tr><tr><td><code>video</code></td><td>By <code>id</code> or PHIZ link (upload first); optional caption</td><td>MVP</td></tr><tr><td><code>document</code></td><td>By <code>id</code> or PHIZ link (upload first); optional caption and file name</td><td>MVP</td></tr>
 
 
 
 
 </tbody></table></div>
-<h3>Media formats and limits</h3>
-<p>Media is always sent by <code>link</code>: a public HTTPS URL hosted by the merchant or the partner. The messaging API <strong>does not process or store</strong> media; it only passes the link to the user's app, which downloads the file straight from that URL. The link must therefore stay reachable after sending, and the file must already be in a format and size the app accepts.</p>
+<h3>Media: upload to PHIZ and temporary storage</h3>
+<p>All media goes through PHIZ storage. Sending takes two steps:</p>
+<ol>
+  <li><strong>Upload.</strong> The BSP sends the file to <code>POST /v1/{sender_id}/media</code> (<code>multipart/form-data</code>). PHIZ checks format and size, stores the file and returns an <code>id</code> and a PHIZ <code>link</code>, with the expiry date in <code>expires_at</code>.</li>
+  <li><strong>Send.</strong> In the message, the media object carries the <code>id</code> (recommended) or that <code>link</code>. The user's app downloads the file from PHIZ storage.</li>
+</ol>
+<ul>
+  <li><strong>Only links generated by PHIZ.</strong> In Phase 1 the API rejects third-party URLs (the merchant's or partner's CDN) with error <code>2302</code>. This way PHIZ guarantees the link is safe and the file stays reachable until delivery, and the app does not expose the user's IP to outside servers.</li>
+  <li><strong>Temporary storage.</strong> The file is kept only as long as sending and delivery need it: proposed 30 days from upload, like the Cloud API media <code>id</code> (see Q8). Within that period the same <code>id</code> can be used in many sends, for example the same PDF to many customers. After it, the <code>id</code> and the link stop working and new sends fail with <code>2303</code>. The merchant can delete it earlier with <code>DELETE /v1/media/{media_id}</code>.</li>
+  <li><strong>Checked at upload.</strong> Format and size are checked at upload, not at delivery: files outside the table below are rejected right away (<code>2304</code> and <code>2305</code>).</li>
+  <li><strong>Scope.</strong> Upload, lookup and deletion use the <code>messages:send</code> scope, and media can only be used by senders of the same merchant account.</li>
+</ul>
+<div class="note-box decision"><span class="lbl">Decision (v1.3)</span><p>In Phase 1, media only by upload to PHIZ, with temporary storage; third-party links are not accepted. Allowing third-party URLs for specific customers, for example with an allow-list of domains, is left for a later phase. Agreed with Henry Wu in the comments on this section.</p></div>
 <div class="tbl"><table><thead><tr><th>Type</th><th>Accepted formats</th><th>Max size</th></tr></thead><tbody>
 <tr><td><code>image</code></td><td>JPEG, PNG, WebP</td><td>5 MB</td></tr>
 <tr><td><code>audio</code></td><td>AAC, MP3, M4A, OGG (Opus), AMR</td><td>16 MB</td></tr>
 <tr><td><code>video</code></td><td>MP4 (H.264 + AAC), 3GP</td><td>16 MB</td></tr>
 <tr><td><code>document</code></td><td>PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, CSV</td><td>100 MB</td></tr>
 </tbody></table></div>
-<p class="cap">Formats and sizes the PHIZ app should accept, inspired by the Cloud API limits. Conversion and compression are up to whoever hosts the file. They must be confirmed with the team that owns media in the app (see Q8).</p>
+<p class="cap">Formats and sizes the PHIZ app should accept, inspired by the Cloud API limits and set by this RFC. Conversion and compression are up to whoever sends the file; the upload rejects anything outside the table. They must be confirmed with the team that owns media in the app (see Q8).</p>
 <h3>Sending policy (consent)</h3>
 <p>Proposal inspired by WhatsApp (see section 03), with the opt-in flows detailed in section 04:</p>
 <ul>
@@ -475,7 +493,11 @@ stateDiagram-v2
 <tr><td>2104</td><td>webhook</td><td>recipient_not_reachable</td><td>No PHIZ account for the number, or the user blocked the sender</td></tr>
 <tr><td>2201</td><td>422</td><td>policy_violation</td><td>Sending not allowed by the opt-in policy</td></tr>
 <tr><td>2202</td><td>422</td><td>unsupported_type</td><td>Message type not enabled for the sender</td></tr>
-<tr><td>2301</td><td>webhook</td><td>media_unavailable</td><td>The app could not download the media from <code>link</code> (URL down, expired or unsupported format)</td></tr>
+<tr><td>2301</td><td>webhook</td><td>media_unavailable</td><td>The app could not download the media from PHIZ storage (media expired or deleted before delivery)</td></tr>
+<tr><td>2302</td><td>400</td><td>media_link_not_allowed</td><td>The <code>link</code> was not generated by PHIZ; upload the file and use the returned <code>id</code> or link</td></tr>
+<tr><td>2303</td><td>422</td><td>media_expired</td><td>The media <code>id</code> or link has expired, was deleted or belongs to another merchant</td></tr>
+<tr><td>2304</td><td>415</td><td>unsupported_media_type</td><td>File format not accepted at upload</td></tr>
+<tr><td>2305</td><td>413</td><td>media_too_large</td><td>File above the maximum size for its type</td></tr>
 <tr><td>2401</td><td>403</td><td>sender_disabled</td><td>Sender disabled or restricted</td></tr>
 <tr><td>2501</td><td>429</td><td>messaging_limit_reached</td><td>The sender's daily recipient limit was reached</td></tr>
 <tr><td>5000</td><td>500</td><td>internal_error</td><td>Internal error; retry with the same Idempotency-Key</td></tr>
@@ -570,7 +592,7 @@ stateDiagram-v2
 <section>
 <h2 id="§plan"><span class="n">15</span>Delivery plan</h2>
 <div class="phases">
-  <div class="phase first"><span class="tag">PHASE 1 · MVP</span><h5>Authenticate and send</h5><ul><li><code>/oauth/token</code>, <code>/oauth/revoke</code>, <code>/v1/me</code></li><li>Send <code>text</code>, <code>image</code>, <code>audio</code>, <code>video</code> and <code>document</code> to phone and PHIZ ID</li><li>Signed <code>messages</code> and <code>message_status</code> webhooks</li><li>Developer area: apps, secrets, webhook</li><li>Default sender (the merchant itself) for everyone; channels as optional senders</li><li>Automatic migration of channel credentials</li></ul></div>
+  <div class="phase first"><span class="tag">PHASE 1 · MVP</span><h5>Authenticate and send</h5><ul><li><code>/oauth/token</code>, <code>/oauth/revoke</code>, <code>/v1/me</code></li><li>Send <code>text</code>, <code>image</code>, <code>audio</code>, <code>video</code> and <code>document</code> to phone and PHIZ ID</li><li>Media upload (<code>/v1/{sender_id}/media</code>) with temporary storage; no third-party links</li><li>Signed <code>messages</code> and <code>message_status</code> webhooks</li><li>Developer area: apps, secrets, webhook</li><li>Default sender (the merchant itself) for everyone; channels as optional senders</li><li>Automatic migration of channel credentials</li></ul></div>
 </div>
 <p>Dates will be set after this RFC is reviewed with the China team.</p>
 </section>
@@ -585,7 +607,7 @@ stateDiagram-v2
   <li><strong>Phone numbers.</strong> Do all PHIZ users have a verified phone number? How do we handle foreign numbers and number changes?</li>
   <li><strong>Is one owning integration per sender enough</strong>, or do we need conversation handover between apps (bot → human agent) already in Phase 2?</li>
   <li><strong>Existing Business Message API.</strong> The AI Robot's “Phiz Business API” mode already has send and callback endpoints and seems to match Channel Service with Channel Bot. Does this RFC replace, extend or wrap that API?</li>
-  <li><strong>Media by link.</strong> Does the PHIZ app play every format in the media table, and which sizes does it accept? Does the app download straight from the merchant's URL (which exposes the user's IP to that server) or through a PHIZ proxy that stores nothing? Should we check the link before accepting the send (for example, type and size without downloading the file)? How long does the <code>url</code> of received media stay valid?</li>
+  <li><strong>Media.</strong> Decided in v1.3: media only by upload to PHIZ, with temporary storage, and no third-party links in Phase 1 (section 09). Still to define: does the PHIZ app play every format in the media table, and at which sizes? Is 30 days the right retention, or should it be shorter? After delivery, does the media move to the chat's normal storage, or disappear from the user's history when it expires? When, and for which customers, do we allow third-party URLs? How long does the <code>url</code> of received media stay valid?</li>
 </ol>
 </section>
 

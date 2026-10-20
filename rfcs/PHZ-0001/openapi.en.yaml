@@ -35,6 +35,9 @@ tags:
   description: Merchant account, senders and developer apps.
 - name: Messages
   description: Send messages to a phone number or PHIZ ID and query their status.
+- name: Media
+  description: Media upload to PHIZ temporary storage. All media sent in messages must go through here; third-party
+    links are not accepted.
 - name: Webhooks
   description: App webhook subscription setup and events delivered to your server.
 security:
@@ -315,28 +318,28 @@ paths:
                   text:
                     body: 'Seu cupom chegou: PHIZ10'
               image:
-                summary: Image by link
+                summary: Image by media id
                 value:
                   to: '+5511987654321'
                   type: image
                   image:
-                    link: https://cdn.lojaexemplo.com.br/nf/48213.jpg
+                    id: pmed.01JB2K3H2D
                     caption: Nota fiscal
               audio:
-                summary: Audio by link
+                summary: Audio by media id
                 value:
                   to: '+5511987654321'
                   type: audio
                   audio:
-                    link: https://cdn.lojaexemplo.com.br/audios/aviso-entrega-48213.mp3
+                    id: pmed.01JB2K4M7A
               video:
-                summary: Video by link
+                summary: Video by PHIZ link
                 value:
                   to: '839201447'
                   to_type: phiz_id
                   type: video
                   video:
-                    link: https://cdn.lojaexemplo.com.br/videos/montagem-48213.mp4
+                    link: https://media.phiz.chat/biz/pmed.01JB2K5V1C
                     caption: Como montar seu produto
               document:
                 summary: Document
@@ -344,7 +347,7 @@ paths:
                   to: '+5511987654321'
                   type: document
                   document:
-                    link: https://cdn.lojaexemplo.com.br/nf/48213.pdf
+                    id: pmed.01JB2K7Q9X
                     filename: nota-fiscal-48213.pdf
                     caption: 'Nota fiscal do pedido #48213'
               buttons:
@@ -404,7 +407,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: Sending not allowed by the opt-in policy, or type not allowed for the sender.
+          description: Sending not allowed by the opt-in policy, type not allowed for the sender, or media expired
+            (2303).
           content:
             application/json:
               schema:
@@ -415,6 +419,137 @@ paths:
                   type: policy_violation
                   message: Sending to this recipient is not allowed by the opt-in policy.
                   trace_id: trc_77ac
+  /v1/{sender_id}/media:
+    post:
+      tags:
+      - Media
+      summary: Upload media
+      description: 'Uploads a file to PHIZ temporary storage and returns the `id` and `link` to use when sending.
+        Format and size are checked here: outside the table in section 09, it answers 415 (2304) or 413 (2305).
+
+
+        The file stays available until `expires_at` (proposed: 30 days) and can be used in many sends by senders
+        of the same merchant account. Requires the `messages:send` scope.'
+      operationId: uploadMedia
+      parameters:
+      - name: sender_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: 7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57
+        description: Sender ID. Use the merchant_id to send directly on behalf of the merchant (default, no channel
+          required) or, optionally, the ID of one of the merchant's channels. Equivalent to Meta Cloud API's phone_number_id.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaUploadRequest'
+      responses:
+        '200':
+          description: Media stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+              example:
+                id: pmed.01JB2K7Q9X
+                link: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+                mime_type: application/pdf
+                file_size: 184320
+                sha256: 9b1f…
+                expires_at: '2026-11-19T14:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '413':
+          description: File above the maximum size for its type (2305).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Format not accepted (2304).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/media/{media_id}:
+    get:
+      tags:
+      - Media
+      summary: Get media
+      description: Link, type, size and expiry of an uploaded media file.
+      operationId: getMedia
+      parameters:
+      - name: media_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: pmed.01JB2K7Q9X
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+              example:
+                id: pmed.01JB2K7Q9X
+                link: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+                mime_type: application/pdf
+                file_size: 184320
+                sha256: 9b1f…
+                expires_at: '2026-11-19T14:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Media
+      summary: Delete media
+      description: Deletes the media before it expires. Sends that still use the `id` or `link` fail with 2303.
+      operationId: deleteMedia
+      parameters:
+      - name: media_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: pmed.01JB2K7Q9X
+      responses:
+        '204':
+          description: Media deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /v1/messages/{message_id}:
     get:
       tags:
@@ -862,7 +997,7 @@ components:
         clientCredentials:
           tokenUrl: https://gateway.phiz.chat/gateway/business/oauth/token
           scopes:
-            messages:send: Send messages
+            messages:send: Send messages and media
             messages:read: Read message statuses
             webhooks:manage: Manage app webhook
             account:read: Read account and senders
@@ -1115,15 +1250,22 @@ components:
           default: false
     MediaContent:
       type: object
-      required:
-      - link
+      description: Provide `id` (recommended) or `link`, both returned by the upload to `POST /v1/{sender_id}/media`.
+      anyOf:
+      - required:
+        - id
+      - required:
+        - link
       properties:
+        id:
+          type: string
+          example: pmed.01JB2K7Q9X
+          description: Media ID returned by the upload. Valid until `expires_at`.
         link:
           type: string
           format: uri
-          example: https://cdn.lojaexemplo.com.br/nf/48213.pdf
-          description: Public HTTPS URL hosted by the merchant or partner. PHIZ does not process or store the media;
-            the user's app downloads it straight from this link, which must stay reachable after sending.
+          example: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+          description: PHIZ link returned by the upload. Third-party URLs are rejected with error 2302.
         caption:
           type: string
           maxLength: 1024
@@ -1131,6 +1273,48 @@ components:
         filename:
           type: string
           description: Document only.
+    MediaUploadRequest:
+      type: object
+      required:
+      - file
+      - type
+      properties:
+        messaging_product:
+          type: string
+          enum:
+          - phiz
+        type:
+          type: string
+          example: application/pdf
+          description: MIME type of the file. Must be in the formats table in section 09.
+        file:
+          type: string
+          format: binary
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+          example: pmed.01JB2K7Q9X
+        link:
+          type: string
+          format: uri
+          example: https://media.phiz.chat/biz/pmed.01JB2K7Q9X
+        mime_type:
+          type: string
+          example: application/pdf
+        file_size:
+          type: integer
+          example: 184320
+        sha256:
+          type: string
+          example: 9b1f…
+        expires_at:
+          type: string
+          format: date-time
+          example: '2026-11-19T14:00:00Z'
+          description: 'End of temporary storage (proposed: 30 days after upload). After it, `id` and `link` stop
+            working.'
     LocationContent:
       type: object
       required:

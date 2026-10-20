@@ -1,6 +1,6 @@
 """Builds rfc.html: trilingual RFC page with shared code samples, Mermaid diagrams and embedded Swagger UI."""
 import json, re, html, yaml
-from openapi_gen import build, EXAMPLES
+from openapi_gen import build, EXAMPLES, MEDIA_EXAMPLE
 
 LANGS = [("pt", "pt-BR", "PT-BR"), ("en", "en-US", "EN-US"), ("zh", "zh-CN", "中文")]
 
@@ -79,11 +79,18 @@ curl -X POST "$PHIZ_API_BASE/v1/1231/messages" \\
                     "body": {"text": "Confirma a entrega amanhã entre 9h e 12h?"},
                     "action": {"buttons": [{"type": "reply", "reply": {"id": "confirmar", "title": "Confirmar"}},
                                             {"type": "reply", "reply": {"id": "reagendar", "title": "Reagendar"}}]}}})),
-"send_audio": ("json", J({"to": "+5511987654321", "type": "audio", "audio": {"link": "https://cdn.lojaexemplo.com.br/audios/aviso-entrega-48213.mp3"}})),
+"media_upload": ("bash", """# 1. Upload the file to PHIZ (multipart/form-data). Third-party URLs are not accepted when sending.
+curl -X POST "$PHIZ_API_BASE/v1/7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57/media" \\
+  -H "Authorization: Bearer $PHIZ_TOKEN" \\
+  -F messaging_product=phiz \\
+  -F type=application/pdf \\
+  -F file=@nota-fiscal-48213.pdf"""),
+"media_upload_resp": ("json", J(MEDIA_EXAMPLE)),
+"send_audio": ("json", J({"to": "+5511987654321", "type": "audio", "audio": {"id": "pmed.01JB2K4M7A"}})),
 "send_video": ("json", J({"to": "839201447", "to_type": "phiz_id", "type": "video",
-                           "video": {"link": "https://cdn.lojaexemplo.com.br/videos/montagem-48213.mp4", "caption": "Como montar seu produto"}})),
+                           "video": {"link": "https://media.phiz.chat/biz/pmed.01JB2K5V1C", "caption": "Como montar seu produto"}})),
 "send_document": ("json", J({"to": "+5511987654321", "type": "document",
-                              "document": {"link": "https://cdn.lojaexemplo.com.br/nf/48213.pdf", "filename": "nota-fiscal-48213.pdf", "caption": "Nota fiscal do pedido #48213"}})),
+                              "document": {"id": "pmed.01JB2K7Q9X", "filename": "nota-fiscal-48213.pdf", "caption": "Nota fiscal do pedido #48213"}})),
 "wh_inbound_media": ("json", J({"from": "839201447", "id": "pmid.IN_01JA9W7R", "timestamp": "1760528731", "type": "audio",
                                  "audio": {"url": "https://media.phiz.chat/in/9xT2…?expires=1760615131&sig=…", "mime_type": "audio/ogg; codecs=opus", "sha256": "3f9a…", "voice": True}})),
 "mark_read": ("json", J({"messaging_product": "phiz", "status": "read", "message_id": "pmid.IN_01JA9W2C"})),

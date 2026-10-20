@@ -244,12 +244,12 @@ flowchart LR
 <ol>
   <li><strong>集成。</strong>企业（如 PicPay 或 Ambar）通过 BSP 提供客服。商户在开发者中心为该 BSP 创建集成，并提供 <code>client_id</code> 和密钥。</li>
   <li><strong>令牌。</strong>BSP 调用 <code>/oauth/token</code>。Auth 在 Merchant Account 中校验集成（密钥、范围和可用发送方），返回 1 小时有效的 JWT。</li>
-  <li><strong>发送。</strong>BSP 调用 <code>POST /v1/{sender_id}/messages</code>。API 校验令牌、范围、发送方、选择接收策略和 <code>Idempotency-Key</code>，返回 <code>202</code> 并将消息入队。</li>
+  <li><strong>发送。</strong>BSP 调用 <code>POST /v1/{sender_id}/messages</code>。API 校验令牌、范围、发送方、选择接收策略和 <code>Idempotency-Key</code>，返回 <code>202</code> 并将消息入队。如需发送媒体，BSP 先将文件上传到 <code>POST /v1/{sender_id}/media</code>，再在发送时使用返回的 <code>id</code> 或 PHIZ 链接。</li>
   <li><strong>路由。</strong><code>sender_id = merchant_id</code> 时作为 Direct Message 发送（默认）；使用频道 ID 时作为 Channel Message 发送（可选）。</li>
-  <li><strong>投递。</strong>Phiz App 向用户展示消息，并直接从提供的链接下载媒体。</li>
+  <li><strong>投递。</strong>Phiz App 向用户展示消息，并通过上传时生成的链接从 PHIZ 存储下载媒体。</li>
   <li><strong>返回。</strong>用户回复和状态（<code>sent</code>、<code>delivered</code>、<code>read</code>、<code>failed</code>）生成事件，由 Webhooks 服务签名后投递给负责该发送方的集成。</li>
 </ol>
-<div class="tbl"><table><thead><tr><th>组件</th><th>职责</th><th>状态</th></tr></thead><tbody><tr><td>BSP / 企业系统</td><td>调用 API，托管媒体链接，接收 Webhook。</td><td>外部</td></tr><tr><td>PHIZ Business API · Auth</td><td>签发和撤销 JWT；校验 <code>client_id</code> 和密钥。</td><td>新增</td></tr><tr><td>PHIZ Business API · Messages</td><td>校验并受理发送（<code>202</code>），处理幂等和限流，入队并按 <code>sender_id</code> 路由。</td><td>新增</td></tr><tr><td>PHIZ Business API · Webhooks</td><td>消费 App 事件，签名并带重试投递；保留 72 小时投递记录。</td><td>新增</td></tr><tr><td>Open Platform · Merchant Account</td><td>存储集成、密钥（哈希）、范围、可用发送方和 Webhook 配置；承载开发者中心。</td><td>变更：凭证从频道迁移到商户</td></tr><tr><td>Direct Message</td><td>App 内商户与用户的直接对话。</td><td>新增（见 Q3）</td></tr><tr><td>Channel / Channel Message</td><td>通过商户频道发送。</td><td>现有</td></tr><tr><td>Phiz App</td><td>展示消息，通过链接下载媒体，产生送达、已读和回复事件。</td><td>变更</td></tr></tbody></table></div>
+<div class="tbl"><table><thead><tr><th>组件</th><th>职责</th><th>状态</th></tr></thead><tbody><tr><td>BSP / 企业系统</td><td>调用 API，上传媒体，接收 Webhook。</td><td>外部</td></tr><tr><td>PHIZ Business API · Auth</td><td>签发和撤销 JWT；校验 <code>client_id</code> 和密钥。</td><td>新增</td></tr><tr><td>PHIZ Business API · Messages</td><td>校验并受理发送（<code>202</code>），处理幂等和限流，入队并按 <code>sender_id</code> 路由。</td><td>新增</td></tr><tr><td>PHIZ Business API · Media</td><td>接收上传，校验格式和大小，限时存储文件，并生成发送时使用的 <code>id</code> 和 PHIZ 链接。</td><td>新增</td></tr><tr><td>PHIZ Business API · Webhooks</td><td>消费 App 事件，签名并带重试投递；保留 72 小时投递记录。</td><td>新增</td></tr><tr><td>Open Platform · Merchant Account</td><td>存储集成、密钥（哈希）、范围、可用发送方和 Webhook 配置；承载开发者中心。</td><td>变更：凭证从频道迁移到商户</td></tr><tr><td>Direct Message</td><td>App 内商户与用户的直接对话。</td><td>新增（见 Q3）</td></tr><tr><td>Channel / Channel Message</td><td>通过商户频道发送。</td><td>现有</td></tr><tr><td>Phiz App</td><td>展示消息，通过 PHIZ 链接下载媒体，产生送达、已读和回复事件。</td><td>变更</td></tr></tbody></table></div>
 <h3>与 Meta Cloud API 的对应关系</h3>
 <div class="tbl"><table><thead><tr><th>Meta（WhatsApp Cloud API）</th><th>PHIZ（本方案）</th></tr></thead><tbody>
 <tr><td>WhatsApp Business Account（WABA）</td><td>商户账号 · <code>merchant_id</code></td></tr>
@@ -257,6 +257,7 @@ flowchart LR
 <tr><td>Meta 应用 + System User 令牌</td><td>开发者应用 + OAuth 客户端凭证</td></tr>
 <tr><td><code>wa_id</code></td><td><code>phiz_id</code></td></tr>
 <tr><td><code>POST /{phone-number-id}/messages</code></td><td><code>POST /v1/{sender_id}/messages</code></td></tr>
+<tr><td><code>POST /{phone-number-id}/media</code> · 媒体可用 <code>id</code> 或第三方 <code>link</code></td><td><code>POST /v1/{sender_id}/media</code> · 媒体仅可用 <code>id</code> 或 PHIZ 链接；不接受第三方链接</td></tr>
 <tr><td><code>object: whatsapp_business_account</code></td><td><code>object: phiz_merchant_account</code></td></tr>
 <tr><td><code>X-Hub-Signature-256</code></td><td><code>X-Phiz-Signature-256</code> + <code>X-Phiz-Timestamp</code></td></tr>
 <tr><td><code>hub.mode</code> / <code>hub.verify_token</code> / <code>hub.challenge</code></td><td>保持一致</td></tr>
@@ -266,7 +267,7 @@ flowchart LR
 <section>
 <h2 id="§principles"><span class="n">07</span>设计原则</h2>
 <ul>
-  <li><strong>与 Cloud API 结构一致。</strong>发送请求、响应和 Webhook 均沿用 Meta 的结构，只有在安全性（签名带时间戳）或清晰度（<code>to_type</code>）有明确收益时才有所不同。</li>
+  <li><strong>与 Cloud API 结构一致。</strong>发送请求、响应和 Webhook 均沿用 Meta 的结构，只有在安全性（签名带时间戳、媒体只经由 PHIZ 存储）或清晰度（<code>to_type</code>）有明确收益时才有所不同。</li>
   <li>HTTP 状态码、统一的错误结构，所有错误响应都带 <code>trace_id</code>。</li>
   <li>发送为异步处理，返回 <code>202 Accepted</code>，结果通过 Webhook 推送。</li>
   <li><strong>幂等。</strong><code>Idempotency-Key</code> 请求头可避免客户端重试导致重复消息。</li>
@@ -305,7 +306,7 @@ sequenceDiagram
 {CODE:jwt_claims}
 <h3>范围（scope）</h3>
 <div class="tbl"><table><thead><tr><th>范围</th><th>允许的操作</th></tr></thead><tbody>
-<tr><td><code>messages:send</code></td><td>发送消息、标记已读</td></tr>
+<tr><td><code>messages:send</code></td><td>发送消息、上传和管理媒体、标记已读</td></tr>
 <tr><td><code>messages:read</code></td><td>查询消息状态</td></tr>
 <tr><td><code>webhooks:manage</code></td><td>配置、测试和重放本应用的 Webhook</td></tr>
 <tr><td><code>account:read</code></td><td>读取商户账号和发送方信息</td></tr>
@@ -335,6 +336,9 @@ sequenceDiagram
 <h2 id="§messages"><span class="n">09</span>发送消息</h2>
 <div class="eps">
   <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/{sender_id}/messages</code><span class="d">发送消息或标记已读</span></div>
+  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/{sender_id}/media</code><span class="d">上传媒体文件，返回 <code>id</code> 和 PHIZ 链接</span></div>
+  <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/media/{media_id}</code><span class="d">媒体信息：链接、类型、大小和有效期</span></div>
+  <div class="ep"><span class="m m-delete">DELETE</span><code class="p">/v1/media/{media_id}</code><span class="d">在到期前删除媒体</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/messages/{message_id}</code><span class="d">最新已知状态（兜底）</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/merchants/{merchant_id}/senders</code><span class="d">集成可使用的发送方（商户与频道）</span></div>
 </div>
@@ -361,9 +365,12 @@ sequenceDiagram
 {CODE:send_curl_channel}
 <h4>向 PHIZ ID 发送文本</h4>
 {CODE:send_phiz_id}
-<h4>通过链接发送音频</h4>
+<h4>上传媒体</h4>
+{CODE:media_upload}
+{CODE:media_upload_resp}
+<h4>通过媒体 <code>id</code> 发送音频</h4>
 {CODE:send_audio}
-<h4>通过链接向 PHIZ ID 发送视频</h4>
+<h4>通过 PHIZ 链接向 PHIZ ID 发送视频</h4>
 {CODE:send_video}
 <h4>带文件名的文档</h4>
 {CODE:send_document}
@@ -374,21 +381,32 @@ sequenceDiagram
 <h3>支持的消息类型</h3>
 <div class="tbl"><table><thead><tr><th>type</th><th>内容</th><th>阶段</th></tr></thead><tbody>
 <tr><td><code>text</code></td><td>最多 4,096 个字符；可选 <code>preview_url</code></td><td>MVP</td></tr>
-<tr><td><code>image</code></td><td>通过 HTTPS <code>link</code>；可选说明文字</td><td>MVP</td></tr><tr><td><code>audio</code></td><td>通过 HTTPS <code>link</code>；不支持说明文字</td><td>MVP</td></tr><tr><td><code>video</code></td><td>通过 HTTPS <code>link</code>；可选说明文字</td><td>MVP</td></tr><tr><td><code>document</code></td><td>通过 HTTPS <code>link</code>；可选说明文字和文件名</td><td>MVP</td></tr>
+<tr><td><code>image</code></td><td>通过 <code>id</code> 或 PHIZ 链接（需先上传）；可选说明文字</td><td>MVP</td></tr><tr><td><code>audio</code></td><td>通过 <code>id</code> 或 PHIZ 链接（需先上传）；不支持说明文字</td><td>MVP</td></tr><tr><td><code>video</code></td><td>通过 <code>id</code> 或 PHIZ 链接（需先上传）；可选说明文字</td><td>MVP</td></tr><tr><td><code>document</code></td><td>通过 <code>id</code> 或 PHIZ 链接（需先上传）；可选说明文字和文件名</td><td>MVP</td></tr>
 
 
 
 
 </tbody></table></div>
-<h3>媒体格式与限制</h3>
-<p>媒体一律通过 <code>link</code> 发送：由商户或合作方托管的公开 HTTPS 链接。消息 API <strong>不处理也不存储</strong>媒体，只把链接传给用户的 App，由 App 直接从该地址下载文件。因此链接在发送后需持续可访问，文件也必须事先符合 App 支持的格式和大小。</p>
+<h3>媒体：上传至 PHIZ 并临时存储</h3>
+<p>所有媒体都经由 PHIZ 存储，发送分两步：</p>
+<ol>
+  <li><strong>上传。</strong>BSP 将文件发送到 <code>POST /v1/{sender_id}/media</code>（<code>multipart/form-data</code>）。PHIZ 校验格式和大小，存储文件，返回 <code>id</code> 和 PHIZ <code>link</code>，有效期见 <code>expires_at</code>。</li>
+  <li><strong>发送。</strong>消息中的媒体对象携带 <code>id</code>（推荐）或该 <code>link</code>，用户 App 从 PHIZ 存储下载文件。</li>
+</ol>
+<ul>
+  <li><strong>只接受 PHIZ 生成的链接。</strong>第 1 阶段 API 拒绝第三方 URL（商户或合作方的 CDN），返回错误 <code>2302</code>。这样 PHIZ 能保证链接安全、文件在投递前持续可读取，App 也不会向外部服务器暴露用户 IP。</li>
+  <li><strong>临时存储。</strong>文件只保存到完成发送和投递所需的时间：建议自上传起 30 天，与 Cloud API 的媒体 <code>id</code> 相同（见 Q8）。有效期内同一个 <code>id</code> 可用于多次发送，例如将同一份 PDF 发给多位客户。到期后 <code>id</code> 和链接失效，新的发送会返回 <code>2303</code>。商户也可通过 <code>DELETE /v1/media/{media_id}</code> 提前删除。</li>
+  <li><strong>上传时校验。</strong>格式和大小在上传时校验，而不是在投递时：不符合下表的文件会被立即拒绝（<code>2304</code> 和 <code>2305</code>）。</li>
+  <li><strong>权限范围。</strong>上传、查询和删除使用 <code>messages:send</code> 范围，媒体只能由同一商户账号下的发送方使用。</li>
+</ul>
+<div class="note-box decision"><span class="lbl">决定（v1.3）</span><p>第 1 阶段媒体只能上传至 PHIZ 并临时存储，不接受第三方链接。为特定客户开放第三方 URL（例如通过域名白名单）留待后续阶段。已与 Henry Wu 在本节评论中达成一致。</p></div>
 <div class="tbl"><table><thead><tr><th>类型</th><th>支持格式</th><th>大小上限</th></tr></thead><tbody>
 <tr><td><code>image</code></td><td>JPEG、PNG、WebP</td><td>5 MB</td></tr>
 <tr><td><code>audio</code></td><td>AAC、MP3、M4A、OGG（Opus）、AMR</td><td>16 MB</td></tr>
 <tr><td><code>video</code></td><td>MP4（H.264 + AAC）、3GP</td><td>16 MB</td></tr>
 <tr><td><code>document</code></td><td>PDF、DOC/DOCX、XLS/XLSX、PPT/PPTX、TXT、CSV</td><td>100 MB</td></tr>
 </tbody></table></div>
-<p class="cap">PHIZ App 应支持的格式和大小，参考 Cloud API 的限制。格式转换和压缩由文件托管方负责。需与负责 App 媒体能力的团队确认（见 Q8）。</p>
+<p class="cap">PHIZ App 应支持的格式和大小，参考 Cloud API 的限制，由本 RFC 定义。格式转换和压缩由文件发送方负责；上传时会拒绝不符合下表的文件。需与负责 App 媒体能力的团队确认（见 Q8）。</p>
 <h3>发送策略（同意）</h3>
 <p>参考 WhatsApp 的提议（见第 03 节），opt-in 流程详见第 04 节：</p>
 <ul>
@@ -475,7 +493,11 @@ stateDiagram-v2
 <tr><td>2104</td><td>webhook</td><td>recipient_not_reachable</td><td>号码无 PHIZ 账号，或用户屏蔽了发送方</td></tr>
 <tr><td>2201</td><td>422</td><td>policy_violation</td><td>选择接收（opt-in）策略不允许此次发送</td></tr>
 <tr><td>2202</td><td>422</td><td>unsupported_type</td><td>该发送方未开通此消息类型</td></tr>
-<tr><td>2301</td><td>webhook</td><td>media_unavailable</td><td>App 无法从 <code>link</code> 下载媒体（链接失效、过期或格式不支持）</td></tr>
+<tr><td>2301</td><td>webhook</td><td>media_unavailable</td><td>App 无法从 PHIZ 存储下载媒体（媒体在投递前已过期或被删除）</td></tr>
+<tr><td>2302</td><td>400</td><td>media_link_not_allowed</td><td><code>link</code> 不是由 PHIZ 生成的；请先上传，再使用返回的 <code>id</code> 或链接</td></tr>
+<tr><td>2303</td><td>422</td><td>media_expired</td><td>媒体 <code>id</code> 或链接已过期、已删除或属于其他商户</td></tr>
+<tr><td>2304</td><td>415</td><td>unsupported_media_type</td><td>上传的文件格式不受支持</td></tr>
+<tr><td>2305</td><td>413</td><td>media_too_large</td><td>文件超过该类型的大小上限</td></tr>
 <tr><td>2401</td><td>403</td><td>sender_disabled</td><td>发送方已停用或受限</td></tr>
 <tr><td>2501</td><td>429</td><td>messaging_limit_reached</td><td>发送方当日接收方额度已用完</td></tr>
 <tr><td>5000</td><td>500</td><td>internal_error</td><td>内部错误，请使用相同 Idempotency-Key 重试</td></tr>
@@ -570,7 +592,7 @@ stateDiagram-v2
 <section>
 <h2 id="§plan"><span class="n">15</span>交付计划</h2>
 <div class="phases">
-  <div class="phase first"><span class="tag">第 1 阶段 · MVP</span><h5>鉴权与发送</h5><ul><li><code>/oauth/token</code>、<code>/oauth/revoke</code>、<code>/v1/me</code></li><li>向手机号和 PHIZ ID 发送 <code>text</code>、<code>image</code>、<code>audio</code>、<code>video</code> 和 <code>document</code></li><li>带签名的 <code>messages</code> 和 <code>message_status</code> Webhook</li><li>开发者中心：应用、密钥、Webhook</li><li>所有商户的默认发送方（商户本身）；频道作为可选发送方</li><li>频道凭证自动迁移</li></ul></div>
+  <div class="phase first"><span class="tag">第 1 阶段 · MVP</span><h5>鉴权与发送</h5><ul><li><code>/oauth/token</code>、<code>/oauth/revoke</code>、<code>/v1/me</code></li><li>向手机号和 PHIZ ID 发送 <code>text</code>、<code>image</code>、<code>audio</code>、<code>video</code> 和 <code>document</code></li><li>媒体上传（<code>/v1/{sender_id}/media</code>）并临时存储；不支持第三方链接</li><li>带签名的 <code>messages</code> 和 <code>message_status</code> Webhook</li><li>开发者中心：应用、密钥、Webhook</li><li>所有商户的默认发送方（商户本身）；频道作为可选发送方</li><li>频道凭证自动迁移</li></ul></div>
 </div>
 <p>具体时间将在与中国团队评审本 RFC 后确定。</p>
 </section>
@@ -585,7 +607,7 @@ stateDiagram-v2
   <li><strong>手机号。</strong>所有 PHIZ 用户都有已验证的手机号吗？境外号码和换号如何处理？</li>
   <li><strong>每个发送方一个负责集成是否足够</strong>，还是第 2 阶段就需要应用间会话移交（机器人 → 人工客服）？</li>
   <li><strong>现有 Business Message API。</strong>AI 机器人的 “Phiz Business API” 模式已有发送和回调接口，似乎对应带 Channel Bot 的 Channel Service。本 RFC 是替代、扩展还是封装这套 API？</li>
-  <li><strong>通过链接发送媒体。</strong>PHIZ App 能否播放媒体表中的所有格式，支持多大的文件？App 是直接从商户的链接下载（会向该服务器暴露用户 IP），还是经由不存储内容的 PHIZ 代理？是否应在受理前校验链接（例如不下载文件，仅检查类型和大小）？收到的媒体 <code>url</code> 有效期多长？</li>
+  <li><strong>媒体。</strong>v1.3 已决定：媒体只能上传至 PHIZ 并临时存储，第 1 阶段不接受第三方链接（第 09 节）。仍需确定：PHIZ App 能否播放媒体表中的所有格式，支持多大的文件？30 天的保存期是否合适，还是应更短？投递后媒体是否转入聊天的常规存储，还是到期后从用户的聊天记录中消失？何时、对哪些客户开放第三方 URL？收到的媒体 <code>url</code> 有效期多长？</li>
 </ol>
 </section>
 
