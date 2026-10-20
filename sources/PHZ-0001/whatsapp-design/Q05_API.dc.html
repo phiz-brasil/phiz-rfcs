@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Q5 Consent API proposal</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+<link rel="stylesheet" href="/_blob/8aaa337a9ac66607d453683ac7ad98bf">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ab" style="width: 640px; gap: 12px">
+<div class="hd"><span class="optag" style="font-size: 13px; align-self: center">Q5</span><div><div class="tt">Model B: the business registers the consent in PHIZ</div><div class="te">Illustrative proposal — not the final API</div></div></div>
+<div class="bz"><b>1. Register</b> — right after the user opts in at the business (Q1):</div>
+<pre class="code">POST /v1/merchants/{merchant_id}/consents
+Authorization: Bearer ACCESS_TOKEN
+
+{
+  "recipient": { "phone": "+5511987654321" },
+  "category": "account_alerts",
+  "source": "merchant_app",
+  "collected_at": "2026-10-19T12:41:00-03:00",
+  "wording_version": "v3",
+  "evidence_ref": "crm-8841"
+}
+
+201 Created
+{ "consent_id": "cns_7Hq2", "status": "active" }</pre>
+<div class="bz"><b>2. Send</b> — PHIZ checks the consent before delivering:</div>
+<pre class="code">POST /v1/{sender_id}/messages   →   202 Accepted
+
+If the user revoked or never consented:
+403 Forbidden
+{ "error": { "code": "recipient_opted_out",
+             "message": "The recipient revoked consent for this category." } }
+
+If the user blocked the business:
+403 Forbidden
+{ "error": { "code": "recipient_blocked" } }</pre>
+<div class="bz"><b>3. Revoke</b> — <code>DELETE /v1/merchants/{merchant_id}/consents/{consent_id}</code> when the user opts out at the business; PHIZ sends <code>consent_update</code> webhooks when the user revokes inside PhizChat.</div>
+<div class="cap">
+<div class="cz">Model B gives PHIZ what Meta does not have: a consent record checked on every send, and data for the consent card (Q3) and the profile (Q4). The cost is one more integration step for the business.</div>
+<div class="ce">Model A skips step 1; only steps 2 (blocked / revoked in Phiz) and the user-side controls apply. Names, codes and fields are placeholders for discussion.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

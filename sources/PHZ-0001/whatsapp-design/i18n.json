@@ -1470,5 +1470,789 @@
  "This week's deals: up to 40% off": [
   "Ofertas da semana: até 40% off",
   "本周优惠：最低 6 折"
+ ],
+ "Server creates a one-time <b>Handoff Token</b>": [
+  "O servidor cria um <b>Handoff Token</b> de uso único",
+  "服务器生成一次性 <b>Handoff Token</b>"
+ ],
+ "Back to the <b>same</b> BA chat and scenario": [
+  "Volta para o <b>mesmo</b> chat da conta business e cenário",
+  "回到<b>同一个</b>企业账号对话和场景"
+ ],
+ "In WhatsApp, opt-in usually happens <b>outside</b> the app and Meta never sees it (O6). Here the user accepts <b>inside PhizChat</b>, so the platform itself holds the proof of consent.": [
+  "No WhatsApp, o opt-in costuma acontecer <b>fora</b> do app e a Meta nunca o vê (O6). Aqui o usuário aceita <b>dentro do PhizChat</b>, então a própria plataforma guarda a prova do consentimento.",
+  "在 WhatsApp 中，opt-in 通常发生在应用<b>之外</b>，Meta 从未看到（O6）。这里用户在 <b>PhizChat 内</b>接受，因此平台本身持有同意的证明。"
+ ],
+ "A webhook when consent changes (proposal: <code>consent_update</code> with <code>granted</code> / <code>revoked</code>), so its own CRM stays in sync.": [
+  "Um webhook quando o consentimento muda (proposta: <code>consent_update</code> com <code>granted</code> / <code>revoked</code>), para o CRM dele ficar sincronizado.",
+  "同意状态变化时收到 Webhook（提议：<code>consent_update</code>，值为 <code>granted</code> / <code>revoked</code>），使其 CRM 保持同步。"
+ ],
+ "Without the app, the link opens a light <b>H5 page</b>: basic profile and security info only. There is <b>no Accept button</b> here — consent is only given inside the app, by a logged-in user.": [
+  "Sem o app, o link abre uma <b>página H5</b> leve: só o perfil básico e informações de segurança. <b>Não há botão Aceitar</b> aqui — o consentimento só é dado dentro do app, por um usuário logado.",
+  "未安装应用时，链接会打开轻量的 <b>H5 页面</b>：只有基本资料和安全信息。这里<b>没有“接受”按钮</b>——只有已登录用户才能在应用内给予同意。"
+ ],
+ "The chat opens with a <b>consent card</b>. The input box is <b>hidden and disabled</b> until the user accepts, so no conversation (and no business message) happens without authorization.": [
+  "O chat abre com um <b>cartão de consentimento</b>. O campo de mensagem fica <b>oculto e desativado</b> até o usuário aceitar, então nenhuma conversa (nem mensagem da empresa) acontece sem autorização.",
+  "对话以<b>同意卡片</b>开始。在用户接受之前，输入框<b>隐藏且不可用</b>，因此未经授权不会产生任何对话（也不会有企业消息）。"
+ ],
+ "After Accept: the button turns grey (“Accepted”), the <b>welcome template</b> is sent automatically if the business configured one, and the input box is activated.": [
+  "Depois do aceite: o botão fica cinza (“Aceito”), o <b>template de boas-vindas</b> é enviado automaticamente se a empresa configurou um, e o campo de mensagem é liberado.",
+  "点击“接受”后：按钮变灰（“已接受”），如果企业配置了<b>欢迎模板</b>则自动发送，输入框被激活。"
+ ],
+ "PhizChat saves the consent (user, merchant_id, time, entry point) and notifies the merchant (proposal: <code>consent_update</code> webhook). The business is saved under “Business” in contacts.": [
+  "O PhizChat salva o consentimento (usuário, merchant_id, horário, ponto de entrada) e avisa o comerciante (proposta: webhook <code>consent_update</code>). A empresa fica salva em “Empresas” nos contatos.",
+  "PhizChat 保存同意记录（用户、merchant_id、时间、入口）并通知商户（提议：<code>consent_update</code> Webhook）。该企业被保存到通讯录的“企业”分类中。"
+ ],
+ "The profile shows who the business is <b>before</b> the user decides: verification, category, website, mini apps and support. The <b>Accept</b> button is also here (opens P5).": [
+  "O perfil mostra quem é a empresa <b>antes</b> de o usuário decidir: verificação, categoria, site, mini apps e suporte. O botão <b>Aceitar</b> também fica aqui (abre o P5).",
+  "资料页在用户做决定<b>之前</b>展示企业是谁：认证、类别、网站、小程序和客服。<b>“接受”</b>按钮也在这里（打开 P5）。"
+ ],
+ "Once accepted, the profile shows <b>the consent status and its date</b>, and “Revoke consent” in Chat management. Revoking is as easy as accepting.": [
+  "Depois do aceite, o perfil mostra <b>o status do consentimento e a data</b>, e “Revogar consentimento” em Gerenciar conversa. Revogar é tão fácil quanto aceitar.",
+  "接受后，资料页显示<b>同意状态及日期</b>，并在“会话管理”中提供“撤回同意”。撤回和接受一样容易。"
+ ],
+ "After confirming, the consent is marked <b>revoked</b> with the date. The chat goes back to the locked state with the Accept card (P2), so the user can authorize again later.": [
+  "Ao confirmar, o consentimento é marcado como <b>revogado</b>, com a data. O chat volta ao estado bloqueado com o cartão de aceite (P2), e o usuário pode autorizar de novo depois.",
+  "确认后，同意被标记为<b>已撤回</b>并记录日期。对话回到带 “接受”卡片的锁定状态（P2），用户之后可以重新授权。"
+ ],
+ "Merchant: new sends fail with an “opted out” error and a <code>consent_update</code> (revoked) webhook is sent (proposal). History stays in the chat.": [
+  "Comerciante: novos envios falham com erro de “opt-out” e é enviado um webhook <code>consent_update</code> (revoked) (proposta). O histórico continua no chat.",
+  "商户：新的发送会以“已退订”错误失败，并发送 <code>consent_update</code>（revoked）Webhook（提议）。历史消息保留在对话中。"
+ ],
+ "Block reuses the current PhizChat Block UI. The <b>API can still be called</b>, but the user no longer receives anything, and the call returns the user's <b>blocked</b> status.": [
+  "O bloqueio reaproveita a tela de bloqueio atual do PhizChat. A <b>API continua aceitando chamadas</b>, mas o usuário não recebe mais nada e a chamada devolve o status <b>bloqueado</b> do usuário.",
+  "屏蔽沿用 PhizChat 现有的屏蔽界面。<b>API 仍可调用</b>，但用户不会再收到任何消息，调用会返回用户的<b>已屏蔽</b>状态。"
+ ],
+ "First message shows <b>where consent came from</b> (Q3)": [
+  "A primeira mensagem mostra <b>de onde veio o consentimento</b> (Q3)",
+  "第一条消息显示<b>同意来自哪里</b>（Q3）"
+ ],
+ "I authorize PicPay to send me payment alerts, bills and security codes on <b>PhizChat</b> at +55 11 98765-4321. I can turn this off at any time.": [
+  "Autorizo o PicPay a me enviar alertas de pagamento, faturas e códigos de segurança pelo <b>PhizChat</b> no número +55 11 98765-4321. Posso desativar a qualquer momento.",
+  "我授权 PicPay 通过 <b>PhizChat</b> 向 +55 11 98765-4321 发送付款提醒、账单和安全验证码。我可以随时关闭。"
+ ],
+ "Same pattern as O1, but naming <b>PhizChat</b>. The moment happens entirely in PicPay's channels; PhizChat does not see it.": [
+  "Mesmo padrão do O1, mas citando o <b>PhizChat</b>. Tudo acontece nos canais do PicPay; o PhizChat não vê esse momento.",
+  "与 O1 相同的模式，但写明的是 <b>PhizChat</b>。整个过程发生在 PicPay 自己的渠道中，PhizChat 看不到。"
+ ],
+ "Unlike flow P, the user did not open this chat: the business started it, based on consent given outside PhizChat. A <b>“New business”</b> label marks the first contact so it does not look like spam.": [
+  "Diferente do fluxo P, o usuário não abriu esta conversa: a empresa iniciou, com base em um consentimento dado fora do PhizChat. A etiqueta <b>“Nova empresa”</b> marca o primeiro contato para não parecer spam.",
+  "与流程 P 不同，这个对话不是用户打开的，而是企业基于在 PhizChat 之外获得的同意发起的。<b>“新企业”</b>标签标识首次联系，避免被当作垃圾消息。"
+ ],
+ "The message is delivered and the input is open, because consent already exists. On top, a <b>consent source card</b> says what was authorized, where and when (from the data the business declared).": [
+  "A mensagem é entregue e o campo de mensagem fica liberado, porque o consentimento já existe. No topo, um <b>cartão de origem do consentimento</b> diz o que foi autorizado, onde e quando (com os dados que a empresa declarou).",
+  "由于已存在同意，消息会被送达且输入框可用。顶部的<b>同意来源卡片</b>说明授权了什么、在哪里、何时（数据由企业申报）。"
+ ],
+ "Whatever the origin (flow P or Q), the user sees <b>one place</b> with what each business may send, the source and the date — and can revoke it.": [
+  "Seja qual for a origem (fluxo P ou Q), o usuário vê em <b>um só lugar</b> o que cada empresa pode enviar, a origem e a data — e pode revogar.",
+  "无论来源是流程 P 还是 Q，用户都能在<b>同一个地方</b>看到每家企业可以发送什么、来源和日期——并可以撤回。"
+ ],
+ "<b>1. Register</b> — right after the user opts in at the business (Q1):": [
+  "<b>1. Registrar</b> — logo depois que o usuário dá opt-in na empresa (Q1):",
+  "<b>1. 登记</b>——在用户于企业处 opt-in 之后立即进行（Q1）："
+ ],
+ "<b>2. Send</b> — PHIZ checks the consent before delivering:": [
+  "<b>2. Enviar</b> — o PHIZ confere o consentimento antes de entregar:",
+  "<b>2. 发送</b>——PHIZ 在投递前检查同意："
+ ],
+ "<b>3. Revoke</b> — <code>DELETE /v1/merchants/{merchant_id}/consents/{consent_id}</code> when the user opts out at the business; PHIZ sends <code>consent_update</code> webhooks when the user revokes inside PhizChat.": [
+  "<b>3. Revogar</b> — <code>DELETE /v1/merchants/{merchant_id}/consents/{consent_id}</code> quando o usuário dá opt-out na empresa; o PHIZ envia webhooks <code>consent_update</code> quando o usuário revoga dentro do PhizChat.",
+  "<b>3. 撤回</b>——用户在企业处退订时调用 <code>DELETE /v1/merchants/{merchant_id}/consents/{consent_id}</code>；用户在 PhizChat 内撤回时，PHIZ 发送 <code>consent_update</code> Webhook。"
+ ],
+ "H5 install page (P1): basic profile + download, <b>no Accept button</b>": [
+  "Página H5 de instalação (P1): perfil básico + download, <b>sem botão Aceitar</b>",
+  "H5 安装页（P1）：基本资料 + 下载，<b>没有“接受”按钮</b>"
+ ],
+ "BA chat window (P2): input <b>locked</b> until Accept": [
+  "Chat da conta business (P2): campo <b>bloqueado</b> até o aceite",
+  "企业账号对话窗口（P2）：“接受”之前输入框<b>锁定</b>"
+ ],
+ "Hi, <b>Ana</b>! You received a Pix of <b>R$ 150,00</b> from João Lima at 09:41.": [
+  "Olá, <b>Ana</b>! Você recebeu um Pix de <b>R$ 150,00</b> de João Lima às 09:41.",
+  "你好，<b>Ana</b>！你收到了 João Lima 于 09:41 转来的 <b>R$ 150,00</b> Pix。"
+ ],
+ "Opt-in inside PhizChat: the user accepts the Business Account": [
+  "Opt-in dentro do PhizChat: o usuário aceita a conta business",
+  "PhizChat 内的 opt-in：用户接受企业账号"
+ ],
+ "From any entry point to an authorized chat — and how consent is revoked or blocked later": [
+  "De qualquer ponto de entrada até uma conversa autorizada — e como o consentimento é revogado ou bloqueado depois",
+  "从任意入口到获得授权的对话——以及之后如何撤回或屏蔽"
+ ],
+ "1 · Entry": [
+  "1 · Entrada",
+  "1 · 入口"
+ ],
+ "User discovers the business": [
+  "O usuário encontra a empresa",
+  "用户发现企业"
+ ],
+ "Entry type?": [
+  "Tipo de entrada?",
+  "入口类型？"
+ ],
+ "SMS / e-mail invitation link": [
+  "Link de convite por SMS / e-mail",
+  "短信 / 邮件邀请链接"
+ ],
+ "QR code / offline material": [
+  "QR code / material impresso",
+  "二维码 / 线下物料"
+ ],
+ "Merchant app / mini program / website": [
+  "App do comerciante / mini app / site",
+  "商户 App / 小程序 / 官网"
+ ],
+ "In-app search inside PhizChat": [
+  "Busca dentro do PhizChat",
+  "PhizChat 应用内搜索"
+ ],
+ "Phiz installed?": [
+  "Phiz instalado?",
+  "已安装 Phiz？"
+ ],
+ "Deep link opens the BA chat": [
+  "O deep link abre o chat da conta business",
+  "深度链接打开企业账号对话"
+ ],
+ "No": [
+  "Não",
+  "否"
+ ],
+ "In-app search skips this step and goes straight to the BA chat (P2).": [
+  "A busca no app pula esta etapa e vai direto para o chat da conta business (P2).",
+  "应用内搜索跳过此步骤，直接进入企业账号对话（P2）。"
+ ],
+ "2 · Install & log in": [
+  "2 · Instalar e entrar",
+  "2 · 安装并登录"
+ ],
+ "Tap “Download / Install Phiz”": [
+  "Toca em “Baixar / Instalar o Phiz”",
+  "点击“下载 / 安装 Phiz”"
+ ],
+ "App Store / Play Store → install → first launch": [
+  "App Store / Play Store → instala → primeira abertura",
+  "App Store / Play Store → 安装 → 首次启动"
+ ],
+ "App redeems the deferred deep link token": [
+  "O app resgata o token do deep link diferido",
+  "应用兑换延迟深度链接令牌"
+ ],
+ "Logged in?": [
+  "Logado?",
+  "已登录？"
+ ],
+ "Log in / register": [
+  "Entrar / cadastrar",
+  "登录 / 注册"
+ ],
+ "3 · Consent": [
+  "3 · Consentimento",
+  "3 · 同意"
+ ],
+ "Accepted?": [
+  "Aceitou?",
+  "已接受？"
+ ],
+ "Value intro + authorization panel (P4, P5)": [
+  "Apresentação do valor + painel de autorização (P4, P5)",
+  "价值介绍 + 授权面板（P4、P5）"
+ ],
+ "Enter business chat (P3)": [
+  "Entra no chat da empresa (P3)",
+  "进入企业对话（P3）"
+ ],
+ "OPT-IN recorded by PhizChat": [
+  "OPT-IN registrado pelo PhizChat",
+  "PhizChat 记录 OPT-IN"
+ ],
+ "user · merchant_id · time · channel": [
+  "usuário · merchant_id · horário · canal",
+  "用户 · merchant_id · 时间 · 渠道"
+ ],
+ "Welcome template sent (if configured) · contact saved under “Business”": [
+  "Template de boas-vindas enviado (se configurado) · contato salvo em “Empresas”",
+  "发送欢迎模板（如已配置）· 联系人保存到“企业”分类"
+ ],
+ "Later…": [
+  "Depois…",
+  "之后……"
+ ],
+ "Revoke consent (P6, P7) → chat locked again": [
+  "Revogar consentimento (P6, P7) → chat bloqueado de novo",
+  "撤回同意（P6、P7）→ 对话重新锁定"
+ ],
+ "Block (P8) → API returns “blocked”": [
+  "Bloquear (P8) → API devolve “bloqueado”",
+  "屏蔽（P8）→ API 返回“已屏蔽”"
+ ],
+ "KEY DIFFERENCE FROM WHATSAPP": [
+  "PRINCIPAL DIFERENÇA DO WHATSAPP",
+  "与 WHATSAPP 的关键区别"
+ ],
+ "What PhizChat stores": [
+  "O que o PhizChat guarda",
+  "PhizChat 保存什么"
+ ],
+ "User ID · merchant_id · status (granted / revoked) · timestamp · entry point (link, QR, search…) · app version and wording shown.": [
+  "ID do usuário · merchant_id · status (concedido / revogado) · data e hora · ponto de entrada (link, QR, busca…) · versão do app e texto exibido.",
+  "用户 ID · merchant_id · 状态（已授予 / 已撤回）· 时间戳 · 入口（链接、二维码、搜索……）· 应用版本及展示的文案。"
+ ],
+ "What the merchant receives": [
+  "O que o comerciante recebe",
+  "商户收到什么"
+ ],
+ "Phiz not installed: H5 page": [
+  "Phiz não instalado: página H5",
+  "未安装 Phiz：H5 页面"
+ ],
+ "Opened from SMS, e-mail or QR code": [
+  "Aberta por SMS, e-mail ou QR code",
+  "从短信、邮件或二维码打开"
+ ],
+ "Phiz Business Account": [
+  "Conta Business do Phiz",
+  "Phiz 企业账号"
+ ],
+ "Digital wallet: Pix, card, bills and investments. Payment alerts and customer service here.": [
+  "Carteira digital: Pix, cartão, contas e investimentos. Alertas de pagamento e atendimento por aqui.",
+  "数字钱包：Pix、信用卡、账单和理财。在这里接收付款提醒和客服服务。"
+ ],
+ "Business Account information": [
+  "Informações da conta business",
+  "企业账号信息"
+ ],
+ "Verified business": [
+  "Empresa verificada",
+  "已认证企业"
+ ],
+ "Financial services": [
+  "Serviços financeiros",
+  "金融服务"
+ ],
+ "Download / Install Phiz": [
+  "Baixar / Instalar o Phiz",
+  "下载 / 安装 Phiz"
+ ],
+ "Tap → server creates a one-time Handoff Token → App Store / Play Store → after install and login, the deferred deep link opens the same BA chat (P2).": [
+  "Toque → o servidor cria um Handoff Token de uso único → App Store / Play Store → depois de instalar e entrar, o deep link diferido abre o mesmo chat da conta business (P2).",
+  "点击 → 服务器生成一次性 Handoff Token → App Store / Play Store → 安装并登录后，延迟深度链接打开同一个企业账号对话（P2）。"
+ ],
+ "BA chat: input locked until Accept": [
+  "Chat da conta business: campo bloqueado até o aceite",
+  "企业账号对话：“接受”之前输入框锁定"
+ ],
+ "Deep link, in-app search or after install": [
+  "Deep link, busca no app ou depois de instalar",
+  "深度链接、应用内搜索或安装之后"
+ ],
+ "This Business account uses a secure service from Phiz to manage this chat. Tap to learn more.": [
+  "Esta conta business usa um serviço seguro do Phiz para gerenciar esta conversa. Toque para saber mais.",
+  "该企业账号使用 Phiz 的安全服务管理此对话。点击了解详情。"
+ ],
+ "Today": [
+  "Hoje",
+  "今天"
+ ],
+ "Digital wallet: Pix, card, bills and investments.": [
+  "Carteira digital: Pix, cartão, contas e investimentos.",
+  "数字钱包：Pix、信用卡、账单和理财。"
+ ],
+ "Receive messages from this business account": [
+  "Receber mensagens desta conta business",
+  "接收此企业账号的消息"
+ ],
+ "Allow PicPay to send you messages here? You can revoke consent anytime in settings.": [
+  "Permitir que o PicPay envie mensagens para você aqui? Você pode revogar o consentimento a qualquer momento nas configurações.",
+  "允许 PicPay 在这里给你发消息吗？你可以随时在设置中撤回同意。"
+ ],
+ "Profile": [
+  "Perfil",
+  "资料"
+ ],
+ "Accept": [
+  "Aceitar",
+  "接受"
+ ],
+ "You can only continue chatting after you Accept.": [
+  "Você só pode continuar a conversa depois de aceitar.",
+  "接受之后才能继续聊天。"
+ ],
+ "Accept → P3. Profile → full business profile (P4), which also has Accept.": [
+  "Aceitar → P3. Perfil → perfil completo da empresa (P4), que também tem o botão Aceitar.",
+  "接受 → P3。资料 → 完整的企业资料页（P4），那里也有“接受”。"
+ ],
+ "After Accept: chat unlocked": [
+  "Depois do aceite: chat liberado",
+  "接受之后：对话解锁"
+ ],
+ "Consent granted inside PhizChat": [
+  "Consentimento dado dentro do PhizChat",
+  "在 PhizChat 内给予同意"
+ ],
+ "✓ Accepted": [
+  "✓ Aceito",
+  "✓ 已接受"
+ ],
+ "Hi, Ana! Thanks for following PicPay. You'll get payment alerts and bills here, and you can talk to us anytime.": [
+  "Olá, Ana! Obrigado por seguir o PicPay. Você vai receber alertas de pagamento e faturas por aqui e pode falar com a gente quando quiser.",
+  "你好，Ana！感谢关注 PicPay。你将在这里收到付款提醒和账单，也可以随时联系我们。"
+ ],
+ "OPT-IN RECORDED": [
+  "OPT-IN REGISTRADO",
+  "OPT-IN 已记录"
+ ],
+ "Business Account profile": [
+  "Perfil da conta business",
+  "企业账号资料页"
+ ],
+ "“Profile” button in P2 · before consent": [
+  "Botão “Perfil” no P2 · antes do consentimento",
+  "P2 中的“资料”按钮 · 同意之前"
+ ],
+ "Mini Apps": [
+  "Mini Apps",
+  "小程序"
+ ],
+ "Support": [
+  "Suporte",
+  "客服"
+ ],
+ "Digital wallet: Pix, card, bills and investments": [
+  "Carteira digital: Pix, cartão, contas e investimentos",
+  "数字钱包：Pix、信用卡、账单和理财"
+ ],
+ "This is a Phiz business account. Phiz only provides messaging technology. The account holder is fully responsible for the content it publishes and the services it offers.": [
+  "Esta é uma conta business do Phiz. O Phiz só fornece a tecnologia de mensagens. O titular da conta é o único responsável pelo conteúdo que publica e pelos serviços que oferece.",
+  "这是 Phiz 企业账号。Phiz 只提供消息技术能力。账号主体对其发布的全部内容和提供的服务承担全部责任。"
+ ],
+ "The disclaimer makes clear that Phiz is the channel; legal responsibility for content stays with the business.": [
+  "O aviso deixa claro que o Phiz é o canal; a responsabilidade legal pelo conteúdo é da empresa.",
+  "该声明明确 Phiz 只是渠道；内容的法律责任由企业承担。"
+ ],
+ "Consent confirmation sheet": [
+  "Janela de confirmação do consentimento",
+  "同意确认弹窗"
+ ],
+ "Accept from the profile page (P4)": [
+  "Aceitar pela página de perfil (P4)",
+  "从资料页接受（P4）"
+ ],
+ "Media, links and documents": [
+  "Mídia, links e documentos",
+  "媒体、链接和文档"
+ ],
+ "Receive messages from this business account?": [
+  "Receber mensagens desta conta business?",
+  "接收此企业账号的消息？"
+ ],
+ "Allow PicPay to send you messages on Phiz? You can revoke consent anytime in settings.": [
+  "Permitir que o PicPay envie mensagens para você no Phiz? Você pode revogar o consentimento a qualquer momento nas configurações.",
+  "允许 PicPay 在 Phiz 上给你发消息吗？你可以随时在设置中撤回同意。"
+ ],
+ "Same decision as the card in P2, from the profile. The text names the business and says it can be revoked — the two things a valid consent needs.": [
+  "A mesma decisão do cartão do P2, feita pelo perfil. O texto cita a empresa e diz que dá para revogar — as duas coisas que um consentimento válido precisa ter.",
+  "与 P2 中的卡片是同一个决定，只是从资料页发起。文案写明了企业名称并说明可以撤回——这是有效同意所需的两点。"
+ ],
+ "After Accept, the business is added to the “Business” category of contacts and the chat opens unlocked (P3).": [
+  "Depois do aceite, a empresa entra na categoria “Empresas” dos contatos e o chat abre liberado (P3).",
+  "接受后，该企业被加入通讯录的“企业”分类，对话以解锁状态打开（P3）。"
+ ],
+ "Profile after consent: manage it": [
+  "Perfil depois do consentimento: gerenciar",
+  "同意之后的资料页：管理同意"
+ ],
+ "Chat management · revoke, block, report": [
+  "Gerenciar conversa · revogar, bloquear, denunciar",
+  "会话管理 · 撤回、屏蔽、举报"
+ ],
+ "Messages from this business": [
+  "Mensagens desta empresa",
+  "来自该企业的消息"
+ ],
+ "Allowed since Oct 20, 2026 · in Phiz": [
+  "Permitido desde 20/10/2026 · no Phiz",
+  "自 2026 年 10 月 20 日起允许 · 在 Phiz 内"
+ ],
+ "Allowed": [
+  "Permitido",
+  "已允许"
+ ],
+ "Media, links and docs": [
+  "Mídia, links e docs",
+  "媒体、链接和文档"
+ ],
+ "Mute": [
+  "Silenciar",
+  "静音"
+ ],
+ "Favorite messages": [
+  "Mensagens favoritas",
+  "收藏的消息"
+ ],
+ "Chat management": [
+  "Gerenciar conversa",
+  "会话管理"
+ ],
+ "Revoke consent": [
+  "Revogar consentimento",
+  "撤回同意"
+ ],
+ "Add to favorites": [
+  "Adicionar aos favoritos",
+  "添加到收藏"
+ ],
+ "Clear chat": [
+  "Limpar conversa",
+  "清空聊天"
+ ],
+ "Block contact": [
+  "Bloquear contato",
+  "屏蔽联系人"
+ ],
+ "Report contact": [
+  "Denunciar contato",
+  "举报联系人"
+ ],
+ "Revoke → P7. Block → P8. Report keeps today's report flow (with reasons such as “I didn't sign up”).": [
+  "Revogar → P7. Bloquear → P8. Denunciar mantém o fluxo de denúncia atual (com motivos como “Não me inscrevi”).",
+  "撤回 → P7。屏蔽 → P8。举报沿用现有举报流程（含“我没有订阅”等原因）。"
+ ],
+ "Confirm revoking consent": [
+  "Confirmar a revogação do consentimento",
+  "确认撤回同意"
+ ],
+ "From “Revoke consent” in P6": [
+  "A partir de “Revogar consentimento” no P6",
+  "从 P6 的“撤回同意”进入"
+ ],
+ "Stop receiving messages from PicPay?": [
+  "Parar de receber mensagens do PicPay?",
+  "停止接收 PicPay 的消息？"
+ ],
+ "PicPay won't be able to send you messages on Phiz. You can authorize again anytime.": [
+  "O PicPay não poderá mais enviar mensagens para você no Phiz. Você pode autorizar de novo a qualquer momento.",
+  "PicPay 将无法再通过 Phiz 给你发消息。你可以随时重新授权。"
+ ],
+ "Confirm revocation": [
+  "Confirmar revogação",
+  "确认撤回"
+ ],
+ "Blocked business account": [
+  "Conta business bloqueada",
+  "已屏蔽的企业账号"
+ ],
+ "“Block contact” in P6 · reuses today's Block": [
+  "“Bloquear contato” no P6 · reaproveita o bloqueio atual",
+  "P6 中的“屏蔽联系人”· 沿用现有屏蔽功能"
+ ],
+ "Hi, Ana! Thanks for following PicPay. You'll get payment alerts and bills here.": [
+  "Olá, Ana! Obrigado por seguir o PicPay. Você vai receber alertas de pagamento e faturas por aqui.",
+  "你好，Ana！感谢关注 PicPay。你将在这里收到付款提醒和账单。"
+ ],
+ "You blocked this business account": [
+  "Você bloqueou esta conta business",
+  "你已屏蔽该企业账号"
+ ],
+ "Unblock": [
+  "Desbloquear",
+  "解除屏蔽"
+ ],
+ "Difference from P7: revoking keeps the chat open to re-authorize; blocking also stops calls and is a strong quality signal against the business.": [
+  "Diferença do P7: revogar mantém o chat aberto para autorizar de novo; bloquear também bloqueia ligações e é um sinal forte de qualidade contra a empresa.",
+  "与 P7 的区别：撤回会保留对话以便重新授权；屏蔽还会阻止来电，并且是对企业不利的强烈质量信号。"
+ ],
+ "Opt-in collected by the business, outside PhizChat": [
+  "Opt-in coletado pela empresa, fora do PhizChat",
+  "企业在 PhizChat 之外收集的 opt-in"
+ ],
+ "The user authorized PicPay in the PicPay app; PhizChat never saw that moment": [
+  "O usuário autorizou o PicPay no app do PicPay; o PhizChat nunca viu esse momento",
+  "用户在 PicPay App 中授权了 PicPay；PhizChat 从未看到这一刻"
+ ],
+ "1 · Business side": [
+  "1 · Lado da empresa",
+  "1 · 企业侧"
+ ],
+ "User turns on “PhizChat messages” in the PicPay app, site or store (Q1)": [
+  "O usuário ativa “Mensagens no PhizChat” no app, site ou loja do PicPay (Q1)",
+  "用户在 PicPay 的 App、网站或门店开启“PhizChat 消息”（Q1）"
+ ],
+ "PicPay stores proof in its CRM: who, category, when, where, wording": [
+  "O PicPay guarda a prova no CRM: quem, categoria, quando, onde, texto",
+  "PicPay 在其 CRM 中保存证明：谁、类别、何时、何地、措辞"
+ ],
+ "Which model? (decision)": [
+  "Qual modelo? (decisão)",
+  "采用哪种模式？（待决定）"
+ ],
+ "A · like Meta": [
+  "A · como a Meta",
+  "A · 与 Meta 相同"
+ ],
+ "Nothing sent to PHIZ; record stays with PicPay": [
+  "Nada vai para o PHIZ; o registro fica com o PicPay",
+  "不向 PHIZ 提交；记录留在 PicPay"
+ ],
+ "B · registry": [
+  "B · registro",
+  "B · 登记"
+ ],
+ "PicPay registers the consent in PHIZ (Q5)": [
+  "O PicPay registra o consentimento no PHIZ (Q5)",
+  "PicPay 在 PHIZ 中登记同意（Q5）"
+ ],
+ "2 · PHIZ API checks on send": [
+  "2 · Verificações da API PHIZ no envio",
+  "2 · PHIZ API 在发送时的检查"
+ ],
+ "PicPay sends a template via the PHIZ API": [
+  "O PicPay envia um template pela API PHIZ",
+  "PicPay 通过 PHIZ API 发送模板"
+ ],
+ "Recipient is a Phiz user?": [
+  "O destinatário é usuário do Phiz?",
+  "收件人是 Phiz 用户吗？"
+ ],
+ "No → error “not on Phiz” · PicPay uses another channel": [
+  "Não → erro “não está no Phiz” · o PicPay usa outro canal",
+  "否 → 错误“不是 Phiz 用户”· PicPay 改用其他渠道"
+ ],
+ "Blocked or revoked by the user?": [
+  "Bloqueado ou revogado pelo usuário?",
+  "被用户屏蔽或撤回？"
+ ],
+ "Yes → error “blocked / opted out” · nothing delivered": [
+  "Sim → erro “bloqueado / opt-out” · nada é entregue",
+  "是 → 错误“已屏蔽 / 已退订”· 不投递"
+ ],
+ "Model B: active consent for this category?": [
+  "Modelo B: há consentimento ativo para esta categoria?",
+  "模式 B：该类别有有效同意吗？"
+ ],
+ "No → error “no consent”": [
+  "Não → erro “sem consentimento”",
+  "否 → 错误“没有同意”"
+ ],
+ "Delivered": [
+  "Entregue",
+  "已送达"
+ ],
+ "3 · User side in PhizChat": [
+  "3 · Lado do usuário no PhizChat",
+  "3 · PhizChat 中的用户侧"
+ ],
+ "New business chat appears in the list (Q2)": [
+  "Nova conversa com a empresa aparece na lista (Q2)",
+  "列表中出现新的企业对话（Q2）"
+ ],
+ "User reaction": [
+  "Reação do usuário",
+  "用户反应"
+ ],
+ "Keep receiving → consent confirmed in Phiz": [
+  "Continuar recebendo → consentimento confirmado no Phiz",
+  "继续接收 → 在 Phiz 中确认同意"
+ ],
+ "Stop → revoked (P7)": [
+  "Parar → revogado (P7)",
+  "停止 → 已撤回（P7）"
+ ],
+ "“I didn't sign up” → report": [
+  "“Não me inscrevi” → denúncia",
+  "“我没有订阅”→ 举报"
+ ],
+ "Status visible in the profile (Q4)": [
+  "Status visível no perfil (Q4)",
+  "状态在资料页可见（Q4）"
+ ],
+ "P · opt-in in PhizChat": [
+  "P · opt-in no PhizChat",
+  "P · 在 PhizChat 内 opt-in"
+ ],
+ "Q · opt-in at the business": [
+  "Q · opt-in na empresa",
+  "Q · 在企业处 opt-in"
+ ],
+ "Who collects": [
+  "Quem coleta",
+  "由谁收集"
+ ],
+ "PhizChat (Accept)": [
+  "PhizChat (Aceitar)",
+  "PhizChat（接受）"
+ ],
+ "The business (app, site, store)": [
+  "A empresa (app, site, loja)",
+  "企业（App、网站、门店）"
+ ],
+ "Proof lives in": [
+  "Onde fica a prova",
+  "证明保存在"
+ ],
+ "Business CRM (A) · or also PHIZ (B)": [
+  "CRM da empresa (A) · ou também o PHIZ (B)",
+  "企业 CRM（A）· 或同时在 PHIZ（B）"
+ ],
+ "First chat": [
+  "Primeira conversa",
+  "首次对话"
+ ],
+ "Locked until Accept": [
+  "Bloqueada até o aceite",
+  "接受之前锁定"
+ ],
+ "Opens with a message and the consent source": [
+  "Abre com uma mensagem e a origem do consentimento",
+  "以一条消息和同意来源打开"
+ ],
+ "Same for both: revoke, block, report — enforced by PhizChat": [
+  "Igual nos dois: revogar, bloquear, denunciar — aplicado pelo PhizChat",
+  "两者相同：撤回、屏蔽、举报——由 PhizChat 执行"
+ ],
+ "WHY Q MATTERS": [
+  "POR QUE O Q IMPORTA",
+  "为什么 Q 很重要"
+ ],
+ "Most Brazilian companies already collect consent in their own channels (see O1, O2). If PhizChat only accepted in-app consent, a company like PicPay could not start conversations with its existing customers. Flow Q allows that, while the user keeps the same controls as in flow P.": [
+  "A maioria das empresas brasileiras já coleta consentimento nos próprios canais (ver O1, O2). Se o PhizChat só aceitasse o consentimento dado no app, uma empresa como o PicPay não conseguiria iniciar conversas com os clientes que já tem. O fluxo Q permite isso, e o usuário mantém os mesmos controles do fluxo P.",
+  "大多数巴西企业已经在自己的渠道中收集同意（见 O1、O2）。如果 PhizChat 只接受应用内的同意，像 PicPay 这样的企业将无法与现有客户发起对话。流程 Q 解决了这一点，同时用户保留与流程 P 相同的控制权。"
+ ],
+ "Under the LGPD the business must prove consent either way; model B also lets PHIZ check it before every send.": [
+  "Pela LGPD, a empresa precisa provar o consentimento nos dois casos; o modelo B também permite ao PHIZ conferir antes de cada envio.",
+  "根据 LGPD，两种情况下企业都必须能证明同意；模式 B 还能让 PHIZ 在每次发送前进行校验。"
+ ],
+ "Opt-in in the PicPay app": [
+  "Opt-in no app do PicPay",
+  "在 PicPay App 中 opt-in"
+ ],
+ "PicPay app › Settings › Notifications (not PhizChat)": [
+  "App PicPay › Ajustes › Notificações (não é o PhizChat)",
+  "PicPay App › 设置 › 通知（不是 PhizChat）"
+ ],
+ "OPT-IN · OUTSIDE PHIZCHAT": [
+  "OPT-IN · FORA DO PHIZCHAT",
+  "OPT-IN · 在 PHIZCHAT 之外"
+ ],
+ "PhizChat — account alerts": [
+  "PhizChat — alertas da conta",
+  "PhizChat — 账户提醒"
+ ],
+ "PhizChat — offers and promotions": [
+  "PhizChat — ofertas e promoções",
+  "PhizChat — 优惠和促销"
+ ],
+ "Receive cashback offers from PicPay on PhizChat.": [
+  "Receber ofertas de cashback do PicPay pelo PhizChat.",
+  "通过 PhizChat 接收 PicPay 的返现优惠。"
+ ],
+ "PicPay records it (who, category, when, wording). In model B it also registers the consent in PHIZ through the API (Q5).": [
+  "O PicPay registra (quem, categoria, quando, texto). No modelo B, também registra o consentimento no PHIZ pela API (Q5).",
+  "PicPay 记录下来（谁、类别、何时、措辞）。在模式 B 中，还会通过 API 在 PHIZ 中登记同意（Q5）。"
+ ],
+ "First message arrives in PhizChat": [
+  "A primeira mensagem chega no PhizChat",
+  "第一条消息到达 PhizChat"
+ ],
+ "The user never opened this chat before": [
+  "O usuário nunca tinha aberto esta conversa",
+  "用户之前从未打开过此对话"
+ ],
+ "New business": [
+  "Nova empresa",
+  "新企业"
+ ],
+ "Verified badge + label = the user knows who it is before opening.": [
+  "Selo de verificação + etiqueta = o usuário sabe quem é antes de abrir.",
+  "认证标识 + 标签 = 用户在打开前就知道是谁。"
+ ],
+ "Chat shows where consent came from": [
+  "O chat mostra de onde veio o consentimento",
+  "对话显示同意的来源"
+ ],
+ "First message from a business-side opt-in": [
+  "Primeira mensagem de um opt-in feito na empresa",
+  "来自企业侧 opt-in 的第一条消息"
+ ],
+ "CONSENT SOURCE": [
+  "ORIGEM DO CONSENTIMENTO",
+  "同意来源"
+ ],
+ "PicPay says you agreed to receive account alerts": [
+  "O PicPay informa que você aceitou receber alertas da conta",
+  "PicPay 表示你已同意接收账户提醒"
+ ],
+ "In the PicPay app · Oct 19, 2026. Phiz shows this so you know why this business can message you.": [
+  "No app do PicPay · 19/10/2026. O Phiz mostra isso para você saber por que esta empresa pode enviar mensagens.",
+  "在 PicPay App 中 · 2026 年 10 月 19 日。Phiz 显示这些信息，让你知道该企业为什么可以给你发消息。"
+ ],
+ "Keep receiving": [
+  "Continuar recebendo",
+  "继续接收"
+ ],
+ "I didn't sign up · Report": [
+  "Não me inscrevi · Denunciar",
+  "我没有订阅 · 举报"
+ ],
+ "Keep receiving → consent also confirmed inside Phiz. Stop → revoked (P7). “I didn't sign up” → report with that reason; a strong quality signal against the business.": [
+  "Continuar recebendo → consentimento também confirmado dentro do Phiz. Parar → revogado (P7). “Não me inscrevi” → denúncia com esse motivo; um sinal forte de qualidade contra a empresa.",
+  "继续接收 → 同意也在 Phiz 内得到确认。停止 → 已撤回（P7）。“我没有订阅”→ 以此原因举报；这是对企业不利的强烈质量信号。"
+ ],
+ "Consent status in the profile": [
+  "Status do consentimento no perfil",
+  "资料页中的同意状态"
+ ],
+ "Per category, with its source": [
+  "Por categoria, com a origem",
+  "按类别显示，并附来源"
+ ],
+ "Allowed · via PicPay app · Oct 19, 2026": [
+  "Permitido · pelo app PicPay · 19/10/2026",
+  "已允许 · 通过 PicPay App · 2026 年 10 月 19 日"
+ ],
+ "Offers and promotions": [
+  "Ofertas e promoções",
+  "优惠和促销"
+ ],
+ "Not allowed": [
+  "Não permitido",
+  "未允许"
+ ],
+ "Off": [
+  "Desligado",
+  "关闭"
+ ],
+ "Customer service": [
+  "Atendimento",
+  "客服"
+ ],
+ "Replies to your messages (24 h)": [
+  "Respostas às suas mensagens (24 h)",
+  "回复你的消息（24 小时内）"
+ ],
+ "Always": [
+  "Sempre",
+  "始终"
+ ],
+ "Per-category status works only if the business declares the category (model B, Q5). In model A, Phiz can only show “Allowed by the business”.": [
+  "O status por categoria só funciona se a empresa declarar a categoria (modelo B, Q5). No modelo A, o Phiz só consegue mostrar “Permitido pela empresa”.",
+  "只有企业申报了类别（模式 B，Q5），才能按类别显示状态。在模式 A 中，Phiz 只能显示“由企业授权”。"
+ ],
+ "Model B: the business registers the consent in PHIZ": [
+  "Modelo B: a empresa registra o consentimento no PHIZ",
+  "模式 B：企业在 PHIZ 中登记同意"
+ ],
+ "Illustrative proposal — not the final API": [
+  "Proposta ilustrativa — não é a API final",
+  "示意性提议——并非最终 API"
+ ],
+ "Model B gives PHIZ what Meta does not have: a consent record checked on every send, and data for the consent card (Q3) and the profile (Q4). The cost is one more integration step for the business.": [
+  "O modelo B dá ao PHIZ o que a Meta não tem: um registro de consentimento conferido a cada envio, e dados para o cartão de consentimento (Q3) e para o perfil (Q4). O custo é um passo a mais de integração para a empresa.",
+  "模式 B 让 PHIZ 拥有 Meta 所没有的东西：每次发送都会校验的同意记录，以及用于同意卡片（Q3）和资料页（Q4）的数据。代价是企业多一个集成步骤。"
+ ],
+ "Model A skips step 1; only steps 2 (blocked / revoked in Phiz) and the user-side controls apply. Names, codes and fields are placeholders for discussion.": [
+  "O modelo A pula o passo 1; valem só o passo 2 (bloqueado / revogado no Phiz) e os controles do usuário. Nomes, códigos e campos são provisórios, para discussão.",
+  "模式 A 跳过第 1 步；只适用第 2 步（在 Phiz 中被屏蔽 / 撤回）和用户侧控制。名称、代码和字段均为待讨论的占位内容。"
  ]
 }

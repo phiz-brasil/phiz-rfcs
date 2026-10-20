@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>P3 After Accept</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+<link rel="stylesheet" href="/_blob/8aaa337a9ac66607d453683ac7ad98bf">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ab">
+<div class="hd"><span class="optag" style="font-size: 13px; align-self: center">P3</span><div><div class="tt">After Accept: chat unlocked</div><div class="te">Consent granted inside PhizChat</div></div></div>
+<div class="ph">
+<div class="pz-bar"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#17201C" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><div class="pz-av">P</div><div style="flex: 1"><div class="nm">PicPay <svg width="14" height="14" viewBox="0 0 16 16" role="img" aria-label="Verified business"><circle cx="8" cy="8" r="8" fill="#15803D"/><path d="M4.5 8.2l2.2 2.2 4.6-4.8" stroke="#fff" stroke-width="1.8" fill="none"/></svg></div><div class="sb">Business account</div></div></div>
+<div class="pz-chat">
+<div class="pz-ban">This Business account uses a secure service from Phiz to manage this chat. Tap to learn more.</div>
+<div class="day">Today</div>
+<div class="pz-card">
+<div class="pz-head"><div class="pz-av lg">P</div><div><div class="pz-name">PicPay</div><div class="pz-handle">@picpay</div></div></div>
+<div class="pz-div"></div>
+<div class="pz-ct">Receive messages from this business account</div>
+<div class="pz-btns"><button class="pz-b s">Profile</button><button class="pz-b done" disabled>✓ Accepted</button></div>
+</div>
+<div class="in">Hi, Ana! Thanks for following PicPay. You'll get payment alerts and bills here, and you can talk to us anytime.<span class="tm">11:22</span></div>
+</div>
+<div class="cmp"><label for="p3m" class="sr">Message</label><input id="p3m" class="inp" placeholder="Message"><button class="mic pzt" aria-label="Record audio"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button></div>
+</div>
+<div class="cap">
+<div style="display: flex; gap: 8px"><span class="optag">OPT-IN RECORDED</span></div>
+<div class="cz">After Accept: the button turns grey (“Accepted”), the <b>welcome template</b> is sent automatically if the business configured one, and the input box is activated.</div>
+<div class="ce">PhizChat saves the consent (user, merchant_id, time, entry point) and notifies the merchant (proposal: <code>consent_update</code> webhook). The business is saved under “Business” in contacts.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":460,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

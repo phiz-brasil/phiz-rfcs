@@ -44,7 +44,7 @@
 <div class="note-box"><span class="lbl">关于画面</span><p>这些是示意图，并非 WhatsApp 官方界面。画面文字已译为中文（真实应用中用户看到的是葡萄牙语）。编号（A2、O1、C3…）与本节来源的设计画布一致。点击图片可查看原尺寸。</p></div>
 
 <h3>消息路径</h3>
-<p>企业不直接对接 WhatsApp：企业系统（CRM、客服）调用 <strong>BSP</strong>（Blip、Zenvia、Twilio、Infobip），BSP 调用 Meta 的 <strong>Cloud API</strong>，再投递到用户手机。回复、点击和状态沿同一路径通过 Webhook 返回。在 PHIZ 中，<strong>PHIZ 商家消息 API</strong> 对应 Cloud API，商户账户（<code>merchant_id</code>）对应 WABA（对照见第 05 节）。</p>
+<p>企业不直接对接 WhatsApp：企业系统（CRM、客服）调用 <strong>BSP</strong>（Blip、Zenvia、Twilio、Infobip），BSP 调用 Meta 的 <strong>Cloud API</strong>，再投递到用户手机。回复、点击和状态沿同一路径通过 Webhook 返回。在 PHIZ 中，<strong>PHIZ 商家消息 API</strong> 对应 Cloud API，商户账户（<code>merchant_id</code>）对应 WABA（对照见第 06 节）。</p>
 <div class="shots">
 <div class="shot"><a href="mocks/zh/whatsapp/b01-architecture.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/b01-architecture.png" alt="企业 → BSP → Meta Cloud API → WhatsApp → 用户；opt-in 是前提，Webhook 为返回路径" width="1400" height="850" loading="lazy"></a><p class="cap"><b>B01.</b> 企业 → BSP → Meta Cloud API → WhatsApp → 用户；opt-in 是前提，Webhook 为返回路径</p></div>
 </div>
@@ -98,7 +98,7 @@
 <div class="shot"><a href="mocks/zh/whatsapp/d10-optout-keyword.png" target="_blank" rel="noopener"><img src="mocks/zh/whatsapp/d10-optout-keyword.png" alt="关键词退订，由商户处理" width="460" height="1022" loading="lazy"></a><p class="cap"><b>D10.</b> 关键词退订，由商户处理</p></div>
 </div>
 <div class="tbl"><table><thead><tr><th>用户操作</th><th>WhatsApp</th><th>PHIZ</th></tr></thead><tbody>
-<tr><td>回复文字或媒体</td><td><code>messages</code> Webhook；开启 24 小时窗口</td><td><code>message</code> 事件（第 09 节）</td></tr>
+<tr><td>回复文字或媒体</td><td><code>messages</code> Webhook；开启 24 小时窗口</td><td><code>message</code> 事件（第 10 节）</td></tr>
 <tr><td>点击按钮或列表项</td><td><code>button_reply</code> / <code>list_reply</code></td><td>带所选 id 的 <code>message</code> 事件</td></tr>
 <tr><td>停止优惠</td><td>营销消息发送失败</td><td>提议：平台对该 <code>merchant_id</code> 屏蔽此类别</td></tr>
 <tr><td>屏蔽或举报</td><td>所有发送失败；质量评级下降</td><td>提议：发送报错并产生质量信号（见 Q3）</td></tr>
@@ -108,14 +108,74 @@
 <h3>对 PHIZ 的启示</h3>
 <ul>
 <li>整个流程中企业的身份是<strong>商户 ID</strong>（<code>merchant_id</code>）：opt-in、屏蔽和质量评级都归属于它。不存在单独的开发者 ID；集成和应用只是代表商户执行操作。</li>
-<li>按商户、按类别管理同意，opt-out 由平台执行（见第 08 节发送策略）。</li>
+<li>按商户、按类别管理同意，opt-out 由平台执行（见第 09 节发送策略）。</li>
 <li>用户信号（屏蔽、举报、停止优惠）影响商户的发送额度。</li>
 <li>聊天内表单（Flows）可作为小程序的参考。</li>
 </ul>
 </section>
 
 <section>
-<h2 id="§goals"><span class="n">04</span>目标与非目标</h2>
+<h2 id="§phizoptin"><span class="n">04</span>PhizChat 中的 opt-in：应用内与企业侧</h2>
+<p>第 03 节说明了在 WhatsApp 上 opt-in 几乎都发生在应用之外，而且 Meta 并不核实。本节提议用户在 PhizChat 中如何<strong>授权</strong>企业账号，共有两条路径，最终都使用相同的退订控制：</p>
+<ul>
+<li><strong>流程 P——在 PhizChat 内：</strong>用户在应用中直接接受企业账号，由平台保存证明。</li>
+<li><strong>流程 Q——在企业侧、PhizChat 之外：</strong>用户在商户的 App、网站或门店中授权，由商户发起对话。</li>
+</ul>
+<div class="note-box"><span class="lbl">关于画面</span><p>这些是示意性提议，以 PicPay 作为示例商户。编号（P0…P8、Q0…Q5）与设计画布一致。点击图片可查看原尺寸。</p></div>
+
+<h3>流程 P · 在 PhizChat 内 opt-in</h3>
+<p>用户通过短信或邮件链接、二维码、商户 App 或网站，或应用内搜索找到企业账号。未安装 Phiz 时，只会看到带资料和下载按钮的 H5 页面；接受永远不会在应用之外发生。安装并登录后，延迟深度链接把用户带回同一个对话，该对话在<strong>接受之前保持锁定</strong>。用户接受后，PhizChat 记录同意（用户、<code>merchant_id</code>、日期、入口），如有欢迎模板则发送，并解锁对话。</p>
+<div class="shots">
+<div class="shot"><a href="mocks/zh/phizchat/p00-optin-map.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p00-optin-map.png" alt="流程 P 总览：入口、安装、登录、接受及之后" width="1400" height="845" loading="lazy"></a><p class="cap"><b>P00.</b> 流程 P 总览：入口、安装、登录、接受及之后</p></div>
+</div>
+<div class="shots phones">
+<div class="shot"><a href="mocks/zh/phizchat/p01-h5-install.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p01-h5-install.png" alt="未安装应用：H5 页面只有资料和下载，没有“接受”按钮" width="460" height="1030" loading="lazy"></a><p class="cap"><b>P01.</b> 未安装应用：H5 页面只有资料和下载，没有“接受”按钮</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/p02-chat-locked.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p02-chat-locked.png" alt="带同意卡片的企业账号对话；接受之前输入框锁定" width="460" height="995" loading="lazy"></a><p class="cap"><b>P02.</b> 带同意卡片的企业账号对话；接受之前输入框锁定</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/p03-accepted.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p03-accepted.png" alt="接受之后：欢迎消息，对话解锁" width="460" height="1038" loading="lazy"></a><p class="cap"><b>P03.</b> 接受之后：欢迎消息，对话解锁</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/p04-profile.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p04-profile.png" alt="同意之前的企业资料页，同样提供“接受”" width="460" height="974" loading="lazy"></a><p class="cap"><b>P04.</b> 同意之前的企业资料页，同样提供“接受”</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/p05-consent-sheet.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p05-consent-sheet.png" alt="同意确认弹窗" width="460" height="1013" loading="lazy"></a><p class="cap"><b>P05.</b> 同意确认弹窗</p></div>
+</div>
+<p>接受之后，资料页显示同意状态和日期。用户可以<strong>撤回</strong>（对话回到锁定状态，之后可以重新授权），或<strong>屏蔽</strong>（沿用现有屏蔽功能；API 仍可调用，但会返回已屏蔽状态）。</p>
+<div class="shots phones">
+<div class="shot"><a href="mocks/zh/phizchat/p06-manage-consent.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p06-manage-consent.png" alt="同意之后的资料页：状态、日期和“撤回同意”" width="460" height="991" loading="lazy"></a><p class="cap"><b>P06.</b> 同意之后的资料页：状态、日期和“撤回同意”</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/p07-revoke.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p07-revoke.png" alt="确认撤回；对话重新锁定" width="460" height="1032" loading="lazy"></a><p class="cap"><b>P07.</b> 确认撤回；对话重新锁定</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/p08-blocked.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/p08-blocked.png" alt="已屏蔽的企业账号：API 返回已屏蔽状态" width="460" height="1013" loading="lazy"></a><p class="cap"><b>P08.</b> 已屏蔽的企业账号：API 返回已屏蔽状态</p></div>
+</div>
+
+<h3>流程 Q · 企业在 PhizChat 之外收集的 opt-in</h3>
+<p>大多数巴西企业已经在自己的渠道中收集同意。在流程 Q 中，用户在 PicPay App 中开启“PhizChat 消息”；PicPay 保存证明，并通过 API 发送模板。API 检查收件人是否为 Phiz 用户、是否已屏蔽或撤回；在模式 B 中，还会检查该类别是否有已登记的同意。在应用中，第一条消息会附带<strong>同意来源卡片</strong>（授权了什么、在哪里、何时），用户可以继续接收、停止或举报。</p>
+<div class="shots">
+<div class="shot"><a href="mocks/zh/phizchat/q00-business-optin-map.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/q00-business-optin-map.png" alt="流程 Q 总览：企业侧、API 检查和用户侧，以及 P 与 Q 的对比" width="1400" height="820" loading="lazy"></a><p class="cap"><b>Q00.</b> 流程 Q 总览：企业侧、API 检查和用户侧，以及 P 与 Q 的对比</p></div>
+</div>
+<div class="shots phones">
+<div class="shot"><a href="mocks/zh/phizchat/q01-optin-merchant-app.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/q01-optin-merchant-app.png" alt="在 PicPay App 中 opt-in，并写明 PhizChat" width="460" height="991" loading="lazy"></a><p class="cap"><b>Q01.</b> 在 PicPay App 中 opt-in，并写明 PhizChat</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/q02-first-message.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/q02-first-message.png" alt="列表中的第一条消息，带“新企业”标签" width="460" height="995" loading="lazy"></a><p class="cap"><b>Q02.</b> 列表中的第一条消息，带“新企业”标签</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/q03-consent-source.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/q03-consent-source.png" alt="同意来源卡片：继续接收、停止或举报" width="460" height="1013" loading="lazy"></a><p class="cap"><b>Q03.</b> 同意来源卡片：继续接收、停止或举报</p></div>
+<div class="shot"><a href="mocks/zh/phizchat/q04-consent-status.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/q04-consent-status.png" alt="按类别显示同意状态，含来源和日期" width="460" height="991" loading="lazy"></a><p class="cap"><b>Q04.</b> 按类别显示同意状态，含来源和日期</p></div>
+</div>
+<div class="shots">
+<div class="shot"><a href="mocks/zh/phizchat/q05-consent-api.png" target="_blank" rel="noopener"><img src="mocks/zh/phizchat/q05-consent-api.png" alt="模式 B：通过 API 登记同意及发送错误（示意性提议）" width="640" height="874" loading="lazy"></a><p class="cap"><b>Q05.</b> 模式 B：通过 API 登记同意及发送错误（示意性提议）</p></div>
+</div>
+
+<h3>P 与 Q 对比</h3>
+<div class="tbl"><table><thead><tr><th></th><th>P · 在 PhizChat 内 opt-in</th><th>Q · 在企业处 opt-in</th></tr></thead><tbody>
+<tr><td>由谁收集</td><td>PhizChat（接受）</td><td>商户（App、网站、门店）</td></tr>
+<tr><td>证明保存在</td><td>PhizChat</td><td>商户 CRM（模式 A）· 同时在 PHIZ（模式 B）</td></tr>
+<tr><td>首次对话</td><td>接受之前锁定</td><td>以消息和同意来源打开</td></tr>
+<tr><td>退订</td><td colspan="2">两者相同：撤回、屏蔽、举报——由 PhizChat 执行</td></tr>
+</tbody></table></div>
+
+<h3>待决定事项</h3>
+<ul>
+<li><strong>流程 Q 采用模式 A 还是 B</strong>（见 Q1）：像 Meta 一样只有政策，还是在 PHIZ 中建立同意登记并在每次发送时校验。完整的同意来源卡片（Q3）和按类别显示的状态（Q4）依赖模式 B。</li>
+<li><strong>流程 Q 中接受之前是否投递：</strong>本提议会投递第一条消息并显示同意来源卡片；另一种做法是像流程 P 一样，在接受之前锁定对话。</li>
+<li><strong>同意类别</strong>（账户提醒、优惠、验证码）以及应用向用户展示什么。</li>
+<li><strong>技术命名</strong>——<code>/v1/merchants/{merchant_id}/consents</code>、<code>consent_update</code> Webhook 和错误码——均为待讨论的占位内容。</li>
+</ul>
+</section>
+
+<section>
+<h2 id="§goals"><span class="n">05</span>目标与非目标</h2>
 <h4>目标</h4>
 <ul>
   <li>凭证归属<strong>商户账号</strong>，不再按频道签发。商户为每个外部系统创建一个<strong>集成</strong>（例如 Blip 一个、Salesforce 一个）。每个集成拥有独立的 <code>client_id</code> 和密钥，由商户决定它能做什么（发送消息、查询状态、配置 Webhook）以及能以哪些发送方身份沟通：商户本身，以及商户可选的频道。</li>
@@ -134,7 +194,7 @@
 </section>
 
 <section>
-<h2 id="§model"><span class="n">05</span>领域模型</h2>
+<h2 id="§model"><span class="n">06</span>领域模型</h2>
 <p>商户账号成为一切的根节点。商户可以通过<strong>两种方式</strong>与 PhizChat 用户沟通：</p>
 <ul>
   <li><strong>直接消息（默认）。</strong>商户以自身名义发送，使用 <em>商户信息</em> 中的名称和头像，无需频道。</li>
@@ -204,7 +264,7 @@ flowchart LR
 </section>
 
 <section>
-<h2 id="§principles"><span class="n">06</span>设计原则</h2>
+<h2 id="§principles"><span class="n">07</span>设计原则</h2>
 <ul>
   <li><strong>与 Cloud API 结构一致。</strong>发送请求、响应和 Webhook 均沿用 Meta 的结构，只有在安全性（签名带时间戳）或清晰度（<code>to_type</code>）有明确收益时才有所不同。</li>
   <li>HTTP 状态码、统一的错误结构，所有错误响应都带 <code>trace_id</code>。</li>
@@ -216,7 +276,7 @@ flowchart LR
 </section>
 
 <section>
-<h2 id="§auth"><span class="n">07</span>鉴权</h2>
+<h2 id="§auth"><span class="n">08</span>鉴权</h2>
 <p>采用 OAuth 2.0 <strong>客户端凭证模式</strong>（RFC 6749 §4.4）。应用用 <code>client_id</code> 和 <code>client_secret</code> 换取 1 小时有效的访问令牌，并在每次调用时通过 <code>Authorization: Bearer</code> 传递。不提供刷新令牌：令牌过期后重新申请即可。</p>
 <div class="eps">
   <div class="ep"><span class="m m-post">POST</span><code class="p">/oauth/token</code><span class="d">签发访问令牌</span></div>
@@ -272,7 +332,7 @@ sequenceDiagram
 </section>
 
 <section>
-<h2 id="§messages"><span class="n">08</span>发送消息</h2>
+<h2 id="§messages"><span class="n">09</span>发送消息</h2>
 <div class="eps">
   <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/{sender_id}/messages</code><span class="d">发送消息或标记已读</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/messages/{message_id}</code><span class="d">最新已知状态（兜底）</span></div>
@@ -330,7 +390,7 @@ sequenceDiagram
 </tbody></table></div>
 <p class="cap">PHIZ App 应支持的格式和大小，参考 Cloud API 的限制。格式转换和压缩由文件托管方负责。需与负责 App 媒体能力的团队确认（见 Q8）。</p>
 <h3>发送策略（同意）</h3>
-<p>参考 WhatsApp 的提议（见第 03 节）：</p>
+<p>参考 WhatsApp 的提议（见第 03 节），opt-in 流程详见第 04 节：</p>
 <ul>
 <li><strong>主动发起会话需要 opt-in</strong>：用户需针对该商户（<code>merchant_id</code>）和类别（账户提醒、优惠或验证码）授权。用户发消息后 24 小时内回复，无需事先 opt-in。</li>
 <li>opt-in 可以在 PHIZ 之外收集（商户的 App、网站或门店），也可以在 PHIZ App 内收集。</li>
@@ -343,7 +403,7 @@ sequenceDiagram
 </section>
 
 <section>
-<h2 id="§webhooks"><span class="n">09</span>Webhook</h2>
+<h2 id="§webhooks"><span class="n">10</span>Webhook</h2>
 <p>每个应用有一个 Webhook 订阅，包含 URL、<code>verify_token</code> 和事件列表，可在开发者中心或通过 API 配置。</p>
 <div class="eps">
   <div class="ep"><span class="m m-put">PUT</span><code class="p">/v1/apps/{app_id}/webhook</code><span class="d">设置 URL、verify_token 和事件</span></div>
@@ -399,7 +459,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§errors"><span class="n">10</span>错误、限额与版本</h2>
+<h2 id="§errors"><span class="n">11</span>错误、限额与版本</h2>
 <p>除 <code>/oauth/*</code> 外，所有错误使用统一结构：</p>
 {CODE:error_env}
 <div class="tbl num"><table><thead><tr><th>code</th><th>HTTP</th><th>type</th><th>含义</th></tr></thead><tbody>
@@ -443,7 +503,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§devarea"><span class="n">11</span>开放平台开发者中心</h2>
+<h2 id="§devarea"><span class="n">12</span>开放平台开发者中心</h2>
 <p>开发配置从 <em>频道 › 开发配置</em> 移出，成为商户菜单中的独立入口 <strong>开发者</strong>，位于 <em>设置</em> 旁边。它复用现有的商户 ID、<em>团队管理</em> 中的角色以及 <em>操作记录</em>。</p>
 <p>新区域的界面示意，数值均为示例。点击图片可查看原图。</p>
 <div class="shots">
@@ -485,7 +545,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§partners"><span class="n">12</span>合作伙伴集成</h2>
+<h2 id="§partners"><span class="n">13</span>合作伙伴集成</h2>
 <p><strong>MVP 阶段</strong>，商户在开发者中心创建应用，把 <code>client_id</code> 和密钥填入 Blip、Salesforce 或自有系统，Webhook URL 由合作方提供。由于契约沿用 Cloud API，已有 WhatsApp 连接器的合作方可以复用大部分实现。</p>
 <p><strong>后续阶段</strong>推出<em>技术合作伙伴</em>计划，对应 Meta 的 Embedded Signup：</p>
 <ul>
@@ -496,7 +556,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§marketing"><span class="n">13</span>通往 Marketing API</h2>
+<h2 id="§marketing"><span class="n">14</span>通往 Marketing API</h2>
 <p>本 RFC 为 Marketing API 预留空间，但不做实现：</p>
 <ul>
   <li>契约中已包含发送用的 <code>type: template</code> 和 <code>templates:manage</code> 范围。</li>
@@ -508,7 +568,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§plan"><span class="n">14</span>交付计划</h2>
+<h2 id="§plan"><span class="n">15</span>交付计划</h2>
 <div class="phases">
   <div class="phase first"><span class="tag">第 1 阶段 · MVP</span><h5>鉴权与发送</h5><ul><li><code>/oauth/token</code>、<code>/oauth/revoke</code>、<code>/v1/me</code></li><li>向手机号和 PHIZ ID 发送 <code>text</code>、<code>image</code>、<code>audio</code>、<code>video</code> 和 <code>document</code></li><li>带签名的 <code>messages</code> 和 <code>message_status</code> Webhook</li><li>开发者中心：应用、密钥、Webhook</li><li>所有商户的默认发送方（商户本身）；频道作为可选发送方</li><li>频道凭证自动迁移</li></ul></div>
 </div>
@@ -516,9 +576,9 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§questions"><span class="n">15</span>待讨论问题</h2>
+<h2 id="§questions"><span class="n">16</span>待讨论问题</h2>
 <ol class="qs">
-  <li><strong>选择接收（opt-in）策略。</strong>第 08 节已给出策略提议（按商户和类别 opt-in、平台执行 opt-out、商户保存记录）。仍需决定：模式 A（与 Meta 相同，不验证）还是 B（在 PHIZ 中建立同意登记，例如 <code>/v1/merchants/{merchant_id}/consents</code>，发送时校验）；有哪些类别；PHIZ App 是否向用户展示其授权内容；以及用户如何屏蔽 Business Account 或停止其优惠（见 Q3）。LGPD 相关要点需与法务确认。适用于 Business Account 和 Channel Service。</li>
+  <li><strong>选择接收（opt-in）策略。</strong>第 09 节已给出策略提议（按商户和类别 opt-in、平台执行 opt-out、商户保存记录）。仍需决定：模式 A（与 Meta 相同，不验证）还是 B（在 PHIZ 中建立同意登记，例如 <code>/v1/merchants/{merchant_id}/consents</code>，发送时校验）；有哪些类别；PHIZ App 是否向用户展示其授权内容；以及用户如何屏蔽 Business Account 或停止其优惠（见 Q3）。LGPD 相关要点需与法务确认。适用于 Business Account 和 Channel Service。</li>
   <li><strong>发送方 ID。</strong>直接使用 <code>merchant_id</code> 和频道 ID 作为 <code>sender_id</code>，还是新建不透明 ID？沿用现有 ID 便于迁移，但会暴露频道的自增 ID。</li>
   <li><strong>Business Account 会话类型。</strong>确认路径 公众号 › Service › Business Account 及其定义：面向企业、商户、政府和机构的双向服务会话，允许用户发消息、菜单可配置，主动消息需遵守授权与发送规则。该类型在 App 中已存在还是需要新建？用户如何屏蔽或免打扰某个 Business Account？</li>
   <li><strong>现有会话类型。</strong>核对层级图和权限表（v1.2）：哪些类型现已存在、哪些现行规则不同、哪些类型不存在、还缺少哪些类型。</li>
@@ -530,6 +590,6 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§openapi"><span class="n">16</span>OpenAPI 参考</h2>
+<h2 id="§openapi"><span class="n">17</span>OpenAPI 参考</h2>
 <p>下方 OpenAPI 3.1 规范覆盖本 RFC 的全部接口和 Webhook，描述为当前语言。由于 API 尚未上线，“Try it out” 已关闭。可通过 “复制 OpenAPI” 将 YAML 导入 Apifox、Postman 或 SDK 生成器。</p>
 </section>

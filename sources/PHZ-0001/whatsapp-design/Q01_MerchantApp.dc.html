@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Q1 Opt-in in the merchant app</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+<link rel="stylesheet" href="/_blob/8aaa337a9ac66607d453683ac7ad98bf">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ab">
+<div class="hd"><span class="optag" style="font-size: 13px; align-self: center">Q1</span><div><div class="tt">Opt-in in the PicPay app</div><div class="te">PicPay app › Settings › Notifications (not PhizChat)</div></div></div>
+<div class="ph">
+<div class="bar"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#17201C" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><div class="nm">Notifications</div><div style="flex: 1"></div><span class="sb">PicPay app</span></div>
+<div class="scr" style="gap: 12px; padding: 18px 16px">
+<div class="sb" style="font-weight: 600">How should we contact you?</div>
+<div class="row" style="padding: 12px 4px"><div class="rt"><div class="rn" style="font-size: 14px">Push notifications</div><div class="rp">In this app</div></div><div class="tg"></div></div>
+<div class="opt" style="border-radius: 12px; background: #FFF8EC; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+<span class="optag">OPT-IN · OUTSIDE PHIZCHAT</span>
+<div style="display: flex; align-items: center; gap: 10px"><div class="rt"><div class="rn" style="font-size: 14px">PhizChat — account alerts</div></div><div class="tg"></div></div>
+<div style="font-size: 12px; line-height: 1.45; color: #3B4742">I authorize PicPay to send me payment alerts, bills and security codes on <b>PhizChat</b> at +55 11 98765-4321. I can turn this off at any time.</div>
+</div>
+<div class="opt" style="border-radius: 12px; background: #FFF8EC; padding: 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 10px"><div class="rt"><div class="rn" style="font-size: 14px">PhizChat — offers and promotions</div></div><div class="tg" style="background: #C9D1CD"></div></div>
+<div style="font-size: 12px; line-height: 1.45; color: #3B4742">Receive cashback offers from PicPay on PhizChat.</div>
+</div>
+</div>
+</div>
+<div class="cap">
+<div class="cz">Same pattern as O1, but naming <b>PhizChat</b>. The moment happens entirely in PicPay's channels; PhizChat does not see it.</div>
+<div class="ce">PicPay records it (who, category, when, wording). In model B it also registers the consent in PHIZ through the API (Q5).</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":460,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

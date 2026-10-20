@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Q0 External opt-in map</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+<link rel="stylesheet" href="/_blob/8aaa337a9ac66607d453683ac7ad98bf">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="wide" style="width: 1400px; gap: 16px">
+<div class="hd"><span class="optag" style="font-size: 13px; align-self: center">Q0</span><div><div class="tt" style="font-size: 26px">Opt-in collected by the business, outside PhizChat</div><div class="te" style="font-size: 14px">The user authorized PicPay in the PicPay app; PhizChat never saw that moment</div></div></div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start">
+<div class="lane" style="border-color: #D97706; background: #FFFBF3">
+<div class="fl-lb" style="color: #B45309">1 · Business side</div>
+<div class="fn o">User turns on “PhizChat messages” in the PicPay app, site or store (Q1)</div>
+<div class="fa">↓</div>
+<div class="fn">PicPay stores proof in its CRM: who, category, when, where, wording</div>
+<div class="fa">↓</div>
+<div class="fd">Which model? (decision)</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 6px">
+<div class="fl"><div class="fl-lb">A · like Meta</div><div class="fa">↓</div><div class="fn">Nothing sent to PHIZ; record stays with PicPay</div></div>
+<div class="fl"><div class="fl-lb">B · registry</div><div class="fa">↓</div><div class="fn g">PicPay registers the consent in PHIZ (Q5)</div></div>
+</div>
+</div>
+
+<div class="lane">
+<div class="fl-lb">2 · PHIZ API checks on send</div>
+<div class="fn">PicPay sends a template via the PHIZ API</div>
+<div class="fa">↓</div>
+<div class="fd">Recipient is a Phiz user?</div>
+<div class="fl-lb" style="margin-top: 4px">No → error “not on Phiz” · PicPay uses another channel</div>
+<div class="fa">↓</div>
+<div class="fd">Blocked or revoked by the user?</div>
+<div class="fl-lb" style="margin-top: 4px">Yes → error “blocked / opted out” · nothing delivered</div>
+<div class="fa">↓</div>
+<div class="fd">Model B: active consent for this category?</div>
+<div class="fl-lb" style="margin-top: 4px">No → error “no consent”</div>
+<div class="fa">↓</div>
+<div class="fn g">Delivered</div>
+</div>
+
+<div class="lane">
+<div class="fl-lb">3 · User side in PhizChat</div>
+<div class="fn">New business chat appears in the list (Q2)</div>
+<div class="fa">↓</div>
+<div class="fn o">First message shows <b>where consent came from</b> (Q3)</div>
+<div class="fa">↓</div>
+<div class="fd">User reaction</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%; margin-top: 6px">
+<div class="fn g">Keep receiving → consent confirmed in Phiz</div>
+<div class="fn r">Stop → revoked (P7)</div>
+<div class="fn r">“I didn't sign up” → report</div>
+</div>
+<div class="fa">↓</div>
+<div class="fn">Status visible in the profile (Q4)</div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px">
+<div class="box" style="padding: 0; overflow: hidden; gap: 0">
+<div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 8px; padding: 10px 16px; background: #17201C; color: #fff; font-size: 13px; font-weight: 600"><div></div><div>P · opt-in in PhizChat</div><div>Q · opt-in at the business</div></div>
+<div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 8px; padding: 9px 16px; font-size: 13px; border-bottom: 1px solid #EEF0EE"><b>Who collects</b><div>PhizChat (Accept)</div><div>The business (app, site, store)</div></div>
+<div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 8px; padding: 9px 16px; font-size: 13px; border-bottom: 1px solid #EEF0EE"><b>Proof lives in</b><div>PhizChat</div><div>Business CRM (A) · or also PHIZ (B)</div></div>
+<div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 8px; padding: 9px 16px; font-size: 13px; border-bottom: 1px solid #EEF0EE"><b>First chat</b><div>Locked until Accept</div><div>Opens with a message and the consent source</div></div>
+<div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 8px; padding: 9px 16px; font-size: 13px"><b>Opt-out</b><div style="grid-column: span 2">Same for both: revoke, block, report — enforced by PhizChat</div></div>
+</div>
+<div class="optbox">
+<span class="optag">WHY Q MATTERS</span>
+<div class="bz">Most Brazilian companies already collect consent in their own channels (see O1, O2). If PhizChat only accepted in-app consent, a company like PicPay could not start conversations with its existing customers. Flow Q allows that, while the user keeps the same controls as in flow P.</div>
+<div class="be">Under the LGPD the business must prove consent either way; model B also lets PHIZ check it before every send.</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
