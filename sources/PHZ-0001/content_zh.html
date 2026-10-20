@@ -18,7 +18,7 @@
   <li><strong>OAuth 2.0 鉴权（客户端凭证模式）</strong>，凭证签发给<em>商户账号</em>，不再绑定频道。</li>
   <li><strong>发送消息</strong>：直接以商户名义向手机号（E.164）或 PHIZ ID 发送消息，是否通过频道发送为可选项。</li>
   <li>带签名的 <strong>Webhook</strong>：推送用户发来的消息，以及已发送消息的每一次状态变化。</li>
-  <li>建立在现有开发者中心之上的<strong>开发者区域</strong>：商户将每个调用 API 的外部系统（如 Blip 或 Salesforce）登记为一个<strong>应用</strong>。每个应用拥有独立的 <code>client_id</code> 和密钥、事件订阅及投递记录。集成与小程序（Miniapp）无关。</li>
+  <li>现有的 <strong>PHIZ开发者中心</strong>：商户将每个调用 API 的外部系统（如 Blip 或 Salesforce）登记为一个<strong>应用</strong>。每个应用拥有独立的 <code>client_id</code> 和密钥、事件订阅及投递记录。集成与小程序（Miniapp）无关。</li>
 </ul>
 <p>消息与 Webhook 的数据结构沿用 Meta Cloud API，仅替换领域名称。已对接 WhatsApp Business Platform 的系统，只需修改 URL、凭证和少量字段名即可适配。</p>
 </section>
@@ -242,7 +242,7 @@ flowchart LR
 </pre></div>
 <p class="cap">回程：用户回复和消息状态通过 Webhook 送达 BSP。</p>
 <ol>
-  <li><strong>集成。</strong>企业（如 PicPay 或 Ambar）通过 BSP 提供客服。商户在开发者中心为该 BSP 创建集成，并提供 <code>client_id</code> 和密钥。</li>
+  <li><strong>集成。</strong>企业（如 PicPay 或 Ambar）通过 BSP 提供客服。商户在开发者中心为该 BSP 创建 Business Messaging 应用，并提供 <code>client_id</code> 和密钥。</li>
   <li><strong>令牌。</strong>BSP 调用 <code>/oauth/token</code>。Auth 在 Merchant Account 中校验集成（密钥、范围和可用发送方），返回 1 小时有效的 JWT。</li>
   <li><strong>发送。</strong>BSP 调用 <code>POST /v1/{sender_id}/messages</code>。API 校验令牌、范围、发送方、选择接收策略和 <code>Idempotency-Key</code>，返回 <code>202</code> 并将消息入队。如需发送媒体，BSP 先将文件上传到 <code>POST /v1/{sender_id}/media</code>，再在发送时使用返回的 <code>id</code> 或 PHIZ 链接。</li>
   <li><strong>路由。</strong><code>sender_id = merchant_id</code> 时作为 Direct Message 发送（默认）；使用频道 ID 时作为 Channel Message 发送（可选）。</li>
@@ -543,7 +543,7 @@ stateDiagram-v2
 </section>
 
 <section>
-<h2 id="§devarea"><span class="n">12</span>开放平台开发者中心</h2>
+<h2 id="§devarea"><span class="n">12</span>PHIZ开发者中心</h2>
 <p>Business API 的开发者配置<strong>不会成为商户菜单中的新区域</strong>，而是建在已有的 <strong>PHIZ开发者中心</strong>内（测试环境：<code>developer-uat.phiz.chat</code>）：沿用相同的菜单，以及应用、密钥、审计、事件订阅和 Webhook 页面，并新增<em>发送方</em>页面。</p>
 <div class="note-box decision"><span class="lbl">决定（v1.5）</span><p>v1.4 为开放平台设计的体验（概览、集成、密钥、Webhook 和发送方）迁移至开发者中心。集成改为 <strong>Business Messaging 类型的应用</strong>，权限改为组织角色，Webhook 使用<em>事件订阅</em>。“频道 › 开发配置”改为指向开发者中心。</p></div>
 <p>采用开发者中心视觉风格的原型，数据为示例。点击图片可查看原图。</p>
@@ -555,17 +555,22 @@ stateDiagram-v2
 <div class="shot"><a href="mocks/zh/05-assinaturas-eventos.png" target="_blank" rel="noopener"><img src="mocks/zh/05-assinaturas-eventos.png" alt="事件订阅：messages 和 message_status，含已验证的 URL、verify token 和 webhook secret" width="1440" height="960" loading="lazy"></a><p class="cap"><b>页面 5.</b> 事件订阅：<code>messages</code> 和 <code>message_status</code>，含已验证的 URL、verify token 和 webhook secret</p></div>
 <div class="shot"><a href="mocks/zh/06-webhook-entregas.png" target="_blank" rel="noopener"><img src="mocks/zh/06-webhook-entregas.png" alt="Webhook：投递、重试、最后响应、trace_id、失败重试和死信" width="1440" height="1110" loading="lazy"></a><p class="cap"><b>页面 6.</b> Webhook：投递、重试、最后响应、<code>trace_id</code>、失败重试和死信</p></div>
 <div class="shot"><a href="mocks/zh/07-remetentes.png" target="_blank" rel="noopener"><img src="mocks/zh/07-remetentes.png" alt="发送方（新页面）：商户和频道、有权限的应用以及负责会话的应用" width="1440" height="960" loading="lazy"></a><p class="cap"><b>页面 7.</b> 发送方（新页面）：商户和频道、有权限的应用以及负责会话的应用</p></div>
-<div class="shot"><a href="mocks/zh/08-canal-migracao.png" target="_blank" rel="noopener"><img src="mocks/zh/08-canal-migracao.png" alt="开放平台的频道页面，提示已迁移至开发者中心" width="1440" height="820" loading="lazy"></a><p class="cap"><b>页面 8.</b> 开放平台的频道页面，提示已迁移至开发者中心</p></div>
+<div class="shot"><a href="mocks/zh/08-aplicacoes-legadas.png" target="_blank" rel="noopener"><img src="mocks/zh/08-aplicacoes-legadas.png" alt="应用页面中的频道凭证迁移：Legacy 应用、时间节点和切换至 OAuth" width="1440" height="960" loading="lazy"></a><p class="cap"><b>页面 8.</b> 应用页面中的频道凭证迁移：Legacy 应用、时间节点和切换至 OAuth</p></div>
 </div>
-<h3>页面</h3>
+<h3>各菜单的变化</h3>
+<p>每张卡片对应开发者中心侧边菜单中的一项，说明 Business Messaging API 带来的变化，以及上方展示它的页面。</p>
 <div class="screens">
-  <div class="screen"><h5>仪表盘</h5><span class="path">/console/dashboard</span><ul><li>已认证组织和商户 ID</li><li>最近 24 小时已发送、已送达和失败的消息；Webhook 投递情况</li><li>Business Messaging API 快速开始</li><li>提醒：旧密钥仍在使用；Webhook 失败</li></ul></div>
-  <div class="screen"><h5>应用</h5><span class="path">/console/application</span><ul><li>新建 <em>Business Messaging</em> 应用：名称、集成类型（自有、Blip、Salesforce、其他）、TEST/SANDBOX/PRODUCTION 环境</li><li>申请范围并由平台审批</li><li>可用发送方和 IP 白名单</li><li>App ID（<code>client_id</code>）、可轮换密钥、最长 7 天宽限期及最近使用时间</li><li>停用应用</li></ul></div>
-  <div class="screen"><h5>发送方（新页面）</h5><span class="path">/console/senders</span><ul><li>商户本身（直接消息，始终存在）和频道</li><li>每个都有 <code>sender_id</code>、状态和限额</li><li>有权限的应用以及负责会话的应用</li><li>为频道开启“Phiz Business API”模式</li></ul></div>
-  <div class="screen"><h5>事件订阅</h5><span class="path">/console/event-subscription</span><ul><li><code>messages</code>、<code>message_status</code>、<code>sender_update</code>、<code>account_update</code> 事件</li><li>用 <code>hub.challenge</code> 验证回调 URL</li><li>可轮换的 verify token 和 webhook secret</li><li>发送测试事件</li></ul></div>
-  <div class="screen"><h5>Webhook</h5><span class="path">/console/webhook-log</span><ul><li>投递状态、尝试次数、最后响应和 <code>trace_id</code></li><li>重试失败项</li><li>死信，72 小时内可手动重放</li></ul></div>
-  <div class="screen"><h5>API 用量与审计</h5><span class="path">/console/usage</span><ul><li>按应用和 API 统计通过、拒绝和失败的调用</li><li>密钥、范围和订阅的审计</li><li>第 2 阶段：带 <code>trace_id</code> 的逐请求日志</li></ul></div>
-  <div class="screen"><h5>沙箱</h5><span class="path">SANDBOX</span><ul><li>应用的 SANDBOX 环境</li><li>测试发送方和最多 5 个测试接收方</li><li><code>phzsk_test_</code> 凭证</li></ul></div>
+  <div class="screen"><h5>仪表盘</h5><span class="path">有变化 · 页面 1</span><ul><li>消息指标：最近 24 小时已发送、已送达和失败的消息，以及 Webhook 投递情况</li><li>Business Messaging API 快速开始</li><li>旧密钥仍在使用、Webhook 失败的提醒</li></ul></div>
+  <div class="screen"><h5>成员</h5><span class="path">无变化</span><ul><li>OWNER、ADMIN、DEVELOPER、AUDITOR 角色决定谁可以管理应用、密钥和订阅（见“角色”表）</li></ul></div>
+  <div class="screen"><h5>应用</h5><span class="path">有变化 · 页面 2, 3, 4, 8</span><ul><li>新增 <em>Business Messaging</em> 类型及集成类型（自有、Blip、Salesforce、其他）</li><li>TEST、SANDBOX、PRODUCTION 环境；SANDBOX 中有测试发送方、最多 5 个接收方和 <code>phzsk_test_</code> 凭证</li><li>按应用设置可用发送方</li><li>可轮换密钥、最长 7 天宽限期及最近使用时间</li><li>由频道生成的 <em>Legacy</em> 应用</li></ul></div>
+  <div class="screen"><h5>发送方</h5><span class="path">新增 · 页面 7</span><ul><li>商户本身（直接消息）和频道，含 <code>sender_id</code>、状态和限额</li><li>有权限的应用以及负责会话的应用</li><li>为每个频道开启“Phiz Business API”模式</li></ul></div>
+  <div class="screen"><h5>Scope 与 API</h5><span class="path">有变化</span><ul><li>发布 Business API 资产：消息、媒体、<code>/v1/me</code> 和账户</li><li>登记第 08 节的范围，由平台审批申请</li></ul></div>
+  <div class="screen"><h5>白名单</h5><span class="path">无变化</span><ul><li>允许调用 API 的 IP</li><li>事件订阅可用的回调 URL</li></ul></div>
+  <div class="screen"><h5>密钥与证书</h5><span class="path">无变化</span><ul><li>Business API 不使用 API Key（<code>X-Api-Key</code>）和证书，只使用 <code>Authorization: Bearer</code></li></ul></div>
+  <div class="screen"><h5>API 用量</h5><span class="path">有变化</span><ul><li>同样统计 Business API 接口的通过、拒绝和失败调用</li><li>第 2 阶段：带 <code>trace_id</code> 的逐请求日志</li></ul></div>
+  <div class="screen"><h5>事件订阅</h5><span class="path">有变化 · 页面 5</span><ul><li>新增 <code>messages</code>、<code>message_status</code>、<code>sender_update</code> 和 <code>account_update</code> 事件</li><li>用 <code>hub.challenge</code> 验证 URL，配置 verify token 和 webhook secret</li><li>发送测试事件</li></ul></div>
+  <div class="screen"><h5>Webhook</h5><span class="path">无变化 · 页面 6</span><ul><li>同一投递页面，增加消息类事件</li><li>重试、死信以及 72 小时内手动重放</li></ul></div>
+  <div class="screen"><h5>审计与通知</h5><span class="path">无变化</span><ul><li>记录并通知密钥、范围、发送方和订阅的变更</li><li><em>密钥</em>和 <em>Webhook</em> 类别为仪表盘提醒提供数据</li></ul></div>
 </div>
 <h3>角色</h3>
 <p>v1.4 提议的权限改为开发者中心组织中已有的角色。下面的对应关系只是提议，取决于各角色目前的权限（Q10）。</p>
