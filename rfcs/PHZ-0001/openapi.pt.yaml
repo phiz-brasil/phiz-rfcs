@@ -40,7 +40,8 @@ tags:
   description: Upload de mídia para o armazenamento temporário da PHIZ. Toda mídia enviada em mensagens precisa
     passar por aqui; links de terceiros não são aceitos.
 - name: Webhooks
-  description: Configuração da assinatura de webhook do app e eventos enviados ao seu servidor.
+  description: Eventos enviados ao seu servidor. Na Fase 1, a URL do webhook é cadastrada manualmente pela PHIZ;
+    os endpoints de configuração do app (`/v1/apps/{app_id}/webhook…`) são da Fase 2.
 security:
 - bearerAuth: []
 paths:
@@ -599,7 +600,7 @@ paths:
       tags:
       - Webhooks
       summary: Consultar webhook
-      description: Configuração e saúde da assinatura de webhook do app.
+      description: '**Fase 2.** Configuração e saúde da assinatura de webhook do app.'
       operationId: getWebhook
       parameters:
       - name: app_id
@@ -630,8 +631,8 @@ paths:
       tags:
       - Webhooks
       summary: Configurar webhook
-      description: Define URL, verify_token e eventos. A PHIZ faz o handshake GET na URL antes de ativar; se falhar,
-        responde 422.
+      description: '**Fase 2.** Define URL, verify_token e eventos. A PHIZ faz o handshake GET na URL antes de ativar;
+        se falhar, responde 422. Na Fase 1, a PHIZ cadastra a URL manualmente.'
       operationId: setWebhook
       parameters:
       - name: app_id
@@ -674,7 +675,7 @@ paths:
       tags:
       - Webhooks
       summary: Remover webhook
-      description: Para de enviar eventos para o app.
+      description: '**Fase 2.** Para de enviar eventos para o app.'
       operationId: deleteWebhook
       parameters:
       - name: app_id
@@ -702,7 +703,7 @@ paths:
       tags:
       - Webhooks
       summary: Enviar evento de teste
-      description: Dispara um evento `messages` de exemplo, assinado, para a URL configurada.
+      description: '**Fase 2.** Dispara um evento `messages` de exemplo, assinado, para a URL configurada.'
       operationId: testWebhook
       parameters:
       - name: app_id
@@ -741,8 +742,8 @@ paths:
       tags:
       - Webhooks
       summary: Listar entregas de webhook
-      description: Histórico das últimas 72 h com status HTTP, tentativas e latência. Permite reenviar entregas
-        que falharam.
+      description: '**Fase 2.** Histórico das últimas 72 h com status HTTP, tentativas e latência. Permite reenviar
+        entregas que falharam.'
       operationId: listDeliveries
       parameters:
       - name: app_id
@@ -778,7 +779,7 @@ paths:
       tags:
       - Webhooks
       summary: Reenviar entrega
-      description: Reenvia um evento com o mesmo `X-Phiz-Delivery-Id`.
+      description: '**Fase 2.** Reenvia um evento com o mesmo `X-Phiz-Delivery-Id`.'
       operationId: replayDelivery
       parameters:
       - name: app_id
@@ -1003,7 +1004,7 @@ components:
           scopes:
             messages:send: Enviar mensagens e mídias
             messages:read: Ler status de mensagens
-            webhooks:manage: Gerenciar webhook do app
+            webhooks:manage: Gerenciar webhook do app (Fase 2)
             account:read: Ler conta e remetentes
             templates:manage: Reservado para a Marketing API
   schemas:

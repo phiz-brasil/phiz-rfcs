@@ -19,8 +19,17 @@
     "Vitor Mozer",
     "Richard Liang"
   ],
-  "version": "1.3",
+  "version": "1.4",
   "changelog": [
+    {
+      "version": "1.4",
+      "date": "2026-10-20",
+      "note": {
+        "pt": "Webhook na Fase 1: a URL é cadastrada manualmente pela PHIZ, a partir da relação comercial; a configuração pela Área do Desenvolvedor e pela API fica para a Fase 2. Retentativas com backoff, reenvio manual e status failing deixam de ser requisitos da Fase 1 e passam para a Fase 2, conforme comentários de Henry Wu na seção 10. Nova Q9.",
+        "en": "Webhook in Phase 1: the URL is registered manually by PHIZ, based on the business relationship; setup through the Developer area and the API moves to Phase 2. Retries with backoff, manual replay and the failing status are no longer Phase 1 requirements and move to Phase 2, following Henry Wu's comments on section 10. New Q9.",
+        "zh": "第 1 阶段的 Webhook：URL 由 PHIZ 依托商务关系手工登记；通过开发者中心和 API 配置移至第 2 阶段。带退避的重试、手动重放和 failing 状态不再是第 1 阶段的要求，移至第 2 阶段，依据 Henry Wu 在第 10 节的评论。新增 Q9。"
+      }
+    },
     {
       "version": "1.3",
       "date": "2026-10-20",
