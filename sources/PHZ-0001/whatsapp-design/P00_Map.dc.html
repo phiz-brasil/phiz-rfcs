@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>P0 PhizChat opt-in map</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ad4f400cc8783507604febd6abdc1ae6">
+<link rel="stylesheet" href="/_blob/8aaa337a9ac66607d453683ac7ad98bf">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="wide" style="width: 1400px; gap: 16px">
+<div class="hd"><span class="optag" style="font-size: 13px; align-self: center">P0</span><div><div class="tt" style="font-size: 26px">Opt-in inside PhizChat: the user accepts the Business Account</div><div class="te" style="font-size: 14px">From any entry point to an authorized chat — and how consent is revoked or blocked later</div></div></div>
+
+<div style="display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 18px; align-items: start">
+
+<div class="lane">
+<div class="fl-lb">1 · Entry</div>
+<div class="fn">User discovers the business</div>
+<div class="fa">↓</div>
+<div class="fd">Entry type?</div>
+<div class="fa">↓</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%">
+<div class="fn">SMS / e-mail invitation link</div>
+<div class="fn">QR code / offline material</div>
+<div class="fn">Merchant app / mini program / website</div>
+<div class="fn g">In-app search inside PhizChat</div>
+</div>
+<div class="fa">↓</div>
+<div class="fd">Phiz installed?</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 6px">
+<div class="fl"><div class="fl-lb">Yes</div><div class="fa">↓</div><div class="fn">Deep link opens the BA chat</div></div>
+<div class="fl"><div class="fl-lb">No</div><div class="fa">↓</div><div class="fn">H5 install page (P1): basic profile + download, <b>no Accept button</b></div></div>
+</div>
+<div class="be" style="text-align: center">In-app search skips this step and goes straight to the BA chat (P2).</div>
+</div>
+
+<div class="lane">
+<div class="fl-lb">2 · Install &amp; log in</div>
+<div class="fn">Tap “Download / Install Phiz”</div>
+<div class="fa">↓</div>
+<div class="fn">Server creates a one-time <b>Handoff Token</b></div>
+<div class="fa">↓</div>
+<div class="fn">App Store / Play Store → install → first launch</div>
+<div class="fa">↓</div>
+<div class="fn">App redeems the deferred deep link token</div>
+<div class="fa">↓</div>
+<div class="fd">Logged in?</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 6px">
+<div class="fl"><div class="fl-lb">Yes</div><div class="fa">↓</div><div class="fn">Continue</div></div>
+<div class="fl"><div class="fl-lb">No</div><div class="fa">↓</div><div class="fn">Log in / register</div></div>
+</div>
+<div class="fa">↓</div>
+<div class="fn">Back to the <b>same</b> BA chat and scenario</div>
+</div>
+
+<div class="lane" style="border-color: #D97706; background: #FFFBF3">
+<div class="fl-lb" style="color: #B45309">3 · Consent</div>
+<div class="fn o">BA chat window (P2): input <b>locked</b> until Accept</div>
+<div class="fa">↓</div>
+<div class="fd">Accepted?</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 6px">
+<div class="fl"><div class="fl-lb">No</div><div class="fa">↓</div><div class="fn">Value intro + authorization panel (P4, P5)</div></div>
+<div class="fl"><div class="fl-lb">Yes</div><div class="fa">↓</div><div class="fn g">Enter business chat (P3)</div></div>
+</div>
+<div class="fa">↓</div>
+<div class="fn g"><b>OPT-IN recorded by PhizChat</b><br>user · merchant_id · time · channel</div>
+<div class="fa">↓</div>
+<div class="fn">Welcome template sent (if configured) · contact saved under “Business”</div>
+<div class="fa">↓</div>
+<div class="fd">Later…</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; margin-top: 6px">
+<div class="fn r">Revoke consent (P6, P7) → chat locked again</div>
+<div class="fn r">Block (P8) → API returns “blocked”</div>
+</div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px">
+<div class="optbox"><span class="optag">KEY DIFFERENCE FROM WHATSAPP</span><div class="bz">In WhatsApp, opt-in usually happens <b>outside</b> the app and Meta never sees it (O6). Here the user accepts <b>inside PhizChat</b>, so the platform itself holds the proof of consent.</div></div>
+<div class="box"><div class="bt">What PhizChat stores</div><div class="bz">User ID · merchant_id · status (granted / revoked) · timestamp · entry point (link, QR, search…) · app version and wording shown.</div></div>
+<div class="box"><div class="bt">What the merchant receives</div><div class="bz">A webhook when consent changes (proposal: <code>consent_update</code> with <code>granted</code> / <code>revoked</code>), so its own CRM stays in sync.</div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1400,"height":1200}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Render the WhatsApp reference screens (EN source) to PNG in en/pt/zh.
 
-usage: render_wa_mocks.py <whatsapp-design dir> <out mocks dir>
+usage: render_wa_mocks.py <whatsapp-design dir> <out mocks dir> [board ...]
   e.g. python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design rfcs/PHZ-0001/mocks
+       python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design rfcs/PHZ-0001/mocks P02_Locked Q03_FirstMsg
 
-Writes <out>/<lang>/whatsapp/<name>.png. The design files are written in English;
+Writes <out>/<lang>/whatsapp/<name>.png for the WhatsApp reference screens and
+<out>/<lang>/phizchat/<name>.png for the PhizChat opt-in screens (P*, Q*), which also use phiz.css.
+With board names, only those are rendered. The design files are written in English;
 i18n.json maps each text to [pt, zh]. Two kinds of keys:
   - the inner HTML of an element that mixes text with <b>/<em>/<code>/<strong>
     (translated as a whole, so word order can change),
@@ -20,6 +23,7 @@ from playwright.sync_api import sync_playwright
 SRC, OUT = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
 I18N = json.loads((SRC / "i18n.json").read_text(encoding="utf-8"))
 CSS = (SRC / "wa.css").read_text(encoding="utf-8")
+PHIZ_CSS = (SRC / "phiz.css").read_text(encoding="utf-8") if (SRC / "phiz.css").exists() else ""
 NAMES = {
     "A02_Phone": "a02-phone-number", "A10_Chats": "a10-chats-home",
     "O00_Consent": "o00-consent-lifecycle", "O01_AppToggle": "o01-optin-app", "O02_Signup": "o02-optin-signup",
@@ -29,7 +33,16 @@ NAMES = {
     "C05_Auth": "c05-authentication", "C06_Bill": "c06-bill", "D00_Map": "d00-options-map",
     "D02_QuickReply": "d02-quick-reply", "D04_List": "d04-list", "D05_Flow": "d05-flow",
     "D07_Preferences": "d07-stop-offers", "D08_Block": "d08-block-report", "D10_OptOut": "d10-optout-keyword",
+    # PhizChat opt-in (section 04)
+    "P00_Map": "p00-optin-map", "P01_H5": "p01-h5-install", "P02_Locked": "p02-chat-locked", "P03_Accepted": "p03-accepted",
+    "P04_Profile": "p04-profile", "P05_Sheet": "p05-consent-sheet", "P06_Manage": "p06-manage-consent",
+    "P07_Revoke": "p07-revoke", "P08_Blocked": "p08-blocked",
+    "Q00_Map": "q00-business-optin-map", "Q01_MerchantApp": "q01-optin-merchant-app", "Q02_ChatList": "q02-first-message",
+    "Q03_FirstMsg": "q03-consent-source", "Q04_Manage": "q04-consent-status", "Q05_API": "q05-consent-api",
 }
+ONLY = set(sys.argv[3:])
+if ONLY - set(NAMES):
+    sys.exit(f"unknown boards: {', '.join(sorted(ONLY - set(NAMES)))}")
 LANGS = {"en": (None, "en"), "pt": (0, "pt-BR"), "zh": (1, "zh-CN")}
 INLINE = {"b", "em", "code", "strong"}
 FONT = {"en": "'Noto Sans',sans-serif", "pt": "'Noto Sans',sans-serif",
@@ -72,14 +85,17 @@ with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page(device_scale_factor=1.5)
     for lang, (idx, bcp) in LANGS.items():
-        out = OUT / lang / "whatsapp"
-        out.mkdir(parents=True, exist_ok=True)
         for src, name in NAMES.items():
+            if ONLY and src not in ONLY:
+                continue
+            phiz = src[0] in "PQ"
+            out = OUT / lang / ("phizchat" if phiz else "whatsapp")
+            out.mkdir(parents=True, exist_ok=True)
             text = (SRC / f"{src}.dc.html").read_text(encoding="utf-8")
             width = int(re.search(r'"\$preview":\{"width":(\d+)', text).group(1))
             body = re.search(r"<x-dc>(.*?)</x-dc>", text, re.S).group(1)
             body = translate(re.sub(r"<helmet>.*?</helmet>", "", body, flags=re.S), idx)
-            style = (f"body{{margin:0}}{CSS} .ab,.wide{{height:auto!important;padding-bottom:28px!important;"
+            style = (f"body{{margin:0}}{CSS}{PHIZ_CSS if phiz else ''} .ab,.wide{{height:auto!important;padding-bottom:28px!important;"
                      f"font-family:{FONT[lang]}!important}}")
             html = f'<!doctype html><html lang="{bcp}"><head><meta charset="utf-8"><style>{style}</style></head><body>{body}</body></html>'
             tmp = out / f"{name}.html"
