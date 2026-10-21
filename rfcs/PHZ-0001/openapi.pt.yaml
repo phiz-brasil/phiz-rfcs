@@ -411,8 +411,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: Envio não permitido pela política de opt-in, tipo não permitido para o remetente, ou mídia
-            expirada (2303).
+          description: Envio não permitido pela política de opt-in (2201), tipo não permitido (2202), fora da janela
+            de atendimento (2203), template não aprovado (2204), horário ou região restritos (2205), ou mídia expirada
+            (2303).
           content:
             application/json:
               schema:
@@ -423,6 +424,47 @@ paths:
                   type: policy_violation
                   message: Sending to this recipient is not allowed by the opt-in policy.
                   trace_id: trc_77ac
+  /v1/{sender_id}/recipients/resolve:
+    post:
+      tags:
+      - Messages
+      summary: Resolver destinatário (proposta)
+      description: '**Proposta do PHZ-BM-0001, em aberto (Q18).** Diz se o Business Account pode enviar para o telefone
+        agora, sem revelar se o número tem conta PHIZ. Requer o escopo `recipients:resolve` e relação com o usuário.'
+      operationId: resolveRecipient
+      parameters:
+      - name: sender_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: ba_7Kq2M9xTpL
+        description: 'ID do remetente: referência externa mapeada para o BA ID de um Business Account da aplicação
+          (padrão) ou, opcionalmente, o ID de um canal. Não é o merchant_id. Equivale ao phone_number_id da Cloud
+          API da Meta.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /v1/{sender_id}/media:
     post:
       tags:
@@ -1003,11 +1045,13 @@ components:
         clientCredentials:
           tokenUrl: https://gateway.phiz.chat/gateway/business/oauth/token
           scopes:
-            messages:send: Enviar mensagens e mídias
+            messages:send: Enviar mensagens de serviço e mídias
             messages:read: Ler status de mensagens
             webhooks:manage: Gerenciar webhook do app (Fase 2)
             account:read: Ler aplicação, Business Accounts e canais
             templates:manage: Reservado para a Marketing API
+            recipients:resolve: Resolver destinatário (proposta)
+            messages:send_marketing: Enviar marketing (reservado)
   schemas:
     TokenRequest:
       type: object
@@ -1172,6 +1216,37 @@ components:
           - YELLOW
           - RED
           - UNKNOWN
+    ResolveRequest:
+      type: object
+      required:
+      - phone
+      properties:
+        phone:
+          type: string
+          example: '+5511987654321'
+          description: Telefone em E.164.
+    ResolveResponse:
+      type: object
+      properties:
+        addressable:
+          type: boolean
+          example: true
+          description: O Business Account pode endereçar esse telefone.
+        eligible:
+          type: boolean
+          example: false
+          description: Uma mensagem iniciada pela empresa seria aceita agora.
+        reason:
+          type: string
+          enum:
+          - ok
+          - no_relation
+          - service_window_closed
+          - suppressed
+          - verification_required
+          - not_addressable
+          example: service_window_closed
+          description: Motivo estável. Nunca revela nome, foto, amizade ou se o número tem cadastro.
     SenderList:
       type: object
       properties:

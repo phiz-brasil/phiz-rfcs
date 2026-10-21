@@ -165,6 +165,25 @@
 <tr><td>Opt-out</td><td colspan="2">Igual nos dois: revogar, bloquear, denunciar — aplicado pelo PhizChat</td></tr>
 </tbody></table></div>
 
+<h3>Estados da relação com o usuário</h3>
+<p>O documento <strong>PHZ-BM-0001</strong> (<em>Business Account Messaging</em>) propõe estados explícitos para a relação entre o Business Account e o usuário. Eles se encaixam nos fluxos P e Q e decidem o que pode ser enviado:</p>
+<div class="tbl"><table><thead><tr><th>Estado</th><th>Significado</th><th>Serviço</th><th>Marketing</th></tr></thead><tbody>
+<tr><td><code>NO_RELATION</code></td><td>Só existe a resolução do telefone</td><td>Só casos fortes aprovados (por exemplo, código de verificação)</td><td>Não</td></tr>
+<tr><td><code>USER_INITIATED</code></td><td>O usuário escreveu, escaneou um QR ou abriu uma entrada da empresa</td><td>Sim</td><td>Consentimento separado</td></tr>
+<tr><td><code>BUSINESS_RELATION</code></td><td>Pedido, suporte, agendamento ou relação parecida (fluxo Q)</td><td>Sim</td><td>Consentimento separado</td></tr>
+<tr><td><code>MARKETING_OPT_IN</code></td><td>O usuário autorizou marketing de forma explícita (fluxo P ou Q)</td><td>Sim</td><td>Sim</td></tr>
+<tr><td><code>BLOCKED</code> / <code>UNSUBSCRIBED</code></td><td>Bloqueio ou cancelamento pelo usuário, ou supressão pela plataforma</td><td>Conforme a política</td><td>Não</td></tr>
+</tbody></table></div>
+<p>O estado fica ligado ao par Business Account (<code>ba_id</code>) e Open ID do usuário. Ele não é exposto pela API; o envio só recebe o resultado (aceito ou erro com motivo).</p>
+<h3>Controles do usuário</h3>
+<div class="tbl"><table><thead><tr><th>Ação</th><th>Resultado</th></tr></thead><tbody>
+<tr><td>Silenciar</td><td>Desliga notificações e mantém a conversa</td></tr>
+<tr><td>Bloquear</td><td>Recusa mensagens futuras desse Business Account</td></tr>
+<tr><td>Cancelar marketing</td><td>Desliga marketing, sem desligar avisos de serviço necessários</td></tr>
+<tr><td>Denunciar</td><td>Abre uma reclamação com evidências</td></tr>
+<tr><td>Consultar a empresa</td><td>Mostra entidade verificada, suporte e política de privacidade</td></tr>
+</tbody></table></div>
+<p>A conversa empresarial precisa ser visualmente diferente de uma conversa entre amigos: nome verificado, por que a mensagem chegou e acesso fácil a bloquear, denunciar e cancelar.</p>
 <h3>Decisões em aberto</h3>
 <ul>
 <li><strong>Modelo A × B no fluxo Q</strong> (ver Q1): só a política, como a Meta, ou registro de consentimento no PHIZ conferido a cada envio. O cartão de origem (Q3) e o status por categoria (Q4) completos dependem do modelo B.</li>
@@ -225,6 +244,25 @@ flowchart LR
   <li><strong>Business Account</strong>: tipo de produto dentro da conversa de serviço empresarial, <strong>exibido ao usuário</strong>, como a identificação de empresa do WhatsApp. É voltado a empresas, governos e instituições.</li>
 </ul>
 <p>Para ter um Business Account, a empresa cria a conta no Open Platform (Merchant ID), o que gera o Developer ID; sob ele cria uma aplicação (App ID) e, na aplicação, o Business Account (BA ID). Tanto as chamadas de terceiros (Salesforce, BSPs) quanto a autorização do usuário para receber mensagens são feitas sobre o BA ID. O Business Account é um tipo de conversa novo: produto e tecnologia vão refinar a definição dele e dos demais tipos, pensando em expansões futuras (Q4).</p>
+<div class="note-box risk"><span class="lbl">Diferença em relação ao PHZ-BM-0001</span><p>O <strong>PHZ-BM-0001</strong> propõe outra hierarquia: <code>Organization → Business Account → App → Credential</code>. Nele, o Business Account fica <strong>acima</strong> das aplicações, várias aplicações podem enviar por ele (o remetente visível continua sendo o BA) e o Business Account é um <strong>subtipo de Channel</strong> (<code>Channel.subtype = BUSINESS_ACCOUNT</code>). Esta RFC mantém o modelo da v1.6, definido com o time técnico da PHIZ: <code>Merchant ID → Developer ID → App ID → BA ID</code>, com cada BA dentro de uma única aplicação e o canal como remetente separado e opcional. O alinhamento entre os dois documentos está na Q11 e na Q12.</p></div>
+<div class="tbl"><table><thead><tr><th>Ponto</th><th>Esta RFC (v1.6)</th><th>PHZ-BM-0001</th></tr></thead><tbody>
+<tr><td>Hierarquia</td><td>Merchant ID → Developer ID → App ID → BA ID</td><td>Organization → Business Account → App → Credential</td></tr>
+<tr><td>Aplicações por BA</td><td>Uma (o BA pertence à aplicação)</td><td>Várias (as aplicações enviam em nome do BA)</td></tr>
+<tr><td>O que é o BA</td><td>Tipo de conversa: conta pública › serviço empresarial › Business Account</td><td>Subtipo de produto de Channel</td></tr>
+<tr><td>Canal</td><td>Remetente opcional, separado do BA</td><td>O BA é um Channel; um ID de canal sozinho nunca autoriza acesso</td></tr>
+<tr><td>ID da conversa</td><td>Não definido</td><td>Curto prazo: <code>channel:&lt;id&gt;</code> com <code>conversation_kind=BUSINESS_1_TO_1</code>, <code>business_channel_id</code> e <code>recipient_user_id</code>; longo prazo: ID opaco do servidor</td></tr>
+<tr><td>Usuário</td><td>Open ID por aplicação</td><td><code>recipient_user_id</code></td></tr>
+<tr><td>Auditoria</td><td>Aplicação e Business Account</td><td>Organização, aplicação e operador como sujeitos separados</td></tr>
+</tbody></table></div>
+<h3>Impacto no app PhizChat</h3>
+<p>O <strong>PHZ-BM-0001</strong> levantou o que o app (Flutter) precisa mudar para exibir conversas Business Account. Vale para qualquer uma das duas hierarquias:</p>
+<div class="tbl"><table><thead><tr><th>Hoje no app</th><th>O que falta</th></tr></thead><tbody>
+<tr><td><code>ChannelInfo.type</code></td><td>Subtipo explícito para Business Account, com enum compatível</td></tr>
+<tr><td><code>ChannelInfo.companyAuth</code> (booleano)</td><td>Estado, nível, validade e motivo da verificação</td></tr>
+<tr><td>Conversa <code>channel:&lt;id&gt;</code></td><td>Metadados de conversa Business Account e proteção dos parsers antigos</td></tr>
+<tr><td><code>StrangerChatHelper</code></td><td>Política empresarial separada, sem misturar com a regra de amizade</td></tr>
+<tr><td><code>MessageReceiver</code> / <code>MessageSender</code></td><td>Envelope com finalidade, identidade do remetente e decisão do servidor</td></tr>
+</tbody></table></div>
 <h3>Fluxo ponta a ponta</h3>
 <p>Visão para o time técnico: por onde a mensagem passa, da empresa até o usuário, e por onde voltam as respostas e os status.</p>
 <div class="diagram"><pre class="mermaid">
@@ -286,6 +324,8 @@ flowchart LR
   <li><strong>Idempotência.</strong> O cabeçalho <code>Idempotency-Key</code> evita mensagens duplicadas quando o cliente repete uma requisição.</li>
   <li><strong>Menor privilégio.</strong> Cada integração tem escopos e uma lista de remetentes permitidos.</li>
   <li>Versionamento <code>/v1</code>. Mudanças compatíveis (campos novos) entram de maneira padronizada; mudanças incompatíveis exigem <code>/v2</code>.</li>
+  <li><strong>Sem amizade não é anônimo.</strong> Falar com quem não é amigo não exige relação prévia, mas o remetente empresarial é sempre identificável.</li>
+  <li><strong>Supressão da plataforma vence.</strong> Bloqueio, cancelamento e supressão têm prioridade sobre qualquer permissão da empresa.</li>
 </ul>
 </section>
 
@@ -321,11 +361,13 @@ sequenceDiagram
 {CODE:jwt_claims}
 <h3>Escopos</h3>
 <div class="tbl"><table><thead><tr><th>Escopo</th><th>Permite</th></tr></thead><tbody>
-<tr><td><code>messages:send</code></td><td>Enviar mensagens, enviar e gerenciar mídias e marcar mensagens como lidas</td></tr>
+<tr><td><code>messages:send</code></td><td>Enviar mensagens de serviço, enviar e gerenciar mídias e marcar mensagens como lidas</td></tr>
 <tr><td><code>messages:read</code></td><td>Consultar status de mensagens</td></tr>
 <tr><td><code>webhooks:manage</code></td><td>Configurar, testar e reenviar o webhook do próprio app (Fase 2)</td></tr>
 <tr><td><code>account:read</code></td><td>Ler dados da aplicação, dos Business Accounts e dos canais</td></tr>
 <tr><td><code>templates:manage</code></td><td>Reservado para a Marketing API</td></tr>
+<tr><td><code>recipients:resolve</code></td><td>Verificar se um telefone pode receber mensagens do Business Account, sem revelar cadastro (proposta, Q18)</td></tr>
+<tr><td><code>messages:send_marketing</code></td><td>Enviar mensagens de marketing; aprovação separada (reservado para a Marketing API)</td></tr>
 </tbody></table></div>
 <h3>Secrets e rotação</h3>
 <ul>
@@ -335,6 +377,16 @@ sequenceDiagram
   <li>A tela mostra o último uso de cada secret, para saber se o antigo ainda está em uso antes de revogá-lo.</li>
   <li>Lista de IPs permitidos por app e política de rotação de 90 dias, ambas já existentes na Central do Desenvolvedor.</li>
 </ul>
+<h3>Pré-requisito: verificação</h3>
+<p>O <strong>PHZ-BM-0001</strong> aponta que hoje não existe um objeto de verificação de conta: os campos <code>companyAuth</code> e <code>memberAuth</code> não bastam para autorizar a API. A Central do Desenvolvedor já mostra “Organização verificada”, mas o modelo abaixo ainda precisa ser confirmado (Q13). A proposta é que cada nível libere um conjunto de escopos, publicado numa matriz pública:</p>
+<div class="tbl"><table><thead><tr><th>Nível</th><th>Pode solicitar</th><th>Não recebe por padrão</th></tr></thead><tbody>
+<tr><td><code>UNVERIFIED</code></td><td>Nada proativo</td><td>Resolução, serviço, marketing</td></tr>
+<tr><td><code>PERSON_VERIFIED</code></td><td>Teste, leitura e respostas iniciadas pelo usuário</td><td>Envio em massa e marketing</td></tr>
+<tr><td><code>INDIVIDUAL_BUSINESS_VERIFIED</code></td><td>Serviço restrito</td><td>Marketing e resolução ampla</td></tr>
+<tr><td><code>BUSINESS_VERIFIED</code></td><td>Serviço, templates e resolução ligada à relação</td><td>Marketing</td></tr>
+<tr><td><code>BUSINESS_VERIFIED</code> + <code>MARKETING_APPROVED</code></td><td>Marketing, sujeito a consentimento, template, opt-out e cota</td><td>Acesso ilimitado ou entre regiões</td></tr>
+</tbody></table></div>
+<p>A verificação é uma máquina de estados, não um booleano: <code>DRAFT → SUBMITTED → UNDER_REVIEW → VERIFIED</code>, com <code>NEEDS_INFO</code> e <code>REJECTED</code>, e depois <code>LIMITED → SUSPENDED → DISABLED</code>. As mensagens têm estado próprio: <code>NOT_ENABLED → SERVICE_ENABLED → MARKETING_REVIEW → MARKETING_ENABLED → PAUSED</code>. Verificação não libera marketing sozinha.</p>
 <h3>Atual × proposto</h3>
 <div class="tbl"><table><thead><tr><th>Aspecto</th><th>Hoje</th><th>Proposta</th></tr></thead><tbody>
 <tr><td>Dono da credencial</td><td>Canal</td><td>Aplicação da Central (Developer ID)</td></tr>
@@ -356,6 +408,7 @@ sequenceDiagram
   <div class="ep"><span class="m m-delete">DELETE</span><code class="p">/v1/media/{media_id}</code><span class="d">Remove a mídia antes do prazo</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/messages/{message_id}</code><span class="d">Último status conhecido (contingência)</span></div>
   <div class="ep"><span class="m m-get">GET</span><code class="p">/v1/apps/{app_id}/senders</code><span class="d">Business Accounts e canais da aplicação</span></div>
+  <div class="ep"><span class="m m-post">POST</span><code class="p">/v1/{sender_id}/recipients/resolve</code><span class="d">Verifica se o telefone pode receber, sem revelar cadastro (proposta, Q18)</span></div>
 </div>
 <h3>Remetente: um Business Account ou um canal</h3>
 <p>O <code>sender_id</code> no caminho define em nome de quem a mensagem sai. Ele é uma referência externa ao remetente e <strong>não</strong> é o <code>merchant_id</code>:</p>
@@ -433,6 +486,32 @@ sequenceDiagram
 <li><strong>Registro obrigatório:</strong> o comerciante guarda a prova de cada consentimento (Open ID do usuário, <code>ba_id</code>, categoria, origem, data, texto exibido e revogação). Pela LGPD, cabe a quem trata os dados provar o consentimento e respeitar a revogação.</li>
 </ul>
 <div class="note-box risk"><span class="lbl">Decisão de Produto</span><p>A Meta tem a política de opt-in mas não a valida: confia no comerciante e reage depois, por denúncias e nota de qualidade. Precisamos escolher entre <strong>A</strong>, o mesmo modelo (política mais registro no comerciante), e <strong>B</strong>, um registro de consentimento no PHIZ, verificado antes de cada envio. Ver Q1.</p></div>
+<h3>Categorias, janela de atendimento e templates</h3>
+<p>Com base no <strong>PHZ-BM-0001</strong>, cada mensagem tem uma direção e uma categoria, e serviço e marketing têm permissões, consentimento, limites e revisão separados:</p>
+<div class="tbl"><table><thead><tr><th>Categoria</th><th>Uso</th><th>Quando a empresa inicia</th></tr></thead><tbody>
+<tr><td><code>AUTHENTICATION</code></td><td>Códigos de verificação e segurança</td><td>Template aprovado</td></tr>
+<tr><td><code>UTILITY</code></td><td>Pedido, pagamento, entrega, reembolso, agendamento, suporte; ligado a um evento de origem</td><td>Template aprovado</td></tr>
+<tr><td><code>MARKETING</code></td><td>Ofertas e campanhas</td><td>Template aprovado, opt-in explícito, horário local e limite de frequência (Marketing API)</td></tr>
+<tr><td><code>USER_REPLY</code></td><td>Respostas dentro da janela aberta pelo usuário</td><td>Não se aplica: só dentro da janela</td></tr>
+</tbody></table></div>
+<ul>
+  <li><strong>Janela de atendimento.</strong> Quando o usuário escreve, abre-se uma janela em que a empresa responde com texto livre e mídia. A duração é configurável por política (valor inicial de referência: 24 h). Fora dela, a empresa só inicia conversa com template aprovado (erro <code>2203</code>).</li>
+  <li><strong>Templates.</strong> Ciclo <code>DRAFT → SUBMITTED → PENDING_REVIEW → APPROVED / REJECTED</code>, com <code>PAUSED</code>, <code>DISABLED</code> e snapshots de versão. A pausa por qualidade gera resultado explícito (erro <code>2204</code> e evento <code>template_status</code>).</li>
+  <li><strong>Sem promoção disfarçada.</strong> Conteúdo de serviço deve ter relação direta com o evento de origem; marketing em categoria de serviço é recusado e conta para a qualidade.</li>
+  <li><strong>Fase 1.</strong> O <strong>PHZ-BM-0001</strong> limita a primeira fase a empresas verificadas e mensagens de serviço aprovadas. Esta RFC previa texto livre na Fase 1; o alinhamento está na Q14.</li>
+</ul>
+<h3>Verificações antes do envio</h3>
+<p>A decisão de aceitar uma mensagem combina permissão da organização, escopo, verificação, ambiente, elegibilidade, supressão, finalidade, template, cota e idempotência:</p>
+<ul>
+  <li>Estado do Business Account e elegibilidade para a categoria.</li>
+  <li>Relação com o usuário ou consentimento de marketing ativo (ver estados na seção 04).</li>
+  <li>Template aprovado, vigente e estruturalmente válido, quando exigido.</li>
+  <li>Destinatário não bloqueado, não descadastrado, não suprimido e dentro da cota.</li>
+  <li>Localidade, horário silencioso, região e regras de setores de risco (erro <code>2205</code>).</li>
+  <li>Limites por organização, Business Account, aplicação, template, usuário e IP (erro <code>2502</code>).</li>
+</ul>
+<h3>Resolução de destinatário (proposta)</h3>
+<p>O <strong>PHZ-BM-0001</strong> propõe um endpoint de resolução separado do envio. Aqui ele fica como <code>POST /v1/{sender_id}/recipients/resolve</code>, com o escopo <code>recipients:resolve</code>. A resposta traz só <code>addressable</code>, <code>eligible</code> e um motivo estável; nunca nome, foto, amizade ou se o número tem cadastro. Só faz sentido para destinatários com relação com o Business Account, e entra na Q18.</p>
 <h3>Idempotência</h3>
 <p>Envie <code>Idempotency-Key</code> em todo envio. A mesma chave em até 24 h devolve a resposta original sem reenviar. A mesma chave com corpo diferente devolve <code>409</code>. Isso torna seguros os retries após timeout ou erro <code>5xx</code>.</p>
 </section>
@@ -508,6 +587,8 @@ stateDiagram-v2
   <li><strong>Reenvio manual.</strong> Depois das 24 h, o evento fica disponível para reenvio por 72 h, com o histórico de entregas (<code>/webhook/deliveries</code>).</li>
   <li><strong>Webhook <code>failing</code>.</strong> Se a URL falhar continuamente por 24 h, o webhook passa para <code>failing</code> e os administradores do comerciante recebem um aviso.</li>
 </ul>
+<h3>Resultados explícitos</h3>
+<p>Pausa de template, rebaixamento do Business Account, opt-out, risco de qualidade e janela vencida geram resultado explícito: erro na chamada ou evento de webhook (<code>message_status</code> com erro, <code>sender_update</code>, <code>template_status</code> e o proposto <code>consent_update</code>). Nunca há retentativa silenciosa nem troca automática de categoria.</p>
 </section>
 
 <section>
@@ -527,13 +608,18 @@ stateDiagram-v2
 <tr><td>2104</td><td>webhook</td><td>recipient_not_reachable</td><td>Telefone sem conta PHIZ ou usuário bloqueou o remetente</td></tr>
 <tr><td>2201</td><td>422</td><td>policy_violation</td><td>Envio não permitido pela política de opt-in</td></tr>
 <tr><td>2202</td><td>422</td><td>unsupported_type</td><td>Tipo de mensagem não habilitado para o remetente</td></tr>
+<tr><td>2203</td><td>422</td><td>service_window_closed</td><td>Fora da janela de atendimento; use um template aprovado</td></tr>
+<tr><td>2204</td><td>422</td><td>template_not_approved</td><td>Template inexistente, não aprovado, pausado ou desativado</td></tr>
+<tr><td>2205</td><td>422</td><td>send_window_restricted</td><td>Horário silencioso, região ou regra de setor impede o envio agora</td></tr>
 <tr><td>2301</td><td>webhook</td><td>media_unavailable</td><td>O app não conseguiu baixar a mídia do armazenamento da PHIZ (mídia expirada ou removida antes da entrega)</td></tr>
 <tr><td>2302</td><td>400</td><td>media_link_not_allowed</td><td>O <code>link</code> não foi gerado pela PHIZ; faça o upload e use o <code>id</code> ou o link devolvido</td></tr>
 <tr><td>2303</td><td>422</td><td>media_expired</td><td>O <code>id</code> ou o link da mídia expirou, foi removido ou pertence a outro comerciante</td></tr>
 <tr><td>2304</td><td>415</td><td>unsupported_media_type</td><td>Formato de arquivo não aceito no upload</td></tr>
 <tr><td>2305</td><td>413</td><td>media_too_large</td><td>Arquivo acima do tamanho máximo do tipo</td></tr>
 <tr><td>2401</td><td>403</td><td>sender_disabled</td><td>Remetente desativado ou restrito</td></tr>
+<tr><td>2402</td><td>403</td><td>verification_required</td><td>Nível de verificação insuficiente para o escopo ou a categoria</td></tr>
 <tr><td>2501</td><td>429</td><td>messaging_limit_reached</td><td>Limite diário de destinatários do remetente atingido</td></tr>
+<tr><td>2502</td><td>429</td><td>frequency_capped</td><td>Limite de frequência por usuário, template ou aplicação atingido</td></tr>
 <tr><td>5000</td><td>500</td><td>internal_error</td><td>Erro interno; repita com a mesma Idempotency-Key</td></tr>
 </tbody></table></div>
 <h3>Limites (proposta inicial)</h3>
@@ -556,6 +642,8 @@ stateDiagram-v2
   <li><code>/gateway/business/…</code>: esta API (autenticação, mensagens e webhooks).</li>
 </ul>
 <p>Com prefixos distintos, cada contexto tem roteamento, autenticação, limites e logs próprios, e o legado pode ser desligado sem afetar a nova API. Todos os caminhos deste documento, como <code>/oauth/token</code> e <code>/v1/{sender_id}/messages</code>, são relativos a <code>https://{gateway}/gateway/business</code>. Nos exemplos, esse endereço aparece como <code>$PHIZ_API_BASE</code>.</p>
+<h3>Auditoria e dados</h3>
+<p>Cada autorização e cada recusa apontam para a empresa, o Business Account, a aplicação, o operador, o template, o snapshot da política usada no envio, o <code>trace_id</code> e o estado final. Telefones aparecem em logs e métricas só como token irreversível. Eventos podem chegar duplicados ou fora de ordem, mas o estado final de cada mensagem só avança. A revisão jurídica define consentimento, retenção, exclusão, transferência internacional e exceções de serviço por jurisdição (Q19).</p>
 </section>
 
 <section>
@@ -592,6 +680,7 @@ stateDiagram-v2
 <p>A Central já controla o acesso pelos papéis da organização, definidos em <em>Membros</em>; não há permissões novas. A tabela mostra o que cada papel faz nas telas da Business Messaging API. É uma proposta, a confirmar com o que cada papel permite hoje (Q10). Aprovar scopes não é papel da organização: quem aprova é a plataforma.</p>
 <div class="tbl"><table><thead><tr><th>Ação</th><th>OWNER</th><th>ADMIN</th><th>DEVELOPER</th><th>AUDITOR</th></tr></thead><tbody><tr><td>Ver aplicações, Business Accounts, assinaturas, entregas, uso e auditoria (sem segredos)</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td></tr><tr><td>Criar, editar e desativar aplicações Business Messaging; solicitar scopes</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Criar e editar Business Accounts; escolher a aplicação responsável por um canal</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Ligar o modo “Phiz Business API” de um canal</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>Gerar, rotacionar e revogar segredos</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr><tr><td>Criar e editar assinaturas de eventos; enviar teste; retentar entregas</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td></tr><tr><td>Gerenciar membros e papéis</td><td style="text-align:center">✓</td><td style="text-align:center">✓</td><td style="text-align:center">—</td><td style="text-align:center">—</td></tr></tbody></table></div>
 <p>Criar, rotacionar ou revogar um segredo, mudar scopes ou Business Accounts e alterar uma assinatura de evento geram registro em <em>Auditoria</em> e notificação para OWNER e ADMIN nas categorias <em>Segredos</em> e <em>Webhook</em>.</p>
+<p>O <strong>PHZ-BM-0001</strong> propõe ainda o papel <strong>Operator</strong>, que só envia templates aprovados dentro de finalidade e cota, e reforça que o Developer nunca recebe o secret de produção. A Central não tem Operator hoje (Q16).</p>
 <h3>Business Account e aplicação</h3>
 <p>Cada Business Account é criado dentro de uma aplicação e pertence só a ela. Assim, só essa aplicação envia por ele e recebe os eventos <code>messages</code> e <code>message_status</code> dele, e o Open ID do usuário é o daquela aplicação. Uma empresa que usa a Blip no atendimento e o Salesforce em campanhas cria uma aplicação para cada um, cada uma com o seu Business Account (Tela 7).</p>
 <ul>
@@ -626,7 +715,7 @@ stateDiagram-v2
 <h2 id="§marketing"><span class="n">14</span>Caminho para a Marketing API</h2>
 <p>Esta RFC reserva o espaço que a Marketing API vai ocupar, sem implementá-la:</p>
 <ul>
-  <li><code>type: template</code> no envio e o escopo <code>templates:manage</code> já existem no contrato.</li>
+  <li><code>type: template</code> no envio e o escopo <code>templates:manage</code> já existem no contrato. Templates de serviço (<code>UTILITY</code>, <code>AUTHENTICATION</code>) podem entrar antes, com a política de envio da seção 09 (Q14); templates de marketing ficam com a Marketing API.</li>
   <li>Templates com aprovação: <code>/v1/{sender_id}/message_templates</code> e evento de webhook <code>template_status</code>.</li>
   <li>Categorias de conversa (<code>conversation.origin.type</code>: <code>service</code>, <code>utility</code>, <code>marketing</code>), base para relatórios e preço.</li>
   <li>Gestão de opt-in e opt-out por remetente, campanhas para segmentos e métricas em <code>/v1/{sender_id}/analytics</code>.</li>
@@ -637,16 +726,26 @@ stateDiagram-v2
 <section>
 <h2 id="§plan"><span class="n">15</span>Plano de entrega</h2>
 <div class="phases">
-  <div class="phase first"><span class="tag">FASE 1 · MVP</span><h5>Autenticar e enviar</h5><ul><li><code>/oauth/token</code>, <code>/oauth/revoke</code>, <code>/v1/me</code></li><li>Envio de <code>text</code>, <code>image</code>, <code>audio</code>, <code>video</code> e <code>document</code> para telefone e Open ID</li><li>Upload de mídia (<code>/v1/{sender_id}/media</code>) com armazenamento temporário; sem links de terceiros</li><li>Webhooks <code>messages</code> e <code>message_status</code> com assinatura, com a URL cadastrada pelo parceiro em Assinaturas de eventos</li><li>Central do Desenvolvedor: tipo de app Business Messaging, ativos de API e escopos, remetentes por app e eventos no catálogo</li><li>Modelo de identidades: Developer ID, App ID, Business Account (BA ID) e Open ID; canais como remetentes opcionais</li><li>Migração automática das credenciais de canal</li></ul></div>
+  <div class="phase"><span class="tag">FASE 0 · FUNDAÇÃO</span><h5>Verificação e regras</h5><ul><li>Titularidade: quem envia em nome de quem (Q11)</li><li>Níveis de verificação e matriz nível → escopo publicada (Q13)</li><li>Categorias, janela de atendimento e templates de serviço (Q14)</li><li>Lista interna de destinatários de teste; sem resolução em massa</li></ul></div>
+  <div class="phase first"><span class="tag">FASE 1 · MVP</span><h5>Autenticar e enviar</h5><ul><li><code>/oauth/token</code>, <code>/oauth/revoke</code>, <code>/v1/me</code></li><li>Envio de <code>text</code>, <code>image</code>, <code>audio</code>, <code>video</code> e <code>document</code> para telefone e Open ID</li><li>Upload de mídia (<code>/v1/{sender_id}/media</code>) com armazenamento temporário; sem links de terceiros</li><li>Webhooks <code>messages</code> e <code>message_status</code> com assinatura, com a URL cadastrada pelo parceiro em Assinaturas de eventos</li><li>Central do Desenvolvedor: tipo de app Business Messaging, ativos de API e escopos, Business Accounts por app e eventos no catálogo</li><li>Modelo de identidades: Developer ID, App ID, Business Account (BA ID) e Open ID; canais como remetentes opcionais</li><li>Migração automática das credenciais de canal</li></ul></div>
   <div class="phase"><span class="tag">FASE 2</span><h5>Complementos</h5><ul><li>Configuração do webhook por API (<code>PUT /v1/apps/{app_id}/webhook</code>, teste e saúde)</li><li>Ajustes na política de retentativas e reenvio, se a da plataforma não atender a seção 10</li><li>Log por requisição com <code>trace_id</code> e métricas de mensagens</li><li>Sandbox com destinatários de teste</li></ul></div>
 </div>
+<h3>Critérios de aceite para o lançamento</h3>
+<p>Adaptados do <strong>PHZ-BM-0001</strong>:</p>
+<ul>
+  <li>Verificação, criação do Business Account e solicitação e revogação de escopos testadas de ponta a ponta.</li>
+  <li>A matriz pública de níveis e escopos bate com a aprovação na Central, as decisões da API, os códigos de erro e a documentação.</li>
+  <li>Conversas empresariais nunca viram amizade ou chat comum; telefones não podem ser enumerados; secrets de produção nunca chegam ao cliente.</li>
+  <li>Testes de retentativa, reconexão, vários dispositivos, bloqueio, opt-out e regras regionais passam.</li>
+  <li>Revisão jurídica concluída para consentimento, retenção, exclusão, processamento internacional e mensagens de serviço obrigatórias.</li>
+</ul>
 <p>Datas serão definidas após a revisão desta RFC com o time da China.</p>
 </section>
 
 <section>
 <h2 id="§questions"><span class="n">16</span>Questões em aberto</h2>
 <ol class="qs">
-  <li><strong>Política de opt-in.</strong> A seção 09 propõe a política (opt-in por comerciante e categoria, opt-out aplicado pela plataforma, registro no comerciante). Falta decidir: modelo A (como a Meta, sem validação) ou B (registro de consentimento no PHIZ, por exemplo <code>/v1/{sender_id}/consents</code>, verificado no envio); quais categorias existem; se o app PHIZ mostra ao usuário o que ele autorizou; e como o usuário bloqueia ou para ofertas de um Business Account (ver Q3). Validar os pontos de LGPD com o jurídico. Vale para Business Account e Channel Service.</li>
+  <li><strong>Política de opt-in.</strong> A seção 09 propõe a política (opt-in por comerciante e categoria, opt-out aplicado pela plataforma, registro no comerciante). Falta decidir: modelo A (como a Meta, sem validação) ou B (registro de consentimento no PHIZ, por exemplo <code>/v1/{sender_id}/consents</code>, verificado no envio); quais categorias existem; se o app PHIZ mostra ao usuário o que ele autorizou; e como o usuário bloqueia ou para ofertas de um Business Account (ver Q3). Validar os pontos de LGPD com o jurídico. Vale para Business Account e Channel Service. Os estados de relação e as categorias da seção 04 e da seção 09 dão a base para essa decisão.</li>
   <li><strong>IDs de remetente.</strong> Respondida na v1.6: o <code>merchant_id</code> não identifica o remetente. O <code>sender_id</code> é uma referência externa mapeada para o BA ID do Business Account (seção 06). Para canais, continua o ID do canal; falta decidir se ele também ganha um ID opaco, para não expor o ID sequencial.</li>
   <li><strong>Tipo de conversa Business Account.</strong> Respondida na v1.6: conversa de conta pública › conversa de serviço empresarial › Business Account, o único exibido ao usuário, voltado a empresas, governos e instituições e criado em Merchant ID › Developer ID › App ID › BA ID (seção 06). Falta definir como o usuário bloqueia ou silencia um Business Account no app.</li>
   <li><strong>Tipos de conversa vigentes.</strong> Respondida em parte na v1.6: além do Business Account existem outros tipos de conversa, e esta entrega cria um tipo novo. Produto e tecnologia vão redefinir e refinar as definições, preparando expansões futuras. Falta a tabela final de tipos e permissões.</li>
@@ -655,7 +754,16 @@ stateDiagram-v2
   <li><strong>Business Message API existente.</strong> O modo “Phiz Business API” do Robô de IA já tem endpoints de envio e callback e parece corresponder ao Channel Service com Channel Bot. Esta RFC substitui, estende ou encapsula essa API?</li>
   <li><strong>Mídia.</strong> Respondida em parte na v1.6: formatos e tamanhos podem ser definidos por esta RFC (tabela da seção 09); na primeira fase, o arquivo é enviado e armazenado pela Business API, e URLs de terceiros são liberadas depois, conforme o cliente; outras regras seguem a definição técnica. Falta definir: o prazo de 30 dias serve, ou deve ser menor? Depois da entrega, a mídia passa para o armazenamento normal do chat, ou some do histórico quando expira? Por quanto tempo o <code>url</code> das mídias recebidas fica válido?</li>
   <li><strong>Webhook na Fase 1.</strong> Proposto na v1.5: o parceiro cadastra a URL em <em>Assinaturas de eventos</em> da Central do Desenvolvedor, no lugar do cadastro manual da v1.4. Falta confirmar com Henry Wu se o cadastro manual ainda é desejado por motivo comercial; se a política de retentativas, a retenção de entregas e o reenvio da plataforma atendem a seção 10; se a plataforma assina as entregas e aceita o handshake e o envelope da Cloud API; e como o parceiro recupera mensagens recebidas que se perderam, já que só o status tem consulta.</li>
-  <li><strong>Central do Desenvolvedor.</strong> (a) O Merchant ID gera o Developer ID em sincronia (v1.6); falta confirmar se o Developer ID é a Organização da Central, como o comerciante entra no console e como fica o Developer ID quando ele pertence a um terceiro, como o Salesforce. (b) Qual é o endpoint de token, a validade e o formato do token do grant <code>CLIENT_CREDENTIALS</code>? (c) Os escopos da Business API seguem o padrão da plataforma (como <code>write:clips:publish</code>) ou mantêm os nomes da seção 08? (d) Quem aprova as solicitações de escopo e em quanto tempo? (e) O que cada papel (OWNER, ADMIN, DEVELOPER, AUDITOR) permite hoje em secrets e assinaturas? (f) O ambiente SANDBOX envia mensagens simuladas ou reais? (g) Qual time constrói as telas e extensões da seção 12?</li>
+  <li><strong>Central do Desenvolvedor.</strong> (a) O Merchant ID gera o Developer ID em sincronia (v1.6); falta confirmar se o Developer ID é a Organização da Central, como o comerciante entra no console e como fica o Developer ID quando ele pertence a um terceiro, como o Salesforce. (b) Qual é o endpoint de token, a validade e o formato do token do grant <code>CLIENT_CREDENTIALS</code>? (c) Os escopos da Business API seguem o padrão da plataforma (como <code>write:clips:publish</code>) ou mantêm os nomes da seção 08? O PHZ-BM-0001 sugere um terceiro padrão (<code>business.message.send.service</code>); precisamos de um só. (d) Quem aprova as solicitações de escopo e em quanto tempo? (e) O que cada papel (OWNER, ADMIN, DEVELOPER, AUDITOR) permite hoje em secrets e assinaturas? (f) O ambiente SANDBOX envia mensagens simuladas ou reais? (g) Qual time constrói as telas e extensões da seção 12?</li>
+  <li><strong>Hierarquia RFC × PHZ-BM-0001.</strong> Esta RFC mantém <code>Merchant ID → Developer ID → App ID → BA ID</code> (um BA por aplicação). O PHZ-BM-0001 propõe <code>Organization → Business Account → App → Credential</code> (várias aplicações por BA). Quem decide e qual vale? Se ficar a da RFC, o PHZ-BM-0001 precisa ser atualizado; se ficar a do BM, as seções 06, 09 e 12 mudam.</li>
+  <li><strong>Business Account como subtipo de Channel.</strong> O BA é um tipo de conversa (esta RFC) ou um <code>Channel.subtype</code> (PHZ-BM-0001)? Qual ID de conversa o app usa: <code>channel:&lt;id&gt;</code> com metadados no curto prazo e ID opaco depois?</li>
+  <li><strong>Verificação.</strong> A Central mostra “Organização verificada”, mas o PHZ-BM-0001 diz que não há objeto de verificação. O que existe hoje, quais níveis adotar, quem revisa, e a Fase 1 depende disso?</li>
+  <li><strong>Templates de serviço e janela.</strong> Na Fase 1, a empresa pode iniciar conversa com texto livre (proposta original desta RFC) ou só com template aprovado (PHZ-BM-0001)? Qual a duração da janela de atendimento e quem aprova templates?</li>
+  <li><strong>Rotas.</strong> Manter o formato da Cloud API (<code>/v1/{sender_id}/messages</code>) ou adotar <code>/v1/business/messages</code>, como no PHZ-BM-0001?</li>
+  <li><strong>Papel Operator.</strong> Criar o papel Operator na Central? Confirmar que DEVELOPER nunca vê o secret de produção.</li>
+  <li><strong>Horário silencioso, frequência e regras regionais.</strong> Quais valores, por região e setor, e onde são configurados (Central ou plataforma)?</li>
+  <li><strong>Resolução de destinatário.</strong> Vale ter <code>/recipients/resolve</code>? Para quais estados de relação, com qual limite, e como garantir que não sirva para enumerar telefones?</li>
+  <li><strong>Revisão jurídica.</strong> Consentimento, retenção, exclusão, transferência internacional e exceções de serviço por jurisdição (LGPD e mercados fora do Brasil).</li>
 </ol>
 </section>
 
