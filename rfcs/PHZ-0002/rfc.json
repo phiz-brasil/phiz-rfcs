@@ -20,14 +20,28 @@
     "Richard Liang",
     "Henry Wu"
   ],
-  "version": "1.0",
+  "version": "1.1",
   "changelog": [
+    {
+      "version": "1.1",
+      "date": "2026-10-21",
+      "note": {
+        "pt": "Respostas da reunião técnica com a CredPay: prazo da ponte legada sem 3DS (30/10), tokenização multiadquirente, exclusão dos CVVs, regras de estorno PIX, webhooks, limites, recorrência e split.",
+        "en": "Answers from the technical meeting with CredPay: deadline of the legacy bridge without 3DS (Oct 30), multi-acquirer tokenization, deletion of stored CVVs, PIX refund rules, webhooks, limits, recurring billing and split.",
+        "zh": "与 CredPay 技术会议的答复：无 3DS 的旧版过渡通道截止日期（10 月 30 日）、多收单机构令牌化、删除已存储的 CVV、PIX 退款规则、Webhook、请求限制、定期扣款和分账。"
+      }
+    },
     {
       "version": "1.0",
       "date": "2026-10-16",
-      "note": { "pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。" }
+      "note": {
+        "pt": "Primeira versão.",
+        "en": "First version.",
+        "zh": "首个版本。"
+      },
+      "status": "draft"
     }
   ],
   "created": "2026-10-16",
-  "updated": "2026-10-16"
+  "updated": "2026-10-21"
 }

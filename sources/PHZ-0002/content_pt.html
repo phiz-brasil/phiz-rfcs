@@ -5,7 +5,7 @@
   <dl class="meta">
     <div><dt>Status</dt><dd><span class="pill">Rascunho</span></dd></div>
     <div><dt>Autor</dt><dd>Gleison (Engenharia PHIZ)</dd></div>
-    <div><dt>Data</dt><dd>16/10/2026</dd></div>
+    <div><dt>Data</dt><dd>16/10/2026 · v1.1 em 21/10/2026</dd></div>
     <div><dt>Revisores</dt><dd>Pedro Bettani (Brasil)<br>Luciana Geromel (Brasil)<br>Richard Liang (China)<br>Henry Wu (China)</dd></div>
     <div><dt>Sistemas</dt><dd>channel · card-vault · backapply</dd></div>
   </dl>
@@ -18,14 +18,15 @@
   <li><strong>Um adaptador novo no <code>phiz-microwd-channel</code></strong>, ao lado do antigo, com códigos de serviço próprios e autenticação por API Key.</li>
   <li><strong>A troca do cliente CredPay no <code>phiz-pay-card-vault</code></strong> pelo contrato novo de cartão.</li>
   <li><strong>Virada controlada pela tabela <code>route_cfg</code></strong>, que o operador já edita no painel interno. Cada operação muda de caminho com uma linha de configuração e volta da mesma forma, sem deploy.</li>
-  <li><strong>Cinco fases</strong>, começando pelo PIX, que é o fluxo mais simples, e deixando para o fim o 3DS, que muda também o front.</li>
+  <li><strong>Cinco fases</strong>, começando pelo PIX, que é o fluxo mais simples. O 3DS passa a ser obrigatório no cartão e define o prazo final, porque a CredPay vai desligar a estrutura antiga sem 3DS.</li>
 </ul>
 <p>A RFC também lista o que a API nova <strong>não cobre</strong>: maquininha (TEF), extrato para conciliação, transferência bancária e listagens. Essas operações ficam na integração antiga até a CredPay responder às <a href="#§questions">perguntas em aberto</a>.</p>
+<div class="note-box decision"><span class="lbl">Prazo definido pela CredPay</span><p>A PHIZ é o único cliente que ainda usa a estrutura antiga, sem 3DS. Para as operações não pararem, a CredPay coloca no ar até 30/10/2026 uma ponte temporária para esse caminho. A data de desligamento da ponte depende da nossa estimativa para a migração completa com 3DS, que a CredPay espera receber até 23/10/2026.</p></div>
 <div class="stats">
   <div class="stat"><b>8</b><span>integrações CredPay hoje</span></div>
   <div class="stat"><b>4 → 1</b><span>formas de autenticação</span></div>
   <div class="stat"><b>31</b><span>rotas atuais mapeadas</span></div>
-  <div class="stat"><b>6</b><span>operações sem equivalente</span></div>
+  <div class="stat"><b>4</b><span>operações sem equivalente</span></div>
 </div>
 </section>
 
@@ -97,9 +98,21 @@ flowchart LR
 <tr><td>Valores</td><td>Cartão: centavos em string (<code>"15000"</code>). PIX: reais em decimal (<code>15.00</code>). Simulação: centavos em inteiro.</td></tr>
 <tr><td>Idempotência</td><td>Cartão: pelo <code>orderId</code>, e duas chamadas simultâneas dão 409. PIX: mesmo valor numa janela curta dá 409.</td></tr>
 <tr><td>Respostas</td><td>O envelope muda por família (<code>details</code>, <code>data</code> ou campos na raiz). Erro sempre com <code>{message}</code>. 502: sem destino. 504: provedor não respondeu.</td></tr>
+<tr><td>Chave de homologação</td><td>A CredPay confere se o cliente PHIZ está habilitado, com as taxas certas, em homologação. Depois disso aparece o botão de token no portal GruPag; a chave gerada ali (<code>gpk_…</code>) vai como <code>Bearer</code> em todas as chamadas.</td></tr>
+<tr><td>Limite de requisições</td><td>Por cliente, não por rota. Padrão de 1 transação por segundo, ajustado pela operação declarada no cadastro (ticket médio, volume diário, faturamento mensal). Picos pontuais, como campanhas ou dias de vencimento, são liberados a pedido, com justificativa.</td></tr>
+<tr><td>Confirmação</td><td>Cartão: a resposta da própria chamada já traz o resultado, sem webhook. PIX: webhook de mudança de status. Para os dois, há consulta da transação por ID.</td></tr>
+<tr><td>Tokenização</td><td>Multiadquirente: a CredPay tokeniza o cartão em todas as adquirentes ao mesmo tempo e devolve um token único. Se uma adquirente falha, outra é tentada automaticamente. O token fica no cofre da CredPay, que guarda só os 6 primeiros e os 4 últimos dígitos; dado bruto de cartão não é armazenado.</td></tr>
 </tbody></table></div>
 {CODE:auth_old}
 {CODE:auth_new}
+<h3>Recursos disponíveis fora do escopo</h3>
+<p>A CredPay confirmou recursos que nenhum cliente PHIZ usa hoje. Ficam registrados para entrarem rápido quando houver demanda.</p>
+<div class="tbl"><table><thead><tr><th>Recurso</th><th>Como funciona</th></tr></thead><tbody>
+<tr><td>Recorrência</td><td>Habilitada por segmento de atividade. Indicada para academias, planos de telefonia e assinaturas. Não é recomendada para entrega de produto, porque o valor não fica reservado.</td></tr>
+<tr><td>Split fixo</td><td>O saldo fica retido na CredPay. O cliente indica por API para quais fornecedores repassar e em qual prazo (15, 20 ou 30 dias).</td></tr>
+<tr><td>Split dinâmico</td><td>Valores variáveis, comandados por API. Só repassa para fornecedores credenciados e autorizados antes pelo dono do negócio.</td></tr>
+<tr><td>Repasse</td><td>O responsável é sempre PJ; o recebedor do split pode ser PF, desde que cadastrado. O dinheiro cai direto no domicílio bancário declarado, em qualquer banco, sem conta bolsão.</td></tr>
+</tbody></table></div>
 </section>
 
 <section>
@@ -110,12 +123,14 @@ flowchart LR
   <li>Trocar os quatro logins e o <code>CredPayAuthTask</code> por uma API Key guardada no cofre de segredos.</li>
   <li>Virar e desvirar cada operação por configuração, por comerciante, sem deploy.</li>
   <li>Concentrar conversões de valor e de status num único adaptador.</li>
+  <li>Apagar todos os CVVs guardados hoje e passar a guardar só o token da CredPay (ver <a href="#§breaking">seção 10</a>).</li>
 </ul>
 <h4>Fora do escopo</h4>
 <ul>
   <li>Usar a API de Simulação para mostrar parcelas e taxas no app. É uma melhoria possível, não um requisito da migração.</li>
   <li>TEF, conciliação e transferência bancária, enquanto não houver equivalente na API nova.</li>
   <li>Outros canais (Pinbank, Cronos, Afro).</li>
+  <li>Recorrência e split. A API oferece os dois, mas nenhum cliente PHIZ usa hoje (ver <a href="#§newapi">seção 04</a>).</li>
 </ul>
 </section>
 
@@ -125,7 +140,7 @@ flowchart LR
 
 <h3>Cartão salvo e checkout</h3>
 <div class="tbl map"><table><thead><tr><th>Hoje</th><th>API nova</th><th>Situação</th><th>O que muda</th></tr></thead><tbody>
-<tr><td>POST /Tokenizacao/CriarToken<br>B20 · Z519</td><td>POST /v1/pagamento/cartao/adicionar</td><td><span class="st ch">muda</span></td><td>Exige <code>authorizerId</code>. Um token vale para uma autorizadora só: crédito e débito precisam de tokens separados. Guardar o <code>customerId</code>.</td></tr>
+<tr><td>POST /Tokenizacao/CriarToken<br>B20 · Z519</td><td>POST /v1/pagamento/cartao/adicionar</td><td><span class="st ch">muda</span></td><td>Exige <code>authorizerId</code>. A CredPay informou que a tokenização é multiadquirente, com um token único; confirmar em homologação se crédito e débito ainda pedem tokens separados. Guardar o <code>customerId</code>.</td></tr>
 <tr><td>GET /Tokenizacao/Obter/{id}</td><td>POST /v1/pagamento/cartao/buscar</td><td><span class="st ch">muda</span></td><td>Devolve só o status (<code>ATV</code> ou <code>INA</code>).</td></tr>
 <tr><td>GET /Tokenizacao/Listar</td><td>—</td><td><span class="st gap">sem equivalente</span></td><td>Ver <a href="#§gaps">Lacunas</a>.</td></tr>
 <tr><td>POST /Tokenizacao/Excluir/{id}<br>B24 · Z520</td><td>DELETE /v1/pagamento/cartao/remover</td><td><span class="st eq">equivalente</span></td><td>DELETE com corpo <code>{token, customer}</code>.</td></tr>
@@ -160,11 +175,11 @@ flowchart LR
 
 <h3>PIX</h3>
 <div class="tbl map"><table><thead><tr><th>Hoje</th><th>API nova</th><th>Situação</th><th>O que muda</th></tr></thead><tbody>
-<tr><td>POST /api/generate-qrcodes<br>B10</td><td>POST /transacional/pix/qrcode</td><td><span class="st eq">equivalente</span></td><td>Reais em decimal. Síncrono, até 30 s.</td></tr>
-<tr><td>GET /api/find-qrcode/{id}<br>B11</td><td>GET /transacional/pix/consulta/{transactionId}</td><td><span class="st eq">equivalente</span></td><td>Pago quando o status é <code>CONFIRMADO</code>. Sem webhook documentado.</td></tr>
+<tr><td>POST /api/generate-qrcodes<br>B10</td><td>POST /transacional/pix/qrcode</td><td><span class="st eq">equivalente</span></td><td>Reais em decimal. Síncrono, até 30 s. Expira em 3 min (instantâneo) ou em até 1 h (padrão).</td></tr>
+<tr><td>GET /api/find-qrcode/{id}<br>B11</td><td>GET /transacional/pix/consulta/{transactionId}</td><td><span class="st eq">equivalente</span></td><td>Pago quando o status é <code>CONFIRMADO</code>. Há webhook de status; a consulta fica como reserva.</td></tr>
 <tr><td>POST /api/bank-transfers<br>B12</td><td>—</td><td><span class="st gap">sem equivalente</span></td><td>—</td></tr>
 <tr><td>POST /api/list-transactions<br>B13</td><td>—</td><td><span class="st gap">sem equivalente</span></td><td>—</td></tr>
-<tr><td>—</td><td>POST /transacional/pix/cancelamento/{transactionId}</td><td><span class="st new">novo</span></td><td>Até 24 h devolve na hora; depois abre disputa.</td></tr>
+<tr><td>—</td><td>POST /transacional/pix/cancelamento/{transactionId}</td><td><span class="st new">novo</span></td><td>Segundo a CredPay, até 23h59 do dia da operação; depois, chamado com análise manual. A documentação fala em 24 h. Ver <a href="#§questions">seção 14</a>.</td></tr>
 <tr><td>—</td><td>POST /transacional/pix/disputa</td><td><span class="st new">novo</span></td><td>Só perfil Admin. Candidato a tela no painel.</td></tr>
 </tbody></table></div>
 
@@ -180,6 +195,12 @@ flowchart LR
 <section>
 <h2 id="§card-flow"><span class="n">07</span>Novo fluxo de cartão com 3DS</h2>
 <p>A maior mudança de fluxo está no 3DS. Hoje o backapply devolve uma URL pronta (<code>certifyUrl</code>, em <code>CardCertifyServiceImpl</code>) e o front só a abre. Na API nova, dois passos rodam <strong>no navegador do pagador</strong>, e o front precisa montar e enviar os formulários.</p>
+<p>Segundo a CredPay, a primeira versão deste checkout transparente foi entregue em outubro de 2025, porque não quisemos embutir o iframe de 3DS dela, e nunca chegou a ser implementada. A versão atual é a segunda. Ainda segundo a CredPay, o nosso código chama hoje a API de transação direto, sem passar pelo 3DS, o que só funciona na estrutura antiga. No modelo novo, o 3DS é obrigatório antes da transação e tem três etapas:</p>
+<ol>
+  <li><strong>Setup.</strong> Cadastra a transação (código do cartão, bandeira, valor) e recebe os dados para rodar o fingerprint do navegador.</li>
+  <li><strong>Enrollment e desafio.</strong> Envia os dados complementares (endereço, Merchant ID e outros) e aguarda o resultado, com ou sem desafio.</li>
+  <li><strong>Consulta e pagamento.</strong> Se a autenticação passou, envia o pagamento com o hash gerado (<code>merchantChargeId</code>).</li>
+</ol>
 <div class="diagram"><pre class="mermaid">
 sequenceDiagram
   autonumber
@@ -205,11 +226,12 @@ sequenceDiagram
 </pre></div>
 <p class="cap">O mesmo <code>Cliente-Id</code> precisa ir em todas as chamadas à API GruPag deste fluxo. Se ele faltar em uma, o pagamento responde "3DS não encontrado".</p>
 <div class="note-box risk"><span class="lbl">Impacto no front</span><p>Ainda falta identificar qual front abre a <code>certifyUrl</code> hoje (o app ou um formulário web). Ele precisa coletar os dados reais do navegador (tela, fuso, user-agent), enviar o 3DS Method num iframe invisível e apresentar o desafio num iframe de 400×650.</p></div>
+<div class="note-box decision"><span class="lbl">Apoio da CredPay</span><p>A CredPay oferece sessões práticas para montar as requisições junto com o time e um HTML de exemplo para testar o fingerprint. O canal de suporte direto fica aberto até o go-live.</p></div>
 </section>
 
 <section>
 <h2 id="§pix-flow"><span class="n">08</span>Novo fluxo PIX</h2>
-<p>O PIX quase não muda de forma: gerar, consultar até pagar. O que entra de novo é a devolução com regra de prazo e a disputa.</p>
+<p>O PIX quase não muda de forma: gerar e aguardar a confirmação, agora por webhook, com a consulta como reserva. O que entra de novo é a devolução com regra de prazo e a disputa.</p>
 <div class="diagram"><pre class="mermaid">
 sequenceDiagram
   autonumber
@@ -220,7 +242,8 @@ sequenceDiagram
   G-->>CH: transactionId e copia-e-cola
   CH-->>P: QR Code
   P->>G: paga no banco
-  loop até CONFIRMADO ou EXPIRADO
+  G-->>CH: webhook de status
+  opt webhook não chegou
     CH->>G: GET /transacional/pix/consulta/{id}
     G-->>CH: status
   end
@@ -230,15 +253,16 @@ stateDiagram-v2
   [*] --> GERADO
   GERADO --> CONFIRMADO: pagamento
   GERADO --> EXPIRADO: venceu
-  CONFIRMADO --> ESTORNANDO: devolução até 24 h
+  CONFIRMADO --> ESTORNANDO: devolução no prazo
   ESTORNANDO --> ESTORNADO
-  CONFIRMADO --> DISPUTA: devolução após 24 h
+  CONFIRMADO --> DISPUTA: devolução fora do prazo
   DISPUTA --> CANCELANDO: admin aprova
   CANCELANDO --> CANCELADO
   DISPUTA --> PAGO: admin nega
 </pre></div>
-<p class="cap">Status de uma cobrança PIX na API nova. A disputa é decidida por um usuário Admin, o que pede uma tela no painel interno.</p>
+<p class="cap">Status de uma cobrança PIX na API nova. A disputa é decidida por um usuário Admin, o que pede uma tela no painel interno. O prazo ainda precisa ser confirmado: a documentação fala em 24 h; na reunião, a CredPay indicou até 23h59 do dia da operação, porque a partir da meia-noite ela processa conciliação, créditos e débitos, e depois disso o caminho é um chamado com análise manual (ver <a href="#§questions">seção 14</a>).</p>
 {CODE:pix_new}
+<div class="note-box decision"><span class="lbl">Validade do QR Code</span><p>Há dois formatos. O <strong>instantâneo</strong> expira em 3 minutos. O <strong>padrão</strong> vale até 1 hora e é o recomendado para volume alto, porque Banco do Brasil, Caixa e Santander podem levar até 30 minutos para responder.</p></div>
 </section>
 
 <section>
@@ -249,23 +273,33 @@ stateDiagram-v2
 <tr><td>Extrato: <code>/Movimentacao/Analitico</code>, <code>/Consulta/Subdominio/Datas</code></td><td>Conciliação diária</td><td><span class="no">A conciliação deixa de conferir o canal.</span></td></tr>
 <tr><td>Transferência bancária: <code>/api/bank-transfers</code></td><td>B12</td><td><span class="part">Para a transferência por esse canal.</span></td></tr>
 <tr><td>Listagens: <code>/Tokenizacao/Listar</code>, <code>/api/list-transactions</code></td><td>Consulta e sincronização</td><td><span class="part">Passamos a depender só dos nossos registros.</span></td></tr>
-<tr><td>Recorrência</td><td>Campos de recorrência no <code>CheckOutPayReq</code></td><td><span class="part">A doc cita contrato de recorrência, sem documentar as rotas.</span></td></tr>
-<tr><td>Webhooks</td><td>—</td><td><span class="part">Confirmação só por consulta, o que mantém o polling.</span></td></tr>
 </tbody></table></div>
+<p>Webhooks e recorrência saíram desta lista na v1.1: a CredPay confirmou que existem (ver <a href="#§newapi">seção 04</a>).</p>
 </section>
 
 <section>
 <h2 id="§breaking"><span class="n">10</span>Mudanças que quebram contrato</h2>
 <div class="tbl"><table><thead><tr><th>Mudança</th><th>Hoje</th><th>API nova</th><th>O que fazer</th></tr></thead><tbody>
-<tr><td><strong>Tokens de cartão</strong></td><td>Criados em <code>/Tokenizacao/CriarToken</code></td><td>Não está claro se valem em <code>/v1/pagamento</code></td><td>Confirmar com a CredPay. Se não valerem, retokenizar pelo cofre antes da Fase 2.</td></tr>
+<tr><td><strong>Tokens de cartão</strong></td><td>Criados em <code>/Tokenizacao/CriarToken</code></td><td>Não valem e não há migração. Token novo, multiadquirente.</td><td>Começar do zero: o cartão salvo é cadastrado de novo no modelo novo. Ver instruções abaixo.</td></tr>
+<tr><td><strong>CVV</strong></td><td>Há CVVs gravados no nosso banco</td><td>Nenhum dado bruto de cartão fica com a PHIZ</td><td>Excluir todos os CVVs. Ver instruções abaixo.</td></tr>
 <tr><td><strong>Valores</strong></td><td>Reais em <code>BigDecimal</code> (<code>valorInicial</code>)</td><td>Cartão em centavos (string); PIX em reais</td><td>Converter num único ponto do adaptador.</td></tr>
 <tr><td><strong>Identificadores</strong></td><td><code>transacaoId</code>, <code>referenceId</code>, <code>numeroInterno</code></td><td><code>nit</code>, <code>merchantChargeId</code>, <code>customerId</code></td><td>Novas colunas no pedido e no cartão.</td></tr>
-<tr><td><strong>Prazo de estorno</strong></td><td>Sem limite documentado</td><td>Cartão: até 23:59 do dia. PIX: depois de 24 h vira disputa.</td><td>Tratar no app e no painel; rotina para devolução fora da API.</td></tr>
+<tr><td><strong>Prazo de estorno</strong></td><td>Sem limite documentado</td><td>Cartão: até 23:59 do dia. PIX: até 23h59 do dia, segundo a CredPay; depois, chamado com análise manual.</td><td>Tratar no app e no painel; rotina para devolução fora da API.</td></tr>
 <tr><td><strong>Empresa</strong></td><td><code>subDominioId</code>, <code>lojaId</code></td><td>Header <code>Cliente-Id</code></td><td>Mapear cada comerciante; resolver uma vez por pedido e reutilizar.</td></tr>
 <tr><td><strong>3DS</strong></td><td>URL pronta</td><td>Formulários no navegador</td><td>Mudar o front.</td></tr>
 <tr><td><strong>Status</strong></td><td>Rótulos do checkout</td><td><code>CONFIRMADO</code>, <code>AUTORIZADO</code>, <code>PENDENTE</code>, <code>NEGADO</code>…</td><td>Tabela de conversão no adaptador.</td></tr>
 </tbody></table></div>
 {CODE:amount_conv}
+<h3>Instruções para o time de desenvolvimento: CVV e tokens</h3>
+<div class="note-box risk"><span class="lbl">Obrigatório antes da virada do cartão</span><p>Não existe migração de tokens nem de dados de cartão do modelo antigo para o novo. A base começa do zero.</p></div>
+<ol>
+  <li><strong>Excluir todos os CVVs</strong> já gravados, em todas as tabelas e em todos os ambientes. Não guardar CVV de nenhuma forma: nem cifrado, nem em log, nem em cache.</li>
+  <li><strong>Não migrar os tokens antigos.</strong> Os cartões salvos no modelo antigo deixam de ser usados na API nova.</li>
+  <li><strong>Tokenizar pela CredPay</strong> todo cartão novo (<code>POST /v1/pagamento/cartao/adicionar</code>). Guardar só o token, o <code>customerId</code> e os 6 primeiros e 4 últimos dígitos.</li>
+  <li><strong>O CVV só trafega</strong> na própria requisição à CredPay e é descartado em seguida.</li>
+  <li><strong>Todo pagamento com cartão passa pelo 3DS</strong> (setup, desafio, consulta) antes de <code>POST /v1/pagamento</code>. Chamar a transação direto só funciona na ponte legada, que será desligada.</li>
+  <li><strong>Entregar evidência:</strong> a lista das tabelas e colunas onde havia CVV e o resultado da exclusão, para revisão do time Brasil.</li>
+</ol>
 </section>
 
 <section>
@@ -285,7 +319,7 @@ flowchart LR
 <h3>Mudanças por repositório</h3>
 <div class="tbl"><table><thead><tr><th>Repositório</th><th>Mudança</th></tr></thead><tbody>
 <tr><td><code>phiz-microwd-channel</code></td><td>Cliente HTTP com API Key e <code>Cliente-Id</code>; adaptadores de cartão, 3DS, pré-autorização e PIX; conversão de valor e status; registro dos códigos novos.</td></tr>
-<tr><td><code>phiz-pay-card-vault</code></td><td>Trocar <code>CredpagamentosClient</code> e <code>CredpayClient</code> pelo contrato novo, atrás de configuração.</td></tr>
+<tr><td><code>phiz-pay-card-vault</code></td><td>Trocar <code>CredpagamentosClient</code> e <code>CredpayClient</code> pelo contrato novo, atrás de configuração. Excluir os CVVs guardados e deixar de gravá-los.</td></tr>
 <tr><td><code>phiz-microwd-backapply</code></td><td>Gravar <code>nit</code>, <code>merchantChargeId</code> e <code>customerId</code>; adaptar <code>CardCertifyServiceImpl</code> ao 3DS novo; tratar o prazo de estorno.</td></tr>
 <tr><td><code>phiz-microwd-common</code></td><td>Colunas novas nas entidades de pedido e de cartão.</td></tr>
 <tr><td><code>phiz-inner</code> e <code>phiz-inner-front</code></td><td>Cadastro dos códigos e do <code>road_info</code>; tela de disputa PIX.</td></tr>
@@ -298,10 +332,10 @@ flowchart LR
 <section>
 <h2 id="§rollout"><span class="n">12</span>Plano de migração</h2>
 <div class="phases">
-  <div class="phase first"><span class="tag">FASE 0</span><h5>Preparação</h5><ul><li>Levantar códigos CredPay ativos em <code>route_cfg</code></li><li>Chave de homologação</li><li>Respostas da CredPay, principalmente sobre tokens</li></ul></div>
+  <div class="phase first"><span class="tag">FASE 0</span><h5>Preparação</h5><ul><li>Levantar códigos CredPay ativos em <code>route_cfg</code></li><li>Chave de homologação, depois da habilitação de taxas</li><li>Estimativa de prazo para a CredPay até 23/10</li><li>Exclusão dos CVVs</li></ul></div>
   <div class="phase"><span class="tag">FASE 1</span><h5>PIX</h5><ul><li>Gerar QR e consultar</li><li>Um comerciante de teste</li><li>Devolução e disputa</li></ul></div>
-  <div class="phase"><span class="tag">FASE 2</span><h5>Cartão sem 3DS</h5><ul><li>Tokenização, pagamento, cancelamento, consulta</li><li>Cofre de cartões</li><li>Retokenização, se preciso</li></ul></div>
-  <div class="phase"><span class="tag">FASE 3</span><h5>3DS</h5><ul><li>Fluxo novo no channel</li><li>Mudança no front</li></ul></div>
+  <div class="phase"><span class="tag">FASE 2</span><h5>Cartão sem 3DS</h5><ul><li>Tokenização multiadquirente, pagamento, cancelamento, consulta</li><li>Cofre de cartões</li><li>Só em homologação: em produção, o cartão vira junto com o 3DS</li></ul></div>
+  <div class="phase"><span class="tag">FASE 3</span><h5>3DS</h5><ul><li>Fluxo novo no channel</li><li>Mudança no front</li><li>Libera o desligamento da ponte legada</li></ul></div>
   <div class="phase"><span class="tag">FASE 4</span><h5>Pré-autorização</h5><ul><li>Reservar, liquidar, desfazer</li></ul></div>
   <div class="phase"><span class="tag">FASE 5</span><h5>Desligamento</h5><ul><li>Remover códigos antigos</li><li>Remover <code>CredPayAuthTask</code> e clientes antigos</li><li>TEF e conciliação seguem até haver substituto</li></ul></div>
 </div>
@@ -312,32 +346,48 @@ flowchart LR
   <li>Acompanhar taxa de aprovação, erros 4xx/5xx por código e tempo de resposta, comparando com o caminho antigo.</li>
   <li>Virar o restante dos comerciantes em lotes.</li>
 </ol>
-<p>Datas serão definidas depois da Fase 0, quando soubermos o que está ativo e o que a CredPay respondeu.</p>
+<h3>Datas combinadas</h3>
+<div class="tbl"><table><thead><tr><th>Data</th><th>O quê</th></tr></thead><tbody>
+<tr><td>23/10/2026</td><td>A PHIZ envia à CredPay a estimativa de prazo para a migração completa com 3DS.</td></tr>
+<tr><td>30/10/2026</td><td>A CredPay coloca no ar a ponte legada sem 3DS, para as operações não pararem.</td></tr>
+<tr><td>A definir</td><td>Desligamento da ponte, a partir da nossa estimativa. Até lá, o cartão com 3DS precisa estar em produção.</td></tr>
+</tbody></table></div>
+<p>As demais datas saem da Fase 0, quando soubermos o que está ativo.</p>
 </section>
 
 <section>
 <h2 id="§risks"><span class="n">13</span>Riscos</h2>
 <div class="tbl"><table><thead><tr><th>Risco</th><th>Mitigação</th></tr></thead><tbody>
-<tr><td>Tokens antigos não valem na API nova</td><td>Confirmar na Fase 0; se for o caso, retokenizar pelo cofre antes da Fase 2.</td></tr>
+<tr><td>Usuários perdem os cartões salvos, porque os tokens antigos não migram</td><td>Pedir o recadastro do cartão no próximo pagamento e avisar no app antes da virada.</td></tr>
 <tr><td><code>Cliente-Id</code> diferente no meio do fluxo</td><td>Resolver uma vez por pedido, gravar e reutilizar; teste automatizado do fluxo 3DS completo.</td></tr>
 <tr><td>Erro de unidade (reais × centavos)</td><td>Conversão num único ponto, com testes de contrato por endpoint.</td></tr>
 <tr><td>Estorno recusado depois das 23:59</td><td>Avisar no app e no painel; rotina de devolução fora da API.</td></tr>
 <tr><td>Conciliação sem fonte de dados</td><td>Manter o extrato antigo até haver substituto.</td></tr>
 <tr><td>Homologação apontando para produção</td><td>O card-vault hoje usa a base de produção como padrão porque o sandbox estava quebrado. Na API nova, exigir a base de homologação fora de produção.</td></tr>
+<tr><td>Ponte legada desligada antes de o 3DS estar em produção</td><td>Estimativa realista até 23/10; tratar o 3DS como caminho crítico.</td></tr>
+<tr><td>CVV esquecido em alguma tabela, log ou backup</td><td>Lista de onde havia CVV e evidência da exclusão, revisada pelo time Brasil.</td></tr>
+<tr><td>Pico acima do limite (1 transação por segundo por padrão)</td><td>Declarar o volume real no cadastro e pedir liberação antes de campanhas.</td></tr>
 </tbody></table></div>
 </section>
 
 <section>
 <h2 id="§questions"><span class="n">14</span>Perguntas em aberto para a CredPay</h2>
+<p>A reunião técnica com a CredPay respondeu cinco das oito perguntas da v1.0.</p>
+<div class="tbl"><table><thead><tr><th>Pergunta</th><th>Resposta da CredPay</th></tr></thead><tbody>
+<tr><td>Tokens antigos valem na API nova?</td><td><span class="no">Não.</span> Não há migração: zerar e começar do zero no modelo multiadquirente.</td></tr>
+<tr><td>Webhooks</td><td><span class="yes">Sim, para PIX.</span> O cartão responde na própria chamada; os dois têm consulta por ID.</td></tr>
+<tr><td>Recorrência</td><td><span class="yes">Disponível</span>, habilitada por segmento de atividade.</td></tr>
+<tr><td>Limites</td><td>Por cliente: 1 transação por segundo por padrão, ajustável no cadastro e sob pedido.</td></tr>
+<tr><td>Prazo</td><td>A PHIZ é o último cliente na estrutura antiga. A ponte sem 3DS fica pronta até 30/10/2026; a data de desligamento sai da nossa estimativa, devida até 23/10/2026.</td></tr>
+</tbody></table></div>
+<h3>Ainda em aberto</h3>
 <ol class="qs">
-  <li><strong>Tokens.</strong> Tokens criados em <code>/Tokenizacao/CriarToken</code> e no cofre valem em <code>/v1/pagamento</code>? Existe migração em lote?</li>
   <li><strong>Lacunas.</strong> Qual o substituto para TEF, extrato, transferência bancária e listagem de transações?</li>
-  <li><strong>Webhooks.</strong> Há notificação de confirmação para PIX e cartão, ou só consulta?</li>
-  <li><strong>Recorrência.</strong> Quais são as rotas do contrato de recorrência citado na documentação?</li>
   <li><strong>Simulação.</strong> O <code>hashSimulacao</code> é conferido no pagamento? A página de simulação diz que sim; a de cartão diz que é aceito e ignorado.</li>
   <li><strong>Empresas.</strong> Como mapear nossos comerciantes para <code>Cliente-Id</code>: uma chave por ambiente com todos vinculados, ou uma por comerciante?</li>
-  <li><strong>Limites.</strong> Há limite de requisições por chave?</li>
-  <li><strong>Prazo.</strong> Quando as APIs atuais serão desligadas?</li>
+  <li><strong>Estorno PIX.</strong> Na reunião, a regra foi até 23h59 do dia e, depois, chamado. A documentação fala em devolução imediata até 24 h e disputa depois. Qual vale, e a rota de disputa continua?</li>
+  <li><strong>Token multiadquirente.</strong> Se o token é único para todas as adquirentes, o <code>authorizerId</code> ainda é obrigatório? Crédito e débito continuam com tokens separados?</li>
+  <li><strong>Desligamento da ponte.</strong> Data final, a combinar depois da nossa estimativa.</li>
 </ol>
 </section>
 
@@ -345,6 +395,7 @@ flowchart LR
 <h2 id="§refs"><span class="n">15</span>Referências</h2>
 <ul>
   <li>Documentação GruPag (exige login): Acesso e API Key, APIs PIX, API Compra com Cartão, API de Simulação.</li>
+  <li>Reunião técnica com a CredPay sobre a API nova (outubro de 2026): 3DS, tokenização, PIX, split, webhooks, recorrência e limites.</li>
   <li>channel: <code>CheckOutTokenServiceImpl</code>, <code>CheckOutOperationServiceImpl</code>, <code>PreAuthService</code>, <code>service/credpay/impl/*</code>, <code>ThreeDomainSecurePaymentService</code>, <code>TefService</code>, <code>SynChannelDataService</code>, <code>ApiCodeConstant</code>.</li>
   <li>card-vault: <code>CredpagamentosClient</code>, <code>CredpayClient</code>, <code>application.yaml</code>.</li>
   <li>backapply: <code>RoadRouteServiceImpl</code>, <code>CardCertifyServiceImpl</code>.</li>
