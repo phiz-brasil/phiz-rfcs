@@ -410,8 +410,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: Sending not allowed by the opt-in policy, type not allowed for the sender, or media expired
-            (2303).
+          description: Sending not allowed by the opt-in policy (2201), type not allowed (2202), outside the service
+            window (2203), template not approved (2204), restricted time or region (2205), or media expired (2303).
           content:
             application/json:
               schema:
@@ -422,6 +422,48 @@ paths:
                   type: policy_violation
                   message: Sending to this recipient is not allowed by the opt-in policy.
                   trace_id: trc_77ac
+  /v1/{sender_id}/recipients/resolve:
+    post:
+      tags:
+      - Messages
+      summary: Resolve recipient (proposal)
+      description: '**Proposal from PHZ-BM-0001, open (Q18).** Tells whether the Business Account can send to the
+        phone number now, without revealing whether the number has a PHIZ account. Requires the `recipients:resolve`
+        scope and a relation with the user.'
+      operationId: resolveRecipient
+      parameters:
+      - name: sender_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: ba_7Kq2M9xTpL
+        description: 'Sender ID: external reference mapped to the BA ID of one of the application''s Business Accounts
+          (default) or, optionally, the ID of a channel. It is not the merchant_id. Equivalent to Meta Cloud API''s
+          phone_number_id.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /v1/{sender_id}/media:
     post:
       tags:
@@ -1002,11 +1044,13 @@ components:
         clientCredentials:
           tokenUrl: https://gateway.phiz.chat/gateway/business/oauth/token
           scopes:
-            messages:send: Send messages and media
+            messages:send: Send service messages and media
             messages:read: Read message statuses
             webhooks:manage: Manage app webhook (Phase 2)
             account:read: Read application, Business Accounts and channels
             templates:manage: Reserved for the Marketing API
+            recipients:resolve: Resolve recipient (proposal)
+            messages:send_marketing: Send marketing (reserved)
   schemas:
     TokenRequest:
       type: object
@@ -1170,6 +1214,37 @@ components:
           - YELLOW
           - RED
           - UNKNOWN
+    ResolveRequest:
+      type: object
+      required:
+      - phone
+      properties:
+        phone:
+          type: string
+          example: '+5511987654321'
+          description: Phone number in E.164.
+    ResolveResponse:
+      type: object
+      properties:
+        addressable:
+          type: boolean
+          example: true
+          description: The Business Account can address this phone number.
+        eligible:
+          type: boolean
+          example: false
+          description: A business-initiated message would be accepted now.
+        reason:
+          type: string
+          enum:
+          - ok
+          - no_relation
+          - service_window_closed
+          - suppressed
+          - verification_required
+          - not_addressable
+          example: service_window_closed
+          description: Stable reason. Never reveals name, photo, friendship or whether the number is registered.
     SenderList:
       type: object
       properties:

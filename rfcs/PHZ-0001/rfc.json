@@ -19,8 +19,17 @@
     "Vitor Mozer",
     "Richard Liang"
   ],
-  "version": "1.6",
+  "version": "1.7",
   "changelog": [
+    {
+      "version": "1.7",
+      "date": "2026-10-21",
+      "note": {
+        "pt": "Complemento com o documento PHZ-BM-0001 (Business Account Messaging). A hierarquia da RFC é mantida, com quadro comparando a do PHZ-BM-0001 e o impacto no app (seção 06). Incorporados: estados da relação e controles do usuário (04), princípios (07), níveis e estados de verificação e novos escopos (08), categorias, janela de atendimento, templates de serviço, verificações antes do envio e resolução de destinatário (09), resultados explícitos (10), erros 2203–2205, 2402 e 2502 e auditoria (11), papel Operator (12), templates de serviço (14), Fase 0 e critérios de aceite (15). Q1 e Q10 revisadas; novas Q11–Q19. OpenAPI com /recipients/resolve (proposta).",
+        "en": "Complement with the PHZ-BM-0001 document (Business Account Messaging). The RFC hierarchy is kept, with a box comparing PHZ-BM-0001’s and the app impact (section 06). Added: relation states and user controls (04), principles (07), verification levels and states and new scopes (08), categories, service window, service templates, pre-send checks and recipient resolution (09), explicit outcomes (10), errors 2203–2205, 2402 and 2502 and audit (11), Operator role (12), service templates (14), Phase 0 and acceptance criteria (15). Q1 and Q10 revised; new Q11–Q19. OpenAPI with /recipients/resolve (proposal).",
+        "zh": "结合 PHZ-BM-0001（Business Account Messaging）文档进行补充。保留本 RFC 的层级，并在第 06 节增加与 PHZ-BM-0001 的对比及对 App 的影响。新增：关系状态与用户控制（04）、原则（07）、认证级别与状态及新范围（08）、消息类别、服务窗口、服务模板、发送前校验和接收方解析（09）、明确的结果（10）、错误码 2203–2205、2402、2502 及审计（11）、Operator 角色（12）、服务模板（14）、第 0 阶段与验收标准（15）。修订 Q1、Q10；新增 Q11–Q19。OpenAPI 增加 /recipients/resolve（提议）。"
+      }
+    },
     {
       "version": "1.6",
       "date": "2026-10-20",

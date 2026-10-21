@@ -398,7 +398,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: 选择接收策略不允许此次发送、该发送方不允许此类型，或媒体已过期（2303）。
+          description: 选择接收策略不允许（2201）、类型不允许（2202）、不在服务窗口内（2203）、模板未批准（2204）、时段或区域受限（2205），或媒体已过期（2303）。
           content:
             application/json:
               schema:
@@ -409,6 +409,46 @@ paths:
                   type: policy_violation
                   message: Sending to this recipient is not allowed by the opt-in policy.
                   trace_id: trc_77ac
+  /v1/{sender_id}/recipients/resolve:
+    post:
+      tags:
+      - Messages
+      summary: 解析接收方（提议）
+      description: '**来自 PHZ-BM-0001 的提议，待定（Q18）。**判断该 Business Account 当前能否向该手机号发送，且不暴露号码是否注册 PHIZ。需要 `recipients:resolve`
+        范围以及与用户的关系。'
+      operationId: resolveRecipient
+      parameters:
+      - name: sender_id
+        in: path
+        required: true
+        schema:
+          type: string
+        example: ba_7Kq2M9xTpL
+        description: 发送方 ID：映射到应用下某个 Business Account 的 BA ID 的外部引用（默认），也可选用频道 ID。它不是 merchant_id。相当于 Meta Cloud
+          API 的 phone_number_id。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
   /v1/{sender_id}/media:
     post:
       tags:
@@ -981,11 +1021,13 @@ components:
         clientCredentials:
           tokenUrl: https://gateway.phiz.chat/gateway/business/oauth/token
           scopes:
-            messages:send: 发送消息和媒体
+            messages:send: 发送服务消息和媒体
             messages:read: 读取消息状态
             webhooks:manage: 管理应用 Webhook（第 2 阶段）
             account:read: 读取应用、Business Account 与频道
             templates:manage: 预留给 Marketing API
+            recipients:resolve: 解析接收方（提议）
+            messages:send_marketing: 发送营销消息（预留）
   schemas:
     TokenRequest:
       type: object
@@ -1146,6 +1188,37 @@ components:
           - YELLOW
           - RED
           - UNKNOWN
+    ResolveRequest:
+      type: object
+      required:
+      - phone
+      properties:
+        phone:
+          type: string
+          example: '+5511987654321'
+          description: E.164 格式手机号。
+    ResolveResponse:
+      type: object
+      properties:
+        addressable:
+          type: boolean
+          example: true
+          description: 该 Business Account 可以向此手机号发送。
+        eligible:
+          type: boolean
+          example: false
+          description: 当前企业主动发送的消息会被受理。
+        reason:
+          type: string
+          enum:
+          - ok
+          - no_relation
+          - service_window_closed
+          - suppressed
+          - verification_required
+          - not_addressable
+          example: service_window_closed
+          description: 稳定的原因码，绝不暴露姓名、头像、好友关系或号码是否注册。
     SenderList:
       type: object
       properties:
