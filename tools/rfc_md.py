@@ -5,6 +5,7 @@ Needs `markdown-it-py` and `mdit-py-plugins` (requirements.txt). RFCs written as
 so tools/build.py still runs without those packages when the repository has only HTML RFCs.
 """
 import html
+import importlib.util
 import json
 import re
 from html.parser import HTMLParser
@@ -34,6 +35,7 @@ NOTE_LABELS = {
     "decision": {"pt": "Decisão", "en": "Decision", "zh": "决定"},
     "risk": {"pt": "A confirmar", "en": "To confirm", "zh": "待确认"},
 }
+COUNTRY = {"BR": {"pt": "Brasil", "en": "Brazil", "zh": "巴西"}, "CN": {"pt": "China", "en": "China", "zh": "中国"}}
 DIRECTIVES = ("note", "decision", "risk", "stats", "phases", "questions", "endpoints", "table")
 TABLE_VARIANTS = ("changes", "num", "map")
 METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
@@ -64,17 +66,74 @@ def hl_json(src):
     return "".join(out)
 
 
+_KEYWORDS = re.compile(r"\b(static|return|new|const|let|final|func|class|public|private|import|export|async|await|def|from)\b")
+_COMMENTS = {"bash": ("#",), "yaml": ("#",), "python": ("#",), "http": ("#",), "java": ("//",), "javascript": ("//",),
+             "typescript": ("//",), "dart": ("//",), "kotlin": ("//",), "go": ("//",), "sql": ("--",)}
+_KEYWORD_LANGS = ("java", "javascript", "typescript", "dart", "kotlin", "go")
+_HTTP_LINE = re.compile(r"^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|HTTP/\d(?:\.\d)?)(\b.*)$")
+_HTTP_HEADER = re.compile(r"^([A-Za-z][A-Za-z0-9-]*)(:)( .*|)$")
+
+
+def _span(cls, text):
+    return f'<span class="t-{cls}">{html.escape(text)}</span>' if text else ""
+
+
+def _hl_line(line, lang):
+    """One line of code → HTML: strings, comments and (for some languages) keywords. Works on the raw text, escaping each piece."""
+    markers = _COMMENTS.get(lang, ())
+    out, i, n, buf = [], 0, len(line), []
+
+    def flush():
+        if buf:
+            text = "".join(buf)
+            if lang in _KEYWORD_LANGS:
+                pos = 0
+                for m in _KEYWORDS.finditer(text):
+                    out.append(html.escape(text[pos:m.start()]) + _span("k", m.group(0)))
+                    pos = m.end()
+                out.append(html.escape(text[pos:]))
+            else:
+                out.append(html.escape(text))
+            buf.clear()
+
+    while i < n:
+        ch = line[i]
+        comment = next((m for m in markers if line.startswith(m, i)), None)
+        if comment and (comment != "#" or i == 0 or line[i - 1].isspace()) and not (comment == "//" and i > 0 and line[i - 1] == ":"):
+            flush()
+            out.append(_span("c", line[i:]))
+            return "".join(out)
+        if ch in "\"'`" and lang != "http" and (lang in ("javascript", "typescript") or ch != "`"):
+            j = line.find(ch, i + 1)
+            while j != -1 and line[j - 1] == "\\":
+                j = line.find(ch, j + 1)
+            if j != -1:
+                flush()
+                out.append(_span("s", line[i:j + 1]))
+                i = j + 1
+                continue
+        buf.append(ch)
+        i += 1
+    flush()
+    return "".join(out)
+
+
 def hl_generic(src, lang):
-    esc = html.escape(src)
-    if lang in ("bash", "http", "python", "yaml"):
-        esc = re.sub(r'(&#x27;[^\n]*?&#x27;|&quot;[^&\n]*?&quot;)', r'<span class="t-s">\1</span>', esc)
-        esc = re.sub(r'(?m)(#[^\n]*)$', r'<span class="t-c">\1</span>', esc)
-    if lang == "http":
-        esc = re.sub(r'(?m)^(GET|POST|PUT|PATCH|DELETE)( )', r'<span class="t-k">\1</span>\2', esc)
-    if lang in ("java", "javascript", "typescript", "dart", "kotlin", "go"):
-        esc = re.sub(r'(?m)(//[^\n]*)$', r'<span class="t-c">\1</span>', esc)
-        esc = re.sub(r'\b(static|return|new|const|let|final|func|class|public|private)\b', r'<span class="t-k">\1</span>', esc)
-    return esc
+    if lang == "text" or lang not in _COMMENTS:
+        return html.escape(src)
+    out = []
+    for line in src.split("\n"):
+        if lang == "http":
+            m = _HTTP_LINE.match(line)
+            if m:
+                out.append(_span("k", m.group(1)) + _hl_line(m.group(2), lang))
+                continue
+            m = _HTTP_HEADER.match(line)
+            if m:
+                out.append(_span("h", m.group(1)) + html.escape(m.group(2)) + _hl_line(m.group(3), lang))
+                continue
+        out.append(_hl_line(line, lang))
+    return "\n".join(out)
 
 
 def code_figure(lang, src):
@@ -135,7 +194,7 @@ def _parser():
         parts = tok.info.strip().split(None, 1)
         lang = parts[0].lower() if parts else ""
         if lang == "mermaid":
-            cap = f'<p class="cap">{html.escape(parts[1])}</p>\n' if len(parts) > 1 else ""
+            cap = f'<p class="cap">{md.renderInline(parts[1], env)}</p>\n' if len(parts) > 1 else ""   # the caption may use inline Markdown
             return f'<div class="diagram"><pre class="mermaid">\n{html.escape(tok.content)}</pre></div>\n{cap}'
         if lang not in CODE_LANGS:
             raise RfcError(f"line {tok.map[0] + 1}: code block needs a language ({', '.join(CODE_LANGS)} or mermaid), got {lang!r}")
@@ -286,7 +345,23 @@ def render_body(text, lang):
             raise RfcError(f"link to #{sid} does not match any section id ({', '.join(ids)})")
         return f'href="#§{sid}"'
     body = re.sub(r'href="#([a-z0-9-]+)"', link, body)
-    return body, ids
+    return _cjk_bold(body), ids
+
+
+def _cjk_bold(body):
+    """CommonMark does not close `**bold：**中文` when punctuation touches a CJK letter. Turn the `**…**` pairs that were left
+    over in running text (never inside <pre> or <code>) into <strong>, block by block."""
+    keep = []
+
+    def protect(m):
+        keep.append(m.group(0))
+        return f"\x00{len(keep) - 1}\x00"
+    body = re.sub(r"<pre\b.*?</pre>|<code\b.*?</code>", protect, body, flags=re.S)
+    parts = re.split(r"(</?(?:p|li|td|th|h[1-6]|div|ul|ol|tr|section|table|thead|tbody|figure|blockquote|dd|dt)\b[^>]*>)", body)
+    for i in range(0, len(parts), 2):          # even entries are the text between block tags
+        parts[i] = re.sub(r"\*\*([^*\n]+?)\*\*", r"<strong>\1</strong>", parts[i])
+    body = "".join(parts)
+    return re.sub(r"\x00(\d+)\x00", lambda m: keep[int(m.group(1))], body)
 
 
 # ---------------------------------------------------------------- structure checks (same numbering as the comments in the page)
@@ -386,6 +461,14 @@ def check(folder, meta=None):
     for lang in LANGS:
         if not isinstance(meta.get("title"), dict) or not meta["title"].get(lang):
             errors.append(f"F01 rfc.json: title.{lang} is missing")
+    for r in meta.get("reviewers") or []:
+        if not (isinstance(r, str) or (isinstance(r, dict) and ("name" in r or set(r) >= set(LANGS)))):
+            errors.append(f"F01 rfc.json: reviewers entries are names, or {{\"name\": …, \"country\": \"BR\"|\"CN\"}}: {r!r}")
+        elif isinstance(r, dict) and r.get("country") not in (None, *COUNTRY):
+            errors.append(f"F01 rfc.json: reviewer country {r.get('country')!r} is not one of {', '.join(COUNTRY)}")
+    for x in meta.get("details") or []:
+        if not (isinstance(x, dict) and "label" in x and "value" in x):
+            errors.append(f"F01 rfc.json: details entries need label and value: {x!r}")
     if (meta.get("summary") or {}).get("pt") in ("Uma frase.", "One sentence."):
         warnings.append("F08 rfc.json: summary still has the default text")
 
@@ -402,6 +485,10 @@ def check(folder, meta=None):
         rendered = render_all(folder)
     except RfcError as e:
         return errors + [f"F03 {e}"], warnings
+    try:
+        openapi_specs(folder)
+    except RfcError as e:
+        errors.append(f"F09 {e}")
     ids = {l: rendered[l][1] for l in LANGS}
     if not (ids["pt"] == ids["en"] == ids["zh"]):
         for l in ("en", "zh"):
@@ -425,11 +512,65 @@ def check(folder, meta=None):
     return errors, warnings
 
 
+# ---------------------------------------------------------------- OpenAPI reference (optional, per RFC)
+
+SWAGGER_VERSION = "5.17.14"
+OPENAPI_BLOCK = """
+    <div class="swagger-wrap">
+      <div class="swagger-tools">
+        <button type="button" class="btn" id="copy-yaml"><span data-l="pt">Copiar OpenAPI (YAML)</span><span data-l="en">Copy OpenAPI (YAML)</span><span data-l="zh">复制 OpenAPI (YAML)</span></button>
+        <span class="note" id="copy-note" aria-live="polite"></span>
+      </div>
+      <div id="swagger-ui"></div>
+      <textarea id="yaml-fallback" aria-label="OpenAPI YAML" readonly hidden></textarea>
+    </div>"""
+
+
+def openapi_specs(folder):
+    """{lang: OpenAPI spec dict} when rfcs/<ID>/openapi_gen.py exists (it defines build(lang)); otherwise None."""
+    path = Path(folder) / "openapi_gen.py"
+    if not path.exists():
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location(f"openapi_gen_{Path(folder).name}", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return {lang: mod.build(lang) for lang in LANGS}
+    except Exception as e:      # the generator is project code: report what broke instead of a traceback
+        raise RfcError(f"openapi_gen.py: {type(e).__name__}: {e}")
+
+
+def openapi_yaml(specs):
+    import yaml
+    return {lang: yaml.safe_dump(s, allow_unicode=True, sort_keys=False, width=110) for lang, s in specs.items()}
+
+
 # ---------------------------------------------------------------- page
 
 def _date(iso, lang):
     m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", iso or "")
     return f"{m.group(3)}/{m.group(2)}/{m.group(1)}" if (m and lang == "pt") else (iso or "")
+
+
+def loc(value, lang):
+    """A value that may be plain text (same in every language) or {"pt": …, "en": …, "zh": …}."""
+    if isinstance(value, dict):
+        return value.get(lang) or value.get("pt") or next(iter(value.values()), "")
+    return value
+
+
+def person_name(person):
+    """Display name used where the language does not matter (index): a string, a {pt,en,zh} dict or {"name", "country"}."""
+    return person.get("name") or loc(person, "pt") if isinstance(person, dict) else person
+
+
+def reviewer_text(r, lang):
+    if isinstance(r, dict) and "name" in r:
+        c = COUNTRY.get(r.get("country"))
+        if c:
+            return f"{r['name']}（{c[lang]}）" if lang == "zh" else f"{r['name']} ({c[lang]})"
+        return r["name"]
+    return loc(r, lang)
 
 
 def hero_html(meta, lang, status=None):
@@ -438,10 +579,12 @@ def hero_html(meta, lang, status=None):
     systems = meta.get("systems") or []
     rows = [
         f'<div><dt>{h["status"]}</dt><dd><span class="pill" data-st="{st}">{label}</span></dd></div>',
-        f'<div><dt>{h["author"]}</dt><dd>{html.escape(", ".join(meta.get("authors") or []) or "—")}</dd></div>',
+        f'<div><dt>{h["author"]}</dt><dd>{html.escape(", ".join(loc(a, lang) for a in meta.get("authors") or []) or "—")}</dd></div>',
         f'<div><dt>{h["date"]}</dt><dd>{html.escape(_date(meta.get("created"), lang))}</dd></div>',
-        f'<div><dt>{h["reviewers"]}</dt><dd>{"<br>".join(html.escape(r) for r in meta.get("reviewers") or []) or h["tbd"]}</dd></div>',
+        f'<div><dt>{h["reviewers"]}</dt><dd>{"<br>".join(html.escape(reviewer_text(r, lang)) for r in meta.get("reviewers") or []) or h["tbd"]}</dd></div>',
     ]
+    for extra in meta.get("details") or []:       # extra header rows; the value may contain inline HTML
+        rows.append(f'<div><dt>{html.escape(loc(extra["label"], lang))}</dt><dd>{loc(extra["value"], lang)}</dd></div>')
     if systems:
         rows.append(f'<div><dt>{h["systems"]}</dt><dd>{html.escape(" · ".join(systems))}</dd></div>')
     return (f'<header class="hero">\n  <div class="eyebrow">RFC {html.escape(meta["id"])} · {label}</div>\n'
@@ -450,9 +593,11 @@ def hero_html(meta, lang, status=None):
             f'  <dl class="meta">\n    ' + "\n    ".join(rows) + "\n  </dl>\n</header>\n")
 
 
-def render_page(folder, meta, status=None):
-    """The full page (what source.html holds for HTML RFCs) for the Markdown files in `folder`."""
+def render_page(folder, meta, status=None, rfc_dir=None):
+    """The full page (what source.html holds for HTML RFCs) for the Markdown files in `folder`.
+    `rfc_dir` is the RFC's own folder when `folder` is an archived version: it holds openapi_gen.py, if any."""
     rendered = render_all(folder)
+    specs = openapi_specs(rfc_dir or folder)
     blocks, tocs = [], []
     for lang in LANGS:
         body, ids = rendered[lang]
@@ -464,5 +609,14 @@ def render_page(folder, meta, status=None):
     shell = (TEMPLATES / "shell.html").read_text(encoding="utf-8")
     css = (TEMPLATES / "page.css").read_text(encoding="utf-8")
     short = meta.get("short") or meta["title"]["en"]
-    return (shell.replace("{{ID}}", html.escape(meta["id"])).replace("{{SHORT_TITLE}}", html.escape(short))
-            .replace("/*CSS*/", css).replace("<!--CONTENT-->", "\n".join(blocks)).replace("<!--TOC-->", "\n".join(tocs)))
+    page = (shell.replace("{{ID}}", html.escape(meta["id"])).replace("{{SHORT_TITLE}}", html.escape(short))
+            .replace("/*CSS*/", css).replace("<!--CONTENT-->", "\n".join(blocks) + (OPENAPI_BLOCK if specs else ""))
+            .replace("<!--TOC-->", "\n".join(tocs)))
+    if specs:       # the reference reads these and redraws itself when the language changes (assets/openapi.js)
+        data = ("window.PHIZ_SPECS=" + json.dumps(specs, ensure_ascii=False).replace("</", "<\\/") + ";"
+                "window.PHIZ_YAML=" + json.dumps(openapi_yaml(specs), ensure_ascii=False).replace("</", "<\\/") + ";")
+        page += (f'\n<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui.css">'
+                 f'\n<script>{data}</script>'
+                 f'\n<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui-bundle.js"></script>'
+                 '\n<script src="{{UP}}assets/openapi.js"></script>')
+    return page

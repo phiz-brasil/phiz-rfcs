@@ -12,12 +12,25 @@
   },
   "status": "in-review",
   "authors": [
-    "Gleison Silva - Soluções de Produto"
+    {
+      "pt": "Gleison Silva - Soluções de Produto",
+      "en": "Gleison Silva - Product Solutions",
+      "zh": "Gleison Silva - 产品解决方案"
+    }
   ],
   "reviewers": [
-    "Pedro Bettani",
-    "Vitor Mozer",
-    "Richard Liang"
+    {
+      "name": "Pedro Bettani",
+      "country": "BR"
+    },
+    {
+      "name": "Vitor Mozer",
+      "country": "BR"
+    },
+    {
+      "name": "Richard Liang",
+      "country": "CN"
+    }
   ],
   "version": "1.7",
   "changelog": [
@@ -97,5 +110,19 @@
     }
   ],
   "created": "2026-10-15",
-  "updated": "2026-10-20"
+  "updated": "2026-10-20",
+  "details": [
+    {
+      "label": {
+        "pt": "Versão da API",
+        "en": "API version",
+        "zh": "API 版本"
+      },
+      "value": {
+        "pt": "<code>v1</code> (proposta)",
+        "en": "<code>v1</code> (proposed)",
+        "zh": "<code>v1</code>（拟）"
+      }
+    }
+  ]
 }
