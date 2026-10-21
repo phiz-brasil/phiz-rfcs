@@ -138,6 +138,8 @@ The starting status is `status` in `rfc.json`; after the first change made on th
 python3 -m http.server -d dist 8000   # http://localhost:8000
 ```
 
+Open the site through the local server (as above), not from the `dist/index.html` file: the page scripts are ES modules, which browsers do not load from `file://`.
+
 Every pull request runs the same check and build (`.github/workflows/check.yml`); the site itself is deployed only from `main` (`pages.yml`).
 
 ## Notes

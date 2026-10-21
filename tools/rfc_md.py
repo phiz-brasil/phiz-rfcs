@@ -367,7 +367,7 @@ def _cjk_bold(body):
 # ---------------------------------------------------------------- structure checks (same numbering as the comments in the page)
 
 class _Blocks(HTMLParser):
-    """Counts, per section, the blocks that get a comment button in the page (assets/rfc-site.js, paraBlocks)."""
+    """Counts, per section, the blocks that get a comment button in the page (assets/js/panels.js, paraBlocks)."""
     VOID = {"br", "hr", "img", "input", "meta", "link", "wbr", "source"}
 
     def __init__(self):
