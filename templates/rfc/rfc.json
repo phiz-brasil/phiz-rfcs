@@ -1,0 +1,15 @@
+{
+  "id": "{{ID}}",
+  "title": { "pt": "{{TITLE_PT}}", "en": "{{TITLE_EN}}", "zh": "{{TITLE_ZH}}" },
+  "summary": { "pt": "Uma frase.", "en": "One sentence.", "zh": "一句话。" },
+  "status": "draft",
+  "authors": ["{{AUTHOR}}"],
+  "reviewers": [],
+  "systems": [],
+  "version": "1.0",
+  "changelog": [
+    { "version": "1.0", "date": "{{DATE_ISO}}", "note": { "pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。" } }
+  ],
+  "created": "{{DATE_ISO}}",
+  "updated": "{{DATE_ISO}}"
+}

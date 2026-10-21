@@ -89,20 +89,27 @@ Every comment (and reply) has a **Excluir / Delete / 删除** link; it asks once
 
 ## Add a new RFC
 
+New RFCs are written in Markdown (format and rules: [`docs/spec/rfc-format.md`](docs/spec/rfc-format.md)). One-time setup of the tools:
+
 ```bash
-python3 tools/new_rfc.py --pt "Título" --en "Title" --zh "标题" --short "Short title" --author "Gleison"
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # then use .venv/bin/python below
 ```
 
-This takes the next free `PHZ-NNNN`, copies `sources/_template/` (10 standard sections in PT-BR, EN-US and 中文, with examples of every component) to `sources/<ID>/`, creates `rfcs/<ID>/rfc.json` and builds `rfcs/<ID>/source.html`. Then:
+```bash
+.venv/bin/python tools/new_rfc.py --pt "Título" --en "Title" --zh "标题" --author "Gleison"
+```
 
-1. Write `sources/<ID>/content_pt.html`, then translate to `content_en.html` and `content_zh.html` (same section ids and the same number of diagrams; the build refuses otherwise). Code samples shared by the three languages go in `code.json` and are placed with `{CODE:name}`.
-2. Fill `summary`, `reviewers` and `status` in `rfcs/<ID>/rfc.json`.
-3. Build: `cd sources/<ID> && python3 build_rfc.py && cd ../.. && python3 tools/build.py`.
-4. `git add sources/<ID> rfcs/<ID> && git commit -m "<ID>: …" && git push`.
+This takes the next free `PHZ-NNNN` and copies [`templates/rfc/`](templates/rfc) to `rfcs/<ID>/`: `rfc.json` (title, summary, status, authors, reviewers, version) and `rfc.pt.md`, `rfc.en.md`, `rfc.zh.md` with the 10 standard sections. Every spot to fill is marked `TODO:`.
 
-With Claude Code, the `phiz-rfc` skill follows this workflow, including research in the PHIZ repos, diagrams, translation and checking the published page.
+1. Fill `rfc.pt.md` (Portuguese first), then translate to `rfc.en.md` and `rfc.zh.md` with the same sections, paragraphs, diagrams and code blocks.
+2. Fill `summary`, `reviewers` and `systems` in `rfc.json`.
+3. Check: `.venv/bin/python tools/check_rfc.py <ID>` (leftover `TODO:`, section ids, the same number of paragraphs/tables/diagrams in the three languages, links). The build runs the same check and stops on errors.
+4. Preview: `.venv/bin/python tools/build.py && python3 -m http.server -d dist 8000`.
+5. `git add rfcs/<ID> && git commit -m "<ID>: …" && git push`.
 
-Open it as a pull request if you want review before it appears in the index.
+With Claude Code, the `phiz-rfc` skill follows this workflow: it reads the documents you give it, fills the template, translates, runs the check and builds.
+
+Open it as a pull request if you want review before it appears in the index. Older RFCs written as HTML (PHZ-0001, PHZ-0002: `sources/<ID>/` → `rfcs/<ID>/source.html`) keep building as before and do not need the Python packages.
 
 ## Versions
 
@@ -114,7 +121,7 @@ To publish a new version of an RFC that was already published:
 python3 tools/new_version.py PHZ-0001 --note-pt "O que mudou" --note-en "What changed" --note-zh "变更内容"
 ```
 
-Run it **before** editing, with the last published version committed. It archives `rfcs/<ID>/source.html` as it is in git HEAD into `rfcs/<ID>/versions/<current>/`, bumps the version (minor by default; `--major`, or `--set 2.0`) and adds the changelog entry. Then edit `sources/<ID>/`, rebuild and commit as usual. Typo fixes do not need a new version.
+Run it **before** editing, with the last published version committed. It archives the RFC as it is in git HEAD (`rfc.*.md` and `rfc.json`, or `source.html` for HTML RFCs) into `rfcs/<ID>/versions/<current>/`, bumps the version (minor by default; `--major`, or `--set 2.0`) and adds the changelog entry. Then edit the RFC (`rfcs/<ID>/rfc.*.md`, or `sources/<ID>/` for HTML RFCs), rebuild and commit as usual. Typo fixes do not need a new version.
 
 Notes: archived pages reuse the RFC's current `mocks/` and OpenAPI files. Comments are keyed by section id and shared by all versions, so keep section ids stable.
 
