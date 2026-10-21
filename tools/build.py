@@ -2,26 +2,21 @@
 """Builds the static site into dist/.
 
   rfcs/<ID>/rfc.json     metadata (status, authors, reviewers, titles, summaries)
-  rfcs/<ID>/source.html  the RFC page (h2 sections need an id)
+  rfcs/<ID>/rfc.{pt,en,zh}.md   the RFC (Markdown, see docs/spec/rfc-format.md), or
+  rfcs/<ID>/source.html  the RFC page of an older, HTML RFC (h2 sections need an id)
   rfcs/<ID>/*            other files (OpenAPI YAMLs, images) are copied as is
 Folders that start with "_" (e.g. _template) are ignored.
 """
 import html, json, re, shutil, sys
 from pathlib import Path
 
+import rfc_md
+from rfc_md import LANGS, STATUS
+
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 CFG = json.loads((ROOT / "site.config.json").read_text(encoding="utf-8"))
 
-STATUS = {
-    "draft":       {"pt": "Rascunho",     "en": "Draft",       "zh": "草稿"},
-    "in-review":   {"pt": "Em revisão",   "en": "In review",   "zh": "评审中"},
-    "approved":    {"pt": "Aprovada",     "en": "Approved",    "zh": "已批准"},
-    "implemented": {"pt": "Implementada", "en": "Implemented", "zh": "已实现"},
-    "rejected":    {"pt": "Rejeitada",    "en": "Rejected",    "zh": "已拒绝"},
-    "superseded":  {"pt": "Substituída",  "en": "Superseded",  "zh": "已被取代"},
-}
-LANGS = ("pt", "en", "zh")
 e = html.escape
 
 
@@ -37,8 +32,17 @@ def load():
         meta = json.loads((d / "rfc.json").read_text(encoding="utf-8"))
         if meta["status"] not in STATUS:
             sys.exit(f"{d.name}: invalid status {meta['status']!r}; use one of {', '.join(STATUS)}")
-        if not (d / "source.html").exists():
-            sys.exit(f"{d.name}: source.html missing")
+        if rfc_md.is_markdown_rfc(d):
+            try:
+                errors, warnings = rfc_md.check(d, meta)
+            except rfc_md.RfcError as err:
+                errors, warnings = [str(err)], []
+            for w in warnings:
+                print(f"warning: {d.name}: {w}")
+            if errors:
+                sys.exit(f"{d.name}: " + "\n  ".join(["cannot build, fix with tools/check_rfc.py:"] + errors))
+        elif not (d / "source.html").exists():
+            sys.exit(f"{d.name}: neither rfc.pt.md nor source.html found")
         out.append((d, meta))
     return out
 
@@ -64,7 +68,19 @@ def versions_of(d, meta):
 
 
 def snapshot(d, v):
-    return d / "versions" / v / "source.html"
+    """The frozen copy of version v: source.html (HTML RFCs) or the folder with the Markdown files."""
+    folder = d / "versions" / v
+    return folder if rfc_md.is_markdown_rfc(folder) else folder / "source.html"
+
+
+_PAGES = {}
+
+
+def page_text(d, meta):
+    """The full RFC page of the current version."""
+    if d.name not in _PAGES:
+        _PAGES[d.name] = rfc_md.render_page(d, meta) if rfc_md.is_markdown_rfc(d) else (d / "source.html").read_text(encoding="utf-8")
+    return _PAGES[d.name]
 
 
 def versions_html(d, meta, shown):
@@ -122,9 +138,9 @@ def render_rfc(d, meta, text, out, shown, frozen, status, up):
 
 def build_rfc(d, meta):
     dest = DIST / "rfcs" / d.name
-    shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html", "versions"))
+    shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html", "versions", "rfc.*.md"))
     cur, log = versions_of(d, meta)
-    render_rfc(d, meta, (d / "source.html").read_text(encoding="utf-8"), dest / "index.html", cur, False, meta["status"], "../../")
+    render_rfc(d, meta, page_text(d, meta), dest / "index.html", cur, False, meta["status"], "../../")
     for ent in log:
         v = str(ent["version"])
         if v == cur:
@@ -135,7 +151,13 @@ def build_rfc(d, meta):
         st = ent.get("status", meta["status"])
         if st not in STATUS:
             sys.exit(f"{d.name} v{v}: invalid status {st!r}")
-        render_rfc(d, meta, snapshot(d, v).read_text(encoding="utf-8"), dest / f"v{v}.html", v, True, st, "../../")
+        snap = snapshot(d, v)
+        if snap.is_dir():       # Markdown RFC: render the frozen files with the header data they had
+            old = json.loads((snap / "rfc.json").read_text(encoding="utf-8")) if (snap / "rfc.json").exists() else meta
+            text = rfc_md.render_page(snap, old, status=st)
+        else:
+            text = snap.read_text(encoding="utf-8")
+        render_rfc(d, meta, text, dest / f"v{v}.html", v, True, st, "../../")
 
 
 
@@ -223,10 +245,10 @@ new MutationObserver(paint).observe(document.documentElement,{attributes:true,at
 SECTION_RE = re.compile(r'<h2 id="(pt|en|zh)-([a-z0-9-]+)"[^>]*>(.*?)</h2>', re.S)
 
 
-def sections_of(d):
+def sections_of(d, meta):
     """{section key: {pt, en, zh}} titles from the RFC page, used by the comments page."""
     out = {}
-    for lg, key, inner in SECTION_RE.findall((d / "source.html").read_text(encoding="utf-8")):
+    for lg, key, inner in SECTION_RE.findall(page_text(d, meta)):
         num = re.search(r'<span class="n">(.*?)</span>', inner)
         text = re.sub(r"<[^>]+>", "", re.sub(r'<span class="n">.*?</span>', "", inner))
         text = html.unescape(re.sub(r"\s+", " ", text)).strip()
@@ -267,7 +289,7 @@ COMMENTS_CSS = """
 def build_comments(items):
     """dist/comments/index.html: every comment of every RFC, with filters (data loaded in the browser)."""
     meta = {"cfg": CFG.get("comments", {}),
-            "rfcs": [{"id": m["id"], "title": m["title"], "sections": sections_of(d)} for d, m in items]}
+            "rfcs": [{"id": m["id"], "title": m["title"], "sections": sections_of(d, m)} for d, m in items]}
     data = json.dumps(meta, ensure_ascii=False).replace("</", "<\\/")
     title = e(CFG["title"])
     lead = {"pt": "Todos os comentários das RFCs em um só lugar. Filtre por RFC, veja o que está sem resposta ou o que chegou desde sua última visita, e abra o comentário na RFC para responder.",

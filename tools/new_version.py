@@ -6,10 +6,11 @@
   python3 tools/new_version.py PHZ-0001 --set 2.0 ...      # explicit number
 
 Run it BEFORE editing the RFC, with the last published version committed. It
-  1. archives rfcs/<ID>/source.html as it is in git HEAD -> rfcs/<ID>/versions/<current>/source.html
+  1. archives the RFC as it is in git HEAD (rfc.{pt,en,zh}.md and rfc.json, or source.html for HTML RFCs)
+     -> rfcs/<ID>/versions/<current>/
      (served at /rfcs/<ID>/v<current>.html, read-only, no new comments),
   2. bumps "version" in rfcs/<ID>/rfc.json and adds a changelog entry with the three notes.
-Then edit sources/<ID>/, rebuild and commit.
+Then edit the RFC (rfcs/<ID>/rfc.*.md, or sources/<ID>/ for HTML RFCs), rebuild and commit.
 """
 import argparse, datetime, json, re, subprocess, sys
 from pathlib import Path
@@ -47,17 +48,21 @@ def main():
     if new in [str(x["version"]) for x in log]:
         sys.exit(f"{a.id} already has version {new}")
 
-    snap = rdir / "versions" / cur / "source.html"
-    if snap.exists():
-        sys.exit(f"{snap.relative_to(ROOT)} already exists; v{cur} is already archived")
-    rel = f"rfcs/{a.id}/source.html"
-    r = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=ROOT, capture_output=True)
-    if r.returncode == 0:
-        html, origin = r.stdout.decode("utf-8"), "git HEAD"
-    else:
-        html, origin = (ROOT / rel).read_text(encoding="utf-8"), "working tree (not committed yet)"
-    snap.parent.mkdir(parents=True)
-    snap.write_text(html, encoding="utf-8")
+    markdown = (rdir / "rfc.pt.md").exists()
+    names = ["rfc.pt.md", "rfc.en.md", "rfc.zh.md", "rfc.json"] if markdown else ["source.html"]
+    folder = rdir / "versions" / cur
+    if folder.exists() and any(folder.iterdir()):
+        sys.exit(f"{folder.relative_to(ROOT)} already exists; v{cur} is already archived")
+    folder.mkdir(parents=True, exist_ok=True)
+    origin = "git HEAD"
+    for name in names:
+        r = subprocess.run(["git", "show", f"HEAD:rfcs/{a.id}/{name}"], cwd=ROOT, capture_output=True)
+        if r.returncode == 0:
+            data = r.stdout.decode("utf-8")
+        else:
+            data, origin = (rdir / name).read_text(encoding="utf-8"), "working tree (not committed yet)"
+        (folder / name).write_text(data, encoding="utf-8")
+    snap = folder
 
     for ent in log:                      # remember the status v<cur> had when it was frozen
         if str(ent["version"]) == cur:
@@ -67,12 +72,16 @@ def main():
     meta.update({"version": new, "changelog": log, "updated": today})
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    print(f"{a.id}: v{cur} archived from {origin} -> {snap.relative_to(ROOT)}\n"
-          f"{a.id}: now v{new} (changelog updated in rfcs/{a.id}/rfc.json)\n"
-          f"next: edit sources/{a.id}/, then\n"
-          f"  cd sources/{a.id} && python3 build_rfc.py && cd ../.. && python3 tools/build.py\n"
-          f"  git add rfcs/{a.id} sources/{a.id} && git commit && git push")
-
+    if markdown:
+        nxt = (f"next: edit rfcs/{a.id}/rfc.pt.md, rfc.en.md and rfc.zh.md, then\n"
+               f"  python3 tools/check_rfc.py {a.id} && python3 tools/build.py\n"
+               f"  git add rfcs/{a.id} && git commit && git push")
+    else:
+        nxt = (f"next: edit sources/{a.id}/, then\n"
+               f"  cd sources/{a.id} && python3 build_rfc.py && cd ../.. && python3 tools/build.py\n"
+               f"  git add rfcs/{a.id} sources/{a.id} && git commit && git push")
+    print(f"{a.id}: v{cur} archived from {origin} -> {snap.relative_to(ROOT)}/\n"
+          f"{a.id}: now v{new} (changelog updated in rfcs/{a.id}/rfc.json)\n" + nxt)
 
 if __name__ == "__main__":
     main()
