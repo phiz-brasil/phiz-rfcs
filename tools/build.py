@@ -316,8 +316,8 @@ def build_index(items):
     lis = []
     for d, m in items:
         st = m["status"]
-        authors = ", ".join(m.get("authors", [])) or "—"
-        revs = ", ".join(m.get("reviewers", [])) or "—"
+        authors = ", ".join(rfc_md.person_name(a) for a in m.get("authors", [])) or "—"
+        revs = ", ".join(rfc_md.person_name(r) for r in m.get("reviewers", [])) or "—"
         lis.append(f'''<li class="card-li" data-status="{st}" data-rfc="{e(m["id"])}"><a class="card" href="rfcs/{e(d.name)}/">
 <div class="top"><span class="id">{e(m["id"])}</span><span class="ver">v{e(versions_of(d, m)[0])}</span><span class="badge" data-st="{st}">{spans(STATUS[st])}</span></div>
 <h2>{spans(m["title"])}</h2><p>{spans(m["summary"])}</p>

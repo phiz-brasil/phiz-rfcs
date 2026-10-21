@@ -34,6 +34,7 @@ NOTE_LABELS = {
     "decision": {"pt": "Decisão", "en": "Decision", "zh": "决定"},
     "risk": {"pt": "A confirmar", "en": "To confirm", "zh": "待确认"},
 }
+COUNTRY = {"BR": {"pt": "Brasil", "en": "Brazil", "zh": "巴西"}, "CN": {"pt": "China", "en": "China", "zh": "中国"}}
 DIRECTIVES = ("note", "decision", "risk", "stats", "phases", "questions", "endpoints", "table")
 TABLE_VARIANTS = ("changes", "num", "map")
 METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
@@ -64,16 +65,23 @@ def hl_json(src):
     return "".join(out)
 
 
+_KEYWORDS = re.compile(r"\b(static|return|new|const|let|final|func|class|public|private)\b")
+
+
 def hl_generic(src, lang):
     esc = html.escape(src)
     if lang in ("bash", "http", "python", "yaml"):
         esc = re.sub(r'(&#x27;[^\n]*?&#x27;|&quot;[^&\n]*?&quot;)', r'<span class="t-s">\1</span>', esc)
-        esc = re.sub(r'(?m)(#[^\n]*)$', r'<span class="t-c">\1</span>', esc)
+        esc = re.sub(r'(?m)((?<!&)#[^\n]*)$', r'<span class="t-c">\1</span>', esc)
     if lang == "http":
         esc = re.sub(r'(?m)^(GET|POST|PUT|PATCH|DELETE)( )', r'<span class="t-k">\1</span>\2', esc)
     if lang in ("java", "javascript", "typescript", "dart", "kotlin", "go"):
-        esc = re.sub(r'(?m)(//[^\n]*)$', r'<span class="t-c">\1</span>', esc)
-        esc = re.sub(r'\b(static|return|new|const|let|final|func|class|public|private)\b', r'<span class="t-k">\1</span>', esc)
+        lines = []
+        for ln in esc.split("\n"):    # keywords only in the code part, never inside the comment or the markup
+            m = re.search(r"(?<!:)//", ln)
+            code, cmt = (ln[:m.start()], ln[m.start():]) if m else (ln, "")
+            lines.append(_KEYWORDS.sub(r'<span class="t-k">\1</span>', code) + (f'<span class="t-c">{cmt}</span>' if cmt else ""))
+        esc = "\n".join(lines)
     return esc
 
 
@@ -135,7 +143,7 @@ def _parser():
         parts = tok.info.strip().split(None, 1)
         lang = parts[0].lower() if parts else ""
         if lang == "mermaid":
-            cap = f'<p class="cap">{html.escape(parts[1])}</p>\n' if len(parts) > 1 else ""
+            cap = f'<p class="cap">{md.renderInline(parts[1], env)}</p>\n' if len(parts) > 1 else ""   # the caption may use inline Markdown
             return f'<div class="diagram"><pre class="mermaid">\n{html.escape(tok.content)}</pre></div>\n{cap}'
         if lang not in CODE_LANGS:
             raise RfcError(f"line {tok.map[0] + 1}: code block needs a language ({', '.join(CODE_LANGS)} or mermaid), got {lang!r}")
@@ -286,7 +294,18 @@ def render_body(text, lang):
             raise RfcError(f"link to #{sid} does not match any section id ({', '.join(ids)})")
         return f'href="#§{sid}"'
     body = re.sub(r'href="#([a-z0-9-]+)"', link, body)
-    return body, ids
+    return _cjk_bold(body), ids
+
+
+def _cjk_bold(body):
+    """CommonMark does not close `**bold：**中文` when punctuation sits next to a CJK letter. Turn the `**…**` pairs
+    that were left over in running text (never inside <pre> or <code>) into <strong>."""
+    parts = re.split(r"(<pre\b.*?</pre>|<code\b.*?</code>|<[^>]+>)", body, flags=re.S)
+    text = [i for i, s in enumerate(parts) if not s.startswith("<")]
+    # a paragraph's text is split by inline tags: join the pieces only when both markers are in the same piece
+    for i in text:
+        parts[i] = re.sub(r"\*\*([^*\n]+?)\*\*", r"<strong>\1</strong>", parts[i])
+    return "".join(parts)
 
 
 # ---------------------------------------------------------------- structure checks (same numbering as the comments in the page)
@@ -386,6 +405,14 @@ def check(folder, meta=None):
     for lang in LANGS:
         if not isinstance(meta.get("title"), dict) or not meta["title"].get(lang):
             errors.append(f"F01 rfc.json: title.{lang} is missing")
+    for r in meta.get("reviewers") or []:
+        if not (isinstance(r, str) or (isinstance(r, dict) and ("name" in r or set(r) >= set(LANGS)))):
+            errors.append(f"F01 rfc.json: reviewers entries are names, or {{\"name\": …, \"country\": \"BR\"|\"CN\"}}: {r!r}")
+        elif isinstance(r, dict) and r.get("country") not in (None, *COUNTRY):
+            errors.append(f"F01 rfc.json: reviewer country {r.get('country')!r} is not one of {', '.join(COUNTRY)}")
+    for x in meta.get("details") or []:
+        if not (isinstance(x, dict) and "label" in x and "value" in x):
+            errors.append(f"F01 rfc.json: details entries need label and value: {x!r}")
     if (meta.get("summary") or {}).get("pt") in ("Uma frase.", "One sentence."):
         warnings.append("F08 rfc.json: summary still has the default text")
 
@@ -432,16 +459,39 @@ def _date(iso, lang):
     return f"{m.group(3)}/{m.group(2)}/{m.group(1)}" if (m and lang == "pt") else (iso or "")
 
 
+def loc(value, lang):
+    """A value that may be plain text (same in every language) or {"pt": …, "en": …, "zh": …}."""
+    if isinstance(value, dict):
+        return value.get(lang) or value.get("pt") or next(iter(value.values()), "")
+    return value
+
+
+def person_name(person):
+    """Display name used where the language does not matter (index): a string, a {pt,en,zh} dict or {"name", "country"}."""
+    return person.get("name") or loc(person, "pt") if isinstance(person, dict) else person
+
+
+def reviewer_text(r, lang):
+    if isinstance(r, dict) and "name" in r:
+        c = COUNTRY.get(r.get("country"))
+        if c:
+            return f"{r['name']}（{c[lang]}）" if lang == "zh" else f"{r['name']} ({c[lang]})"
+        return r["name"]
+    return loc(r, lang)
+
+
 def hero_html(meta, lang, status=None):
     h, st = HERO[lang], status or meta["status"]
     label = html.escape(STATUS[st][lang])
     systems = meta.get("systems") or []
     rows = [
         f'<div><dt>{h["status"]}</dt><dd><span class="pill" data-st="{st}">{label}</span></dd></div>',
-        f'<div><dt>{h["author"]}</dt><dd>{html.escape(", ".join(meta.get("authors") or []) or "—")}</dd></div>',
+        f'<div><dt>{h["author"]}</dt><dd>{html.escape(", ".join(loc(a, lang) for a in meta.get("authors") or []) or "—")}</dd></div>',
         f'<div><dt>{h["date"]}</dt><dd>{html.escape(_date(meta.get("created"), lang))}</dd></div>',
-        f'<div><dt>{h["reviewers"]}</dt><dd>{"<br>".join(html.escape(r) for r in meta.get("reviewers") or []) or h["tbd"]}</dd></div>',
+        f'<div><dt>{h["reviewers"]}</dt><dd>{"<br>".join(html.escape(reviewer_text(r, lang)) for r in meta.get("reviewers") or []) or h["tbd"]}</dd></div>',
     ]
+    for extra in meta.get("details") or []:       # extra header rows; the value may contain inline HTML
+        rows.append(f'<div><dt>{html.escape(loc(extra["label"], lang))}</dt><dd>{loc(extra["value"], lang)}</dd></div>')
     if systems:
         rows.append(f'<div><dt>{h["systems"]}</dt><dd>{html.escape(" · ".join(systems))}</dd></div>')
     return (f'<header class="hero">\n  <div class="eyebrow">RFC {html.escape(meta["id"])} · {label}</div>\n'

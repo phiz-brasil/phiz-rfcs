@@ -28,6 +28,10 @@ templates/shell.html, templates/page.css   page frame and styles shared by all M
 `id` (= folder name), `title` / `summary` (`pt`, `en`, `zh`), `status`, `authors`, `reviewers`, `created`, `updated`,
 `version`, `changelog`. Optional: `systems` (list of strings shown in the header), `short` (short title for the browser tab; default: the English title).
 `status` is one of `draft`, `in-review`, `approved`, `implemented`, `rejected`, `superseded`.
+`authors` entries are text or `{"pt": …, "en": …, "zh": …}` when the text differs by language. `reviewers` entries are names, or
+`{"name": "Pedro Bettani", "country": "BR"}` (`BR` or `CN`), which the header shows as `Pedro Bettani (Brasil / Brazil / 巴西)`.
+`details` adds rows to the header: `[{"label": {"pt": …, "en": …, "zh": …}, "value": {"pt": …, "en": …, "zh": …}}]` (the value may
+contain inline HTML such as `<code>`).
 The header of the page (eyebrow, title, lede, status, authors, date, reviewers, systems) is generated from this file; the
 Markdown files contain only the body.
 
@@ -41,7 +45,7 @@ CommonMark plus GFM tables. Raw HTML is allowed as an escape hatch.
 - `###` and `####` are sub-headings. `[text](#id)` links to a section.
 - **Tables** are wrapped for the site. Variants: `::: table map` (also `changes`, `num`) around one table.
 - **Diagrams**: a fenced block `mermaid` followed by the caption on the info line:
-  ```` ```mermaid Caption in this language ````. Translate the labels, keep identifiers.
+  ```` ```mermaid Caption in this language ````. The caption may use inline Markdown; when it contains backticks, open the block with `~~~mermaid` instead of backticks. Translate the labels, keep identifiers.
 - **Code**: fenced blocks with a language (`json`, `bash`, `http`, `python`, `yaml`, `java`, `javascript`, `typescript`, `dart`,
   `kotlin`, `go`). Samples are shared: the block must be identical in the three languages (comments in English).
 - **Callouts**: `::: note Label`, `::: decision Label`, `::: risk Label` (the label is optional; each has a default per language).
@@ -49,6 +53,9 @@ CommonMark plus GFM tables. Raw HTML is allowed as an escape hatch.
 - **Phases**: `::: phases` with `##### PHASE 0: Preparation` headings, each followed by a list.
 - **Open questions**: `::: questions` around a numbered list; start each item with a bold topic.
 - **Endpoints**: `::: endpoints` with items `- POST /v1/payment — Charges the card`.
+
+In Chinese, CommonMark does not close `**bold：**中文` when punctuation touches a CJK letter; the renderer fixes `**…**` pairs left
+in running text, so write bold the same way in the three languages.
 
 Everything the template shows is part of the contract; nothing else is required. Add, split or drop sections as the topic needs.
 

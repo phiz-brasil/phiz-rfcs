@@ -15,10 +15,22 @@
     "Gleison"
   ],
   "reviewers": [
-    "Pedro Bettani",
-    "Luciana Geromel",
-    "Richard Liang",
-    "Henry Wu"
+    {
+      "name": "Pedro Bettani",
+      "country": "BR"
+    },
+    {
+      "name": "Luciana Geromel",
+      "country": "BR"
+    },
+    {
+      "name": "Richard Liang",
+      "country": "CN"
+    },
+    {
+      "name": "Henry Wu",
+      "country": "CN"
+    }
   ],
   "version": "1.1",
   "changelog": [
@@ -43,5 +55,10 @@
     }
   ],
   "created": "2026-10-16",
-  "updated": "2026-10-21"
+  "updated": "2026-10-21",
+  "systems": [
+    "channel",
+    "card-vault",
+    "backapply"
+  ]
 }
