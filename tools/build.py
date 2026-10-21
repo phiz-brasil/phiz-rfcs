@@ -130,7 +130,7 @@ def render_rfc(d, meta, text, out, shown, frozen, status, up):
     cfg = {"repo": CFG["repo"], "giscus": CFG["giscus"], "comments": CFG.get("comments", {})}
     inject = (f'<script>window.PHIZ_SITE={json.dumps(cfg)};window.PHIZ_RFC_ID={json.dumps(meta["id"])};'
               f'window.PHIZ_FROZEN={json.dumps(frozen)};</script>\n'
-              f'<script src="{up}assets/mermaid.min.js"></script>\n<script src="{up}assets/rfc-site.js"></script>\n<script src="{up}assets/status.js"></script>\n</body>')
+              f'<script src="{up}assets/mermaid.min.js"></script>\n<script type="module" src="{up}assets/js/main.js"></script>\n<script src="{up}assets/status.js"></script>\n</body>')
     page = page.replace("</body>", inject, 1) if "</body>" in page else page + inject
     out.write_text(page, encoding="utf-8")
 
@@ -347,9 +347,7 @@ def build_index(items):
 def main():
     if DIST.exists():
         shutil.rmtree(DIST)
-    (DIST / "assets").mkdir(parents=True)
-    for f in (ROOT / "assets").iterdir():
-        shutil.copy(f, DIST / "assets" / f.name)
+    shutil.copytree(ROOT / "assets", DIST / "assets")
     (DIST / ".nojekyll").write_text("")
     items = load()
     for d, m in items:
