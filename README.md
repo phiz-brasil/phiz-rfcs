@@ -15,7 +15,7 @@ Static site for the PHIZ Open Platform RFCs, published on GitHub Pages.
 2. **Settings → Pages → Source: GitHub Actions**. The workflow in `.github/workflows/pages.yml` builds and deploys on every push. The site will be at `https://<user-or-org>.github.io/<repo>/`.
 3. Enable comments on the page (Supabase):
    1. Create a free project at <https://supabase.com> (any region; `sa-east-1` is closest to Brazil).
-   2. **SQL Editor → New query**, paste [`supabase/schema.sql`](supabase/schema.sql) and run it. It creates `rfc_comments`, the access rules and a rate limit (5 per minute, 50 per day per origin).
+   2. Apply the migrations in [`supabase/migrations`](supabase/migrations), in file order: **SQL Editor → New query**, paste each file and run it (or `supabase link` then `supabase db push`). They create `rfc_comments`, the access rules and the rate limits, and are safe to run again (see *Database migrations* below).
    3. **Project Settings → API**: copy the **Project URL** and the **publishable** key (`sb_publishable_…`, or the legacy `anon` key). Never use the `secret`/`service_role` key here.
    4. Put both in `site.config.json` → `comments.supabaseUrl` and `comments.supabaseKey`. Push.
 
@@ -38,7 +38,7 @@ Static site for the PHIZ Open Platform RFCs, published on GitHub Pages.
 
 Comments are shown in the language selected on the page (PT-BR, EN-US or 中文), with a *Machine translation · Show original* note. Translations are made once on the server and stored with the comment, so every reader sees the same text in any browser. Until this is set up, comments simply appear as written.
 
-1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run) or only its last block, “Tradução automática”. It adds the read-only columns `translations` and `src_lang`.
+1. **Database**: apply [`20261016000000_translations.sql`](supabase/migrations/20261016000000_translations.sql) (and the ones before it, if not applied yet). It adds the read-only columns `translations` and `src_lang`.
 2. **Cloudflare keys** (free, no card needed for the free allowance of 10,000 Neurons a day, roughly several hundred comments):
    1. Create an account at <https://dash.cloudflare.com/sign-up>. Your **Account ID** is on the right side of the dashboard home (or in the URL after `dash.cloudflare.com/`).
    2. **My Profile → API Tokens → Create Token → Create Custom Token**, permission **Account · Workers AI · Read** (the "Workers AI" template also works). Copy the token; it is shown once.
@@ -68,7 +68,7 @@ The model (`m2m100`) does not detect the source language, so the function guesse
 
 The status badge in the header of each RFC is a button (`EM REVISÃO ▾`): pick a status, type your name once (remembered in the browser) and it changes for everyone, with no rebuild. The index, the header badge and the status pill and eyebrow in the three languages all follow the live status. There is no login: anyone with the link can change it, so every change is kept in `rfc_status_log` with the name typed, an origin rate limit (10 a minute) applies, and archived versions (`v1.0.html`) keep the status they had.
 
-1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run) or only its last block, “Status das RFCs”. It creates `rfc_status_log` (append-only) and the view `rfc_status_current`.
+1. **Database**: apply [`20261019000000_status.sql`](supabase/migrations/20261019000000_status.sql). It creates `rfc_status_log` (append-only) and the view `rfc_status_current`.
 2. Nothing else to configure; the page uses the same Supabase keys as the comments. Until step 1 is done, the page shows the status from `rfcs/<ID>/rfc.json` and changing it fails with an error message.
 3. **Undo a wrong change**: **Table Editor → rfc_status_log**, delete the row; the previous one becomes current. The `status` in `rfc.json` is only the starting value (before the first change in the page).
 
@@ -76,7 +76,7 @@ The status badge in the header of each RFC is a button (`EM REVISÃO ▾`): pick
 
 Every comment (and reply) has a **Excluir / Delete / 删除** link; it asks once and then removes the comment for everyone. Deleting a comment also removes its replies. There is no login: anyone with the link can delete, so “delete” only **hides** the comment (`hidden = true`, with `hidden_at`, `hidden_by` and an origin rate limit of 10 a minute); nothing is erased from the database.
 
-1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run) or only its last block, “Excluir comentários”. It adds the columns `hidden_at` and `hidden_by` and the function `hide_rfc_comment`, which is the only way the page can hide a comment. Until this is done, the button shows “Could not delete”.
+1. **Database**: apply [`20261020000000_hide_comments.sql`](supabase/migrations/20261020000000_hide_comments.sql). It adds the columns `hidden_at` and `hidden_by` and the function `hide_rfc_comment`, which is the only way the page can hide a comment. Until this is done, the button shows “Could not delete”.
 2. **Restore a comment**: **Table Editor → rfc_comments**, set `hidden = false` on the comment and on its replies (they are hidden together).
 
 ### Comments on each paragraph, and emoji reactions
@@ -84,8 +84,33 @@ Every comment (and reply) has a **Excluir / Delete / 删除** link; it asks once
 - **Per paragraph**: every paragraph, list item, table, diagram and code block has a small 💬 button in the right margin (on hover; with a counter once it has comments). It opens a comment box right under that paragraph. Paragraphs are numbered per section in document order (`para` 0, 1, 2…), so the same number points to the same paragraph in PT-BR, EN-US and 中文: **keep the structure of the three languages aligned** (same paragraphs in the same order). If you add or remove a paragraph in a published RFC, comments after that point move with the numbers, so prefer a new version for big edits. The section list still shows everything, with a `¶ N` tag on paragraph comments (click it to jump to the paragraph).
 - **Reactions**: each comment has `☺+` to react with 👍 ❤️ 👌 ✅ 🎉 👀 🙏 😄; reactions show as small counters and clicking one you gave takes it back. A reaction is saved as a reply that contains only an emoji, so **it counts as an answer** (“Sem resposta” in the comments list and on the comments page does not include it). Typing only an emoji as a reply does the same.
 
-1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run; run the whole file, because the insert trigger also changed: replies inherit `para`, and the rate limit is now 15 a minute / 150 a day so reactions do not hit it). Until it runs, the page works as before without the paragraph buttons.
+1. **Database**: apply [`20261021000000_paragraph_comments.sql`](supabase/migrations/20261021000000_paragraph_comments.sql): the `para` column and the insert trigger (replies inherit `para`; the rate limit is 15 a minute / 150 a day so reactions do not hit it). Until it runs, the page works as before without the paragraph buttons.
 2. **Translation function**: redeploy [`supabase/functions/translate-comment`](supabase/functions/translate-comment/index.ts) (Edge Functions → translate-comment → paste the file → Deploy). It now skips emoji-only text, so reactions do not use the translation allowance.
+
+## Database migrations
+
+The database is described by numbered files in [`supabase/migrations`](supabase/migrations) (`<timestamp>_<name>.sql`, the Supabase CLI convention), one per feature, applied in order:
+
+| file | what it adds |
+|---|---|
+| `20261015000000_comments` | `rfc_comments`, insert rules, public-key permissions |
+| `20261016000000_translations` | `translations` and `src_lang` (filled by the `translate-comment` function) |
+| `20261019000000_status` | `rfc_status_log` and `rfc_status_current` (status changed from the page) |
+| `20261020000000_hide_comments` | `hide_rfc_comment` (delete from the page = hide) |
+| `20261021000000_paragraph_comments` | `para` (comment per paragraph), reactions and the current rate limits |
+
+Every file is idempotent (`if not exists` / `or replace`), so applying all of them again is safe. To change the database, add a **new** file with a later timestamp; never edit one that has been applied. Apply a new file in the Supabase **SQL Editor** (paste and run) or with `supabase db push`.
+
+## Tests
+
+The page scripts have smoke tests that run in a real browser against the built site, with the Supabase API replaced by a small in-memory fake (`tests/fake_supabase.py`): languages and diagrams, versions, status change, comment and reply placement, delete, reactions, paragraph comments, and a database without the `para` column.
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests -v   # uses your Chrome; CI installs Playwright's Chromium
+```
+
+The page scripts live in `assets/js/` as ES modules (`main.js` is the entry; `state.js` holds the config and the only shared mutable state).
 
 ## Add a new RFC
 
@@ -140,13 +165,14 @@ python3 -m http.server -d dist 8000   # http://localhost:8000
 
 Open the site through the local server (as above), not from the `dist/index.html` file: the page scripts are ES modules, which browsers do not load from `file://`.
 
-Every pull request runs the same check and build (`.github/workflows/check.yml`); the site itself is deployed only from `main` (`pages.yml`).
+Every pull request runs the same check and build, plus the smoke tests (`.github/workflows/check.yml`); the site itself is deployed only from `main` (`pages.yml`).
 
 ## Notes
 
 - Every RFC is Markdown (`rfcs/<ID>/rfc.{pt,en,zh}.md`) rendered by `tools/build.py`; nothing generated is committed. Versions archived before the Markdown format (PHZ-0001 v1.0–v1.6, PHZ-0002 v1.0) remain as frozen HTML pages in `versions/<v>/source.html`.
 - PHZ-0001 ends with a Swagger UI. The spec comes from `rfcs/PHZ-0001/openapi_gen.py` (`build(lang)`), and the build publishes `openapi.{pt,en,zh}.yaml` next to the page (needs `PyYAML`, in `requirements.txt`; Swagger UI itself is loaded from jsDelivr).
 - The screens of PHZ-0001 sections 03 (WhatsApp reference) and 04 (PhizChat opt-in, boards P* and Q*, which also use `phiz.css`) come from `sources/PHZ-0001/whatsapp-design/` (English `.dc.html` files plus `i18n.json` with PT-BR and 中文). Render them with `python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design rfcs/PHZ-0001/mocks` (needs playwright, beautifulsoup4 and a CJK font such as Noto Sans CJK SC).
+- `.github/workflows/keepalive.yml` reads one row from Supabase every Monday and Thursday, because free projects are paused after about a week without activity (it fails, and GitHub emails you, if the project is already paused: restore it in the Supabase dashboard).
 - Mermaid is bundled in `assets/` (v10.9.1), so diagrams do not depend on a CDN. Fonts and Swagger UI load from Google Fonts and jsDelivr.
 - Reachability from mainland China is not guaranteed for github.io, Google Fonts, Supabase or giscus. If a reviewer there has trouble, send them the PDF/HTML of the RFC directly.
 - Prefer private hosting later? The same `dist/` folder works unchanged on Cloudflare Pages + Access or S3 + CloudFront.
