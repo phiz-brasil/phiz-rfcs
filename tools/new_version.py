@@ -6,11 +6,10 @@
   python3 tools/new_version.py PHZ-0001 --set 2.0 ...      # explicit number
 
 Run it BEFORE editing the RFC, with the last published version committed. It
-  1. archives the RFC as it is in git HEAD (rfc.{pt,en,zh}.md and rfc.json, or source.html for HTML RFCs)
-     -> rfcs/<ID>/versions/<current>/
+  1. archives the RFC as it is in git HEAD (rfc.{pt,en,zh}.md and rfc.json) -> rfcs/<ID>/versions/<current>/
      (served at /rfcs/<ID>/v<current>.html, read-only, no new comments),
   2. bumps "version" in rfcs/<ID>/rfc.json and adds a changelog entry with the three notes.
-Then edit the RFC (rfcs/<ID>/rfc.*.md, or sources/<ID>/ for HTML RFCs), rebuild and commit.
+Then edit rfcs/<ID>/rfc.*.md, check, rebuild and commit.
 """
 import argparse, datetime, json, re, subprocess, sys
 from pathlib import Path
@@ -48,8 +47,7 @@ def main():
     if new in [str(x["version"]) for x in log]:
         sys.exit(f"{a.id} already has version {new}")
 
-    markdown = (rdir / "rfc.pt.md").exists()
-    names = ["rfc.pt.md", "rfc.en.md", "rfc.zh.md", "rfc.json"] if markdown else ["source.html"]
+    names = ["rfc.pt.md", "rfc.en.md", "rfc.zh.md", "rfc.json"]
     folder = rdir / "versions" / cur
     if folder.exists() and any(folder.iterdir()):
         sys.exit(f"{folder.relative_to(ROOT)} already exists; v{cur} is already archived")
@@ -72,14 +70,9 @@ def main():
     meta.update({"version": new, "changelog": log, "updated": today})
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    if markdown:
-        nxt = (f"next: edit rfcs/{a.id}/rfc.pt.md, rfc.en.md and rfc.zh.md, then\n"
-               f"  python3 tools/check_rfc.py {a.id} && python3 tools/build.py\n"
-               f"  git add rfcs/{a.id} && git commit && git push")
-    else:
-        nxt = (f"next: edit sources/{a.id}/, then\n"
-               f"  cd sources/{a.id} && python3 build_rfc.py && cd ../.. && python3 tools/build.py\n"
-               f"  git add rfcs/{a.id} sources/{a.id} && git commit && git push")
+    nxt = (f"next: edit rfcs/{a.id}/rfc.pt.md, rfc.en.md and rfc.zh.md, then\n"
+           f"  python3 tools/check_rfc.py {a.id} && python3 tools/build.py\n"
+           f"  git add rfcs/{a.id} && git commit && git push")
     print(f"{a.id}: v{cur} archived from {origin} -> {snap.relative_to(ROOT)}/\n"
           f"{a.id}: now v{new} (changelog updated in rfcs/{a.id}/rfc.json)\n" + nxt)
 

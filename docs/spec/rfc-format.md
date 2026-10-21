@@ -1,7 +1,7 @@
 # Spec: RFC format (Markdown)
 
 Status: implemented by `tools/rfc_md.py` (render + checks), `tools/check_rfc.py` (CLI), `tools/new_rfc.py` (scaffold).
-Older RFCs written as HTML (`sources/<ID>/content_*.html` → `rfcs/<ID>/source.html`) keep working; this spec covers new RFCs.
+Every RFC follows it. Versions archived before the Markdown format stay as frozen HTML pages (`versions/<v>/source.html`).
 
 ## Why
 
@@ -17,7 +17,8 @@ rfcs/PHZ-NNNN/
   rfc.pt.md       content in Portuguese (reference language)
   rfc.en.md       content in English
   rfc.zh.md       content in Simplified Chinese
-  <other files>   images, OpenAPI files…: copied to the site next to the page
+  openapi_gen.py optional: defines build(lang) returning the OpenAPI spec; the page ends with a Swagger UI and the YAML files are published
+  <other files>   images…: copied to the site next to the page
   versions/<v>/   frozen copy of the three .md files and rfc.json of an older version
 templates/rfc/    skeleton copied by tools/new_rfc.py (same layout, with TODO: markers)
 templates/shell.html, templates/page.css   page frame and styles shared by all Markdown RFCs
@@ -73,6 +74,7 @@ Errors stop the build; warnings do not.
 | F06 | Same number of diagrams, and code blocks with the same content, in the three languages. |
 | F07 | Every `[..](#id)` points to an existing section id; directives are known and well formed. |
 | F08 | No `TODO:` markers left (error), no default `summary` text (warning). |
+| F09 | `openapi_gen.py`, when present, builds a spec for the three languages. |
 
 ## Versions
 

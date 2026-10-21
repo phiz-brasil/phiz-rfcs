@@ -2,9 +2,10 @@
 """Builds the static site into dist/.
 
   rfcs/<ID>/rfc.json     metadata (status, authors, reviewers, titles, summaries)
-  rfcs/<ID>/rfc.{pt,en,zh}.md   the RFC (Markdown, see docs/spec/rfc-format.md), or
-  rfcs/<ID>/source.html  the RFC page of an older, HTML RFC (h2 sections need an id)
-  rfcs/<ID>/*            other files (OpenAPI YAMLs, images) are copied as is
+  rfcs/<ID>/rfc.{pt,en,zh}.md   the RFC (Markdown, see docs/spec/rfc-format.md)
+  rfcs/<ID>/openapi_gen.py      optional: builds the OpenAPI spec shown at the end of the page
+  rfcs/<ID>/versions/<v>/       archived older versions (Markdown, or the HTML page of versions archived before Markdown)
+  rfcs/<ID>/*            other files (images…) are copied as is
 Folders that start with "_" (e.g. _template) are ignored.
 """
 import html, json, re, shutil, sys
@@ -32,17 +33,14 @@ def load():
         meta = json.loads((d / "rfc.json").read_text(encoding="utf-8"))
         if meta["status"] not in STATUS:
             sys.exit(f"{d.name}: invalid status {meta['status']!r}; use one of {', '.join(STATUS)}")
-        if rfc_md.is_markdown_rfc(d):
-            try:
-                errors, warnings = rfc_md.check(d, meta)
-            except rfc_md.RfcError as err:
-                errors, warnings = [str(err)], []
-            for w in warnings:
-                print(f"warning: {d.name}: {w}")
-            if errors:
-                sys.exit(f"{d.name}: " + "\n  ".join(["cannot build, fix with tools/check_rfc.py:"] + errors))
-        elif not (d / "source.html").exists():
-            sys.exit(f"{d.name}: neither rfc.pt.md nor source.html found")
+        try:
+            errors, warnings = rfc_md.check(d, meta)
+        except rfc_md.RfcError as err:
+            errors, warnings = [str(err)], []
+        for w in warnings:
+            print(f"warning: {d.name}: {w}")
+        if errors:
+            sys.exit(f"{d.name}: " + "\n  ".join(["cannot build, fix with tools/check_rfc.py:"] + errors))
         out.append((d, meta))
     return out
 
@@ -68,7 +66,7 @@ def versions_of(d, meta):
 
 
 def snapshot(d, v):
-    """The frozen copy of version v: source.html (HTML RFCs) or the folder with the Markdown files."""
+    """The frozen copy of version v: the folder with the Markdown files, or source.html for versions archived as HTML."""
     folder = d / "versions" / v
     return folder if rfc_md.is_markdown_rfc(folder) else folder / "source.html"
 
@@ -79,7 +77,7 @@ _PAGES = {}
 def page_text(d, meta):
     """The full RFC page of the current version."""
     if d.name not in _PAGES:
-        _PAGES[d.name] = rfc_md.render_page(d, meta) if rfc_md.is_markdown_rfc(d) else (d / "source.html").read_text(encoding="utf-8")
+        _PAGES[d.name] = rfc_md.render_page(d, meta)
     return _PAGES[d.name]
 
 
@@ -119,6 +117,7 @@ def render_rfc(d, meta, text, out, shown, frozen, status, up):
         i = marker.start() if marker else len(page)
         page = head + page[:i] + "\n</head>\n<body>\n" + page[i:] + "\n</body>\n</html>\n"
     cur, _ = versions_of(d, meta)
+    page = page.replace("{{UP}}", up)
     page = page.replace('<span class="rfcno">', f'<a class="back" href="{up}">← RFCs</a><span class="rfcno">', 1)
     badge = (f'<span class="rfcno st" data-st="{status}">'
              + "".join(f'<span class="lang-st" data-l="{l}">{e(STATUS[status][l])}</span>' for l in LANGS) + "</span>")
@@ -138,7 +137,11 @@ def render_rfc(d, meta, text, out, shown, frozen, status, up):
 
 def build_rfc(d, meta):
     dest = DIST / "rfcs" / d.name
-    shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html", "versions", "rfc.*.md"))
+    shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html", "versions", "rfc.*.md", "openapi_gen.py", "__pycache__"))
+    specs = rfc_md.openapi_specs(d)
+    if specs:       # the spec is generated from openapi_gen.py: published as files next to the page
+        for lang, text in rfc_md.openapi_yaml(specs).items():
+            (dest / f"openapi.{lang}.yaml").write_text(text, encoding="utf-8")
     cur, log = versions_of(d, meta)
     render_rfc(d, meta, page_text(d, meta), dest / "index.html", cur, False, meta["status"], "../../")
     for ent in log:
@@ -154,7 +157,7 @@ def build_rfc(d, meta):
         snap = snapshot(d, v)
         if snap.is_dir():       # Markdown RFC: render the frozen files with the header data they had
             old = json.loads((snap / "rfc.json").read_text(encoding="utf-8")) if (snap / "rfc.json").exists() else meta
-            text = rfc_md.render_page(snap, old, status=st)
+            text = rfc_md.render_page(snap, old, status=st, rfc_dir=d)
         else:
             text = snap.read_text(encoding="utf-8")
         render_rfc(d, meta, text, dest / f"v{v}.html", v, True, st, "../../")

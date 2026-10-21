@@ -241,3 +241,4 @@ html { scroll-behavior: smooth; }
 .stat b { display: block; font: 800 1.9rem/1.1 var(--f-display); color: var(--accent-ink); }
 .stat span { font-size: .84rem; color: var(--muted); }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: .82rem; color: var(--muted); margin: 6px 0 12px; }
+.shots.phones { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
