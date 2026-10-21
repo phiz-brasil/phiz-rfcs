@@ -19,6 +19,7 @@
           central: "Ver comentários de todas as RFCs →", close: "Fechar",
           newHint: "“Novos” = desde a última vez que você abriu esta lista.",
           auto: "Tradução automática", from: "de", orig: "Ver original", showTr: "Ver tradução",
+          para: "Parágrafo", paraBtn: "Comentar este parágrafo", react: "Reagir", ok: "OK",
           del: "Excluir", delSure: "Excluir este comentário?", delYes: "Sim, excluir", delNo: "Não", delErr: "Não foi possível excluir. Tente de novo." },
     en: { btn: "Comment", fallback: "Open on GitHub", need: "Comments use your GitHub account.",
           name: "Your name", body: "Write a comment", send: "Comment", sending: "Sending…", reply: "Reply",
@@ -33,6 +34,7 @@
           central: "See comments on all RFCs →", close: "Close",
           newHint: "“New” = since you last opened this list.",
           auto: "Machine translation", from: "from", orig: "Show original", showTr: "Show translation",
+          para: "Paragraph", paraBtn: "Comment on this paragraph", react: "React", ok: "OK",
           del: "Delete", delSure: "Delete this comment?", delYes: "Yes, delete", delNo: "No", delErr: "Could not delete. Please try again." },
     zh: { btn: "评论", fallback: "在 GitHub 打开", need: "评论需要使用 GitHub 账号。",
           name: "你的名字", body: "写下评论", send: "评论", sending: "发送中…", reply: "回复",
@@ -47,6 +49,7 @@
           central: "查看所有 RFC 的评论 →", close: "关闭",
           newHint: "“新评论”指自你上次打开此列表以来的评论。",
           auto: "机器翻译", from: "原文", orig: "查看原文", showTr: "查看译文",
+          para: "段落", paraBtn: "评论此段落", react: "表情回应", ok: "确定",
           del: "删除", delSure: "删除这条评论？", delYes: "确认删除", delNo: "取消", delErr: "无法删除，请重试。" }
   };
   const LANG_TAG = { pt: "PT", en: "EN", zh: "中文" };
@@ -92,7 +95,9 @@
       /^eyJ/.test(cfg.comments.supabaseKey) ? { Authorization: "Bearer " + cfg.comments.supabaseKey } : {})
   } : null;
   const BASE_COLS = "id,rfc_id,section,parent_id,author,body,quote,lang,created_at";
-  let COLS = BASE_COLS + ",translations,src_lang";   // falls back to BASE_COLS if the columns do not exist yet
+  const FULL_COLS = BASE_COLS + ",para,translations,src_lang";
+  let COLS = FULL_COLS;    // falls back step by step if the newer columns do not exist yet
+  let HAS_PARA = true;
   let all = null;          // comments of this RFC; null while loading
   let loadFailed = false;
 
@@ -100,7 +105,8 @@
     try {
       const q = c => `?select=${c}&rfc_id=eq.${encodeURIComponent(rfcId)}&order=created_at.asc&limit=2000`;
       let r = await fetch(sb.url + q(COLS), { headers: sb.headers });
-      if (r.status === 400 && COLS !== BASE_COLS) { COLS = BASE_COLS; r = await fetch(sb.url + q(COLS), { headers: sb.headers }); }
+      if (r.status === 400 && COLS === FULL_COLS) { COLS = BASE_COLS + ",translations,src_lang"; HAS_PARA = false; r = await fetch(sb.url + q(COLS), { headers: sb.headers }); }
+      if (r.status === 400 && COLS !== BASE_COLS) { COLS = BASE_COLS; HAS_PARA = false; r = await fetch(sb.url + q(COLS), { headers: sb.headers }); }
       if (!r.ok) throw new Error("HTTP " + r.status);
       all = await r.json();
       loadFailed = false;
@@ -108,6 +114,7 @@
       console.warn("comments", e);
       all = []; loadFailed = true;
     }
+    if (!HAS_PARA) document.querySelectorAll(".cmt-pbtn, .cmt-para-panel").forEach(n => n.remove());   // database without the para column
     paintCounts(); paintMarks(); paintAllBtn();
     document.querySelectorAll(".cmt-panel[data-key]").forEach(renderThreads);
     openFromLink();
@@ -124,7 +131,7 @@
   }
 
   async function addComment(row) {
-    const r = await fetch(sb.url + "?select=" + BASE_COLS, {
+    const r = await fetch(sb.url + "?select=" + BASE_COLS + (HAS_PARA ? ",para" : ""), {
       method: "POST",
       headers: Object.assign({ "Content-Type": "application/json", Prefer: "return=representation" }, sb.headers),
       body: JSON.stringify(row)
@@ -155,11 +162,24 @@
   }
 
   // replies whose parent was hidden by a moderator are not shown or counted
-  const forSection = key => {
+  // `para` (a number) keeps only the comments of that paragraph; without it, the whole section
+  const forSection = (key, para) => {
     const rows = (all || []).filter(c => c.section === key);
-    const tops = new Set(rows.filter(c => !c.parent_id).map(c => c.id));
-    return rows.filter(c => !c.parent_id || tops.has(c.parent_id));
+    const tops = new Set(rows.filter(c => !c.parent_id && (para === undefined || c.para === para)).map(c => c.id));
+    return rows.filter(c => c.parent_id ? tops.has(c.parent_id) : tops.has(c.id));
   };
+
+  /* ---------- reactions: a reply that is only emoji ---------- */
+  const REACT_RE = /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\uFE0F|\u200D|\u20E3)+$/u;
+  const isReaction = c => !!c.parent_id && c.body.length <= 16 && REACT_RE.test(c.body.trim());
+  const EMOJIS = ["👍", "❤️", "👌", "✅", "🎉", "👀", "🙏", "😄"];
+
+  // every open list and counter follows the data
+  function rerenderAll() {
+    document.querySelectorAll(".cmt-panel[data-key]").forEach(renderThreads);
+    paintCounts(); paintMarks(); paintAllBtn();
+    if (drawer) renderDrawer();
+  }
 
   function paintCounts() {
     document.querySelectorAll(".lang h2[id] .cmt-btn").forEach(b => {
@@ -168,6 +188,15 @@
       if (!c) { c = el("span", "cmt-n"); b.append(c); }
       c.textContent = n ? String(n) : "";
       c.hidden = !n;
+    });
+    document.querySelectorAll(".cmt-pbtn").forEach(b => {
+      const h = b.closest("section") && b.closest("section").querySelector("h2[id]");
+      if (!h) return;
+      const n = forSection(sectionKey(h), Number(b.dataset.i)).length;
+      const c = b.querySelector(".cmt-n");
+      c.textContent = n ? String(n) : "";
+      c.hidden = !n;
+      b.classList.toggle("has", !!n);
     });
   }
 
@@ -205,14 +234,16 @@
     list.replaceChildren();
     if (!all) { list.append(el("p", "cmt-note", "…")); return; }
     if (loadFailed) { list.append(el("p", "cmt-note cmt-err", L().load)); return; }
-    const items = forSection(panel.dataset.key);
+    const para = panel.dataset.para === undefined ? undefined : Number(panel.dataset.para);
+    const items = forSection(panel.dataset.key, para);
     const tops = items.filter(c => !c.parent_id);
     if (!tops.length) { list.append(el("p", "cmt-note", L().empty)); return; }
     for (const c of tops) {
       const th = el("div", "cmt-thread");
       th.dataset.id = c.id;
-      th.append(card(c, panel, false));
-      items.filter(r => r.parent_id === c.id).forEach(r => th.append(card(r, panel, true)));
+      const replies = items.filter(r => r.parent_id === c.id);
+      th.append(card(c, panel, false, replies.filter(isReaction)));
+      replies.filter(r => !isReaction(r)).forEach(r => th.append(card(r, panel, true)));
       list.append(th);
     }
     placeForm(panel);
@@ -227,18 +258,24 @@
     (th || panel).append(f);
   }
 
-  function card(c, panel, isReply) {
+  function card(c, panel, isReply, reacts) {
     const box = el("article", "cmt-item" + (isReply ? " cmt-reply" : ""));
     box.dataset.id = c.id;
     const meta = el("div", "cmt-meta");
     meta.append(el("strong", null, c.author), el("time", null, when(c.created_at)));
     const x = txt(c);
     if (srcOf(c) && srcOf(c) !== lang() && !x.can) meta.append(el("span", "cmt-lang", LANG_TAG[srcOf(c)] || srcOf(c)));
+    if (c.para != null && panel.dataset.para === undefined) {     // section list: say which paragraph it is about
+      const tag = el("button", "cmt-ptag", `¶ ${c.para + 1}`); tag.type = "button"; tag.title = L().para;
+      tag.addEventListener("click", () => flashPara(c));
+      meta.append(tag);
+    }
     box.append(meta);
     if (x.quote) box.append(el("blockquote", "cmt-quote", x.quote));
     box.append(el("p", "cmt-body", x.body));
     const note = trNote(c, x, () => renderThreads(panel));
     if (note) box.append(note);
+    if (!isReply) box.append(reactionRow(c, reacts || []));
     const acts = el("div", "cmt-acts");
     if (!isReply) {
       const rb = el("button", "cmt-link", L().reply);
@@ -249,6 +286,125 @@
     acts.append(deleteControl(c, panel));
     box.append(acts);
     return box;
+  }
+
+  function reactionRow(c, reacts) {
+    const row = el("div", "cmt-rx");
+    const me = store.get("phiz-rfc-author");
+    const groups = new Map();
+    for (const r of reacts) { const k = r.body.trim(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
+    const mineOf = e => me && (groups.get(e) || []).find(r => r.author === me);
+    for (const [emoji, rs] of groups) {
+      const b = el("button", "cmt-rxchip"); b.type = "button";
+      b.setAttribute("aria-pressed", String(!!mineOf(emoji)));
+      b.title = rs.map(r => r.author).join(", ");
+      b.append(el("span", null, emoji), el("b", null, String(rs.length)));
+      b.addEventListener("click", () => react(c, emoji, row));
+      row.append(b);
+    }
+    const add = el("button", "cmt-rxadd", "☺+"); add.type = "button";
+    add.title = L().react; add.setAttribute("aria-label", L().react); add.setAttribute("aria-expanded", "false");
+    const pick = el("span", "cmt-rxpick"); pick.hidden = true;
+    EMOJIS.forEach(e => {
+      const eb = el("button", "cmt-rxopt", e); eb.type = "button";
+      eb.addEventListener("click", () => react(c, e, row));
+      pick.append(eb);
+    });
+    add.addEventListener("click", () => { pick.hidden = !pick.hidden; add.setAttribute("aria-expanded", String(!pick.hidden)); });
+    row.append(add, pick);
+    return row;
+  }
+
+  // clicking an emoji adds it as a reply with that emoji; clicking one you already gave takes it back
+  async function react(c, emoji, row) {
+    const me = store.get("phiz-rfc-author");
+    if (!me) { askName(row, () => react(c, emoji, row)); return; }
+    row.querySelectorAll("button").forEach(b => { b.disabled = true; });
+    try {
+      const mine = (all || []).find(r => r.parent_id === c.id && r.author === me && r.body.trim() === emoji);
+      if (mine) {
+        await hideComment(mine.id);
+        all = all.filter(r => r.id !== mine.id);
+      } else {
+        const data = { rfc_id: rfcId, section: c.section, parent_id: c.id, author: me, body: emoji, quote: null, lang: lang() };
+        if (HAS_PARA && c.para != null) data.para = c.para;
+        (all = all || []).push(await addComment(data));
+      }
+      rerenderAll();
+    } catch (e) {
+      console.warn("reaction", e);
+      row.querySelectorAll("button").forEach(b => { b.disabled = false; });
+      let err = row.querySelector(".cmt-err");
+      if (!err) { err = el("span", "cmt-err"); row.append(err); }
+      err.textContent = e.code === "rate" ? L().rate : L().err;
+    }
+  }
+
+  function askName(row, then) {
+    if (row.querySelector(".cmt-rxname")) { row.querySelector(".cmt-rxname input").focus(); return; }
+    const box = el("span", "cmt-rxname");
+    const input = el("input"); input.maxLength = 60; input.placeholder = L().name; input.setAttribute("aria-label", L().name); input.autocomplete = "name";
+    const ok = el("button", "cmt-link", L().ok); ok.type = "button";
+    const go = () => { const v = input.value.trim(); if (!v) { input.focus(); return; } store.set("phiz-rfc-author", v); box.remove(); then(); };
+    ok.addEventListener("click", go);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    box.append(input, ok);
+    row.append(box);
+    input.focus();
+  }
+
+  /* ---------- one comment box per paragraph ---------- */
+  // paragraphs are numbered per section (0, 1, 2…) in document order, the same in the three languages
+  const PARA_SEL = "p:not(.cap), li, .tbl, .diagram, figure.code";
+  function paraBlocks(sec) {
+    return [...sec.querySelectorAll(PARA_SEL)].filter(e =>
+      !e.closest(".cmt-panel") && !(e.parentElement && e.parentElement.closest(".tbl, .diagram, figure, .eps-wrap")) &&
+      !(e.matches("p") && e.parentElement.matches("li")));
+  }
+
+  function decoratePara() {
+    if (!HAS_PARA) return;
+    document.querySelectorAll(".lang section").forEach(sec => {
+      const h = sec.querySelector("h2[id]");
+      if (!h) return;
+      const key = sectionKey(h);
+      paraBlocks(sec).forEach((blk, i) => {
+        if (blk._pb) return;
+        blk._pb = true;
+        const b = el("button", "cmt-pbtn"); b.type = "button"; b.dataset.i = String(i);
+        b.title = L().paraBtn; b.setAttribute("aria-label", L().paraBtn); b.setAttribute("aria-expanded", "false");
+        b.append(el("span", null, "💬"), el("span", "cmt-n"));
+        b.addEventListener("click", () => openParaPanel(blk, key, i, b));
+        blk.classList.add("cmt-pb");
+        if (blk.matches(".tbl, .diagram, figure")) blk.classList.add("cmt-pb-in");
+        blk.append(b);
+      });
+    });
+    paintCounts();
+  }
+
+  function openParaPanel(blk, key, idx, btn) {
+    const inLi = blk.matches("li");
+    const existing = inLi ? [...blk.children].find(c => c.classList.contains("cmt-panel"))
+                          : (blk.nextElementSibling && blk.nextElementSibling.dataset.para !== undefined ? blk.nextElementSibling : null);
+    if (existing) { existing.remove(); btn.setAttribute("aria-expanded", "false"); return; }
+    const panel = el("div", "cmt-panel cmt-para-panel");
+    panel.dataset.key = key; panel.dataset.para = String(idx);
+    panel._form = buildForm(panel);
+    panel.append(el("div", "cmt-list"), panel._form);
+    renderThreads(panel);
+    if (inLi) blk.append(panel); else blk.after(panel);
+    btn.setAttribute("aria-expanded", "true");
+  }
+
+  function flashPara(c) {
+    const h = document.getElementById(`${lang()}-${c.section}`);
+    const sec = h && h.closest("section");
+    const blk = sec && paraBlocks(sec)[c.para];
+    if (!blk) return;
+    blk.scrollIntoView({ block: "center" });
+    blk.classList.add("cmt-pflash");
+    setTimeout(() => blk.classList.remove("cmt-pflash"), 1800);
   }
 
   // "Delete" asks once, then hides the comment (and its replies) for everyone
@@ -267,8 +423,7 @@
           all = (all || []).filter(r => r.id !== c.id && r.parent_id !== c.id);
           const f = panel._form;
           if (f && f.dataset.parent === c.id) setReply(panel, null);
-          renderThreads(panel); paintCounts(); paintMarks(); paintAllBtn();
-          if (drawer) renderDrawer();
+          rerenderAll();
         } catch (e) {
           console.warn("delete comment", e);
           msg.textContent = e.code === "rate" ? L().rate : L().delErr;
@@ -328,14 +483,17 @@
       if (!text) { err.textContent = L().needBody; err.hidden = false; body.focus(); return; }
       send.disabled = true; send.textContent = L().sending;
       try {
-        const saved = await addComment({ rfc_id: rfcId, section: panel.dataset.key, parent_id: f.dataset.parent || null,
-                                         author, body: text, quote: f.dataset.quote || null, lang: lang() });
+        const parent = f.dataset.parent ? (all || []).find(x => x.id === f.dataset.parent) : null;
+        const para = parent ? parent.para : (panel.dataset.para !== undefined ? Number(panel.dataset.para) : null);
+        const data = { rfc_id: rfcId, section: panel.dataset.key, parent_id: f.dataset.parent || null,
+                       author, body: text, quote: f.dataset.quote || null, lang: lang() };
+        if (HAS_PARA && para != null) data.para = para;
+        const saved = await addComment(data);
         store.set("phiz-rfc-author", author);
         (all = all || []).push(saved);
         body.value = "";
         setReply(panel, null); setQuote(panel, "");
-        renderThreads(panel); paintCounts(); paintMarks(); paintAllBtn();
-        if (drawer) renderDrawer();
+        rerenderAll();
       } catch (e) {
         err.textContent = e.code === "rate" ? L().rate : L().err; err.hidden = false;
       } finally {
@@ -580,12 +738,16 @@
 
   /* ---------- wiring ---------- */
   function refresh() {
-    if (!frozen) decorate();
+    if (!frozen) { decorate(); if (sb) decoratePara(); }
     renderMermaid();
     if (sb) {
       // open panels live under one language's copy of the section: move them (with any draft) to the active language
       const cur = lang();
       document.querySelectorAll(".cmt-panel[data-key]").forEach(p => {
+        if (p.dataset.para !== undefined) {       // a paragraph box closes when the language changes
+          if (!p.closest(`.lang[data-lang="${cur}"]`)) { p.remove(); document.querySelectorAll(".cmt-pbtn[aria-expanded=true]").forEach(b => b.setAttribute("aria-expanded", "false")); }
+          return;
+        }
         const h = p.previousElementSibling;
         if (!h || h.id.startsWith(cur + "-")) return;
         const f = p.querySelector("form");

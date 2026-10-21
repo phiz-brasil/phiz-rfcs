@@ -45,20 +45,21 @@ begin
   new.quote      := nullif(btrim(coalesce(new.quote, '')), '');
   new.ip_hash    := encode(digest(ip || ':phiz-rfc', 'sha256'), 'hex');
 
-  -- Respostas têm um nível só e ficam na mesma RFC e seção do comentário original.
+  -- Respostas têm um nível só e ficam na mesma RFC, seção e parágrafo do comentário original.
   if new.parent_id is not null then
     select * into parent from public.rfc_comments where id = new.parent_id;
     if not found or parent.hidden or parent.parent_id is not null
        or parent.rfc_id <> new.rfc_id or parent.section <> new.section then
       raise exception 'invalid parent' using errcode = '22023';
     end if;
+    new.para := parent.para;
   end if;
 
-  -- Limite por origem: 5 por minuto e 50 por dia.
+  -- Limite por origem: 15 por minuto e 150 por dia (reações com emoji também contam).
   if (select count(*) from public.rfc_comments
-        where ip_hash = new.ip_hash and created_at > now() - interval '1 minute') >= 5
+        where ip_hash = new.ip_hash and created_at > now() - interval '1 minute') >= 15
      or (select count(*) from public.rfc_comments
-        where ip_hash = new.ip_hash and created_at > now() - interval '1 day') >= 50 then
+        where ip_hash = new.ip_hash and created_at > now() - interval '1 day') >= 150 then
     raise exception 'rate limit' using errcode = 'PT429';
   end if;
 
@@ -216,3 +217,13 @@ $$;
 
 revoke all on function public.hide_rfc_comment(uuid, text) from public;
 grant execute on function public.hide_rfc_comment(uuid, text) to anon, authenticated;
+
+-- Comentário por parágrafo e reações ------------------------------------------------------------
+-- para = número do parágrafo dentro da seção (0, 1, 2…, na ordem do documento, igual nos três idiomas);
+-- vazio = comentário da seção. Respostas herdam o para do comentário original (trigger acima).
+-- Uma reação é uma resposta que contém só emoji; ela conta como resposta ("respondido").
+alter table public.rfc_comments add column if not exists para integer
+  check (para is null or para between 0 and 999);
+
+grant select (para) on public.rfc_comments to anon, authenticated;
+grant insert (para) on public.rfc_comments to anon, authenticated;

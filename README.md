@@ -79,6 +79,14 @@ Every comment (and reply) has a **Excluir / Delete / 删除** link; it asks once
 1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run) or only its last block, “Excluir comentários”. It adds the columns `hidden_at` and `hidden_by` and the function `hide_rfc_comment`, which is the only way the page can hide a comment. Until this is done, the button shows “Could not delete”.
 2. **Restore a comment**: **Table Editor → rfc_comments**, set `hidden = false` on the comment and on its replies (they are hidden together).
 
+### Comments on each paragraph, and emoji reactions
+
+- **Per paragraph**: every paragraph, list item, table, diagram and code block has a small 💬 button in the right margin (on hover; with a counter once it has comments). It opens a comment box right under that paragraph. Paragraphs are numbered per section in document order (`para` 0, 1, 2…), so the same number points to the same paragraph in PT-BR, EN-US and 中文: **keep the structure of the three languages aligned** (same paragraphs in the same order). If you add or remove a paragraph in a published RFC, comments after that point move with the numbers, so prefer a new version for big edits. The section list still shows everything, with a `¶ N` tag on paragraph comments (click it to jump to the paragraph).
+- **Reactions**: each comment has `☺+` to react with 👍 ❤️ 👌 ✅ 🎉 👀 🙏 😄; reactions show as small counters and clicking one you gave takes it back. A reaction is saved as a reply that contains only an emoji, so **it counts as an answer** (“Sem resposta” in the comments list and on the comments page does not include it). Typing only an emoji as a reply does the same.
+
+1. **Database**: in the Supabase **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql) again (safe to re-run; run the whole file, because the insert trigger also changed: replies inherit `para`, and the rate limit is now 15 a minute / 150 a day so reactions do not hit it). Until it runs, the page works as before without the paragraph buttons.
+2. **Translation function**: redeploy [`supabase/functions/translate-comment`](supabase/functions/translate-comment/index.ts) (Edge Functions → translate-comment → paste the file → Deploy). It now skips emoji-only text, so reactions do not use the translation allowance.
+
 ## Add a new RFC
 
 ```bash

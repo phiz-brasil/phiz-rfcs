@@ -58,7 +58,8 @@ async function translate(text: string, from: Lang, to: Lang): Promise<string> {
 
 async function translateRow(row: Row) {
   const hint = LANGS.includes(row.lang as Lang) ? (row.lang as Lang) : null;
-  const src = detect(row.body) ?? detect(row.quote ?? "") ?? hint;
+  // emoji-only comments (reactions) have nothing to translate
+  const src = /\p{L}/u.test(row.body) ? (detect(row.body) ?? detect(row.quote ?? "") ?? hint) : null;
   const out: Record<string, Piece> = {};
   if (src) {
     out[src] = { body: row.body, quote: row.quote };   // the original stays as written
