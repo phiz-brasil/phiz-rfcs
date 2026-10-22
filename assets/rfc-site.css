@@ -146,3 +146,5 @@ li > .cmt-para-panel { margin-top: 8px; }
 .cmt-rx button:disabled { opacity: .6; cursor: progress; }
 .cmt-rxname { display: inline-flex; align-items: center; gap: 8px; }
 .cmt-rxname input { font: 400 .85rem var(--f-body, system-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; width: 140px; }
+/* RFC page drawn from the database (/rfc/) */
+.live-state { padding: 40px 0; color: var(--muted); }

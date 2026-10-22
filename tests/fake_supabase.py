@@ -23,6 +23,10 @@ class FakeSupabase:
         self.status_log = []
         self.posts = []                   # bodies received by POST, in order
         self.hides = []                   # ids sent to rpc/hide_rfc_comment
+        self.ids = {"PHZ-0001": "repo", "PHZ-0002": "repo"}      # rfc_ids: the sequence shared with the repository
+        self.revisions = []               # rfc_revisions of the RFCs created on the site
+        self.calls = []                   # (function, body) of every rpc call, in order
+        self.rate_limited = False         # make create_rfc / add_rfc_revision answer 429
 
     # -- test helpers ---------------------------------------------------
     def add_comment(self, rfc_id, section, author, body, parent_id=None, para=None, **extra):
@@ -32,6 +36,36 @@ class FakeSupabase:
         row.update(extra)
         self.comments.append(row)
         return row
+
+    def next_id(self, source="site"):
+        n = max(int(i[4:]) for i in self.ids) + 1
+        new = f"PHZ-{n:04d}"
+        self.ids[new] = source
+        return new
+
+    def add_revision(self, rfc_id, bundle, meta, authors, collaborators=(), by="Ana", note=None):
+        rev = len([r for r in self.revisions if r["rfc_id"] == rfc_id]) + 1
+        row = {"id": str(uuid.uuid4()), "rfc_id": rfc_id, "rev": rev, "version": f"1.{rev - 1}", "meta": meta, "bundle": bundle,
+               "authors": list(authors), "collaborators": list(collaborators), "edited_by": by, "note": note, "created_at": now()}
+        self.revisions.append(row)
+        return row
+
+    def seed_rfc(self, bundle, meta, authors=("Ana",), collaborators=()):
+        """An RFC created on the site, as if create_rfc had run."""
+        rid = self.next_id()
+        self.add_revision(rid, bundle, meta, authors, collaborators)
+        return rid
+
+    def current(self, rfc_id=None):
+        out = []
+        for rid in sorted({r["rfc_id"] for r in self.revisions}, reverse=True):
+            if rfc_id and rid != rfc_id:
+                continue
+            revs = [r for r in self.revisions if r["rfc_id"] == rid]
+            last = revs[-1]
+            out.append({k: last[k] for k in ("rfc_id", "rev", "version", "meta", "authors", "collaborators", "edited_by", "created_at")}
+                       | {"first_created_at": revs[0]["created_at"]})
+        return out
 
     def visible(self, rfc_id=None):
         return [c for c in self.comments if not c["hidden"] and (rfc_id is None or c["rfc_id"] == rfc_id)]
@@ -81,4 +115,34 @@ class FakeSupabase:
             self.posts.append(body)
             self.status_log.append({**body, "created_at": now()})
             return route.fulfill(status=201, headers=CORS)
+        eq = lambda key: q[key].split("eq.", 1)[1] if key in q and q[key].startswith("eq.") else None
+        if path.endswith("/rest/v1/rfc_live_current"):
+            return ok(self.current(eq("rfc_id")))
+        if path.endswith("/rest/v1/rfc_live_revisions"):
+            rows = [{k: r[k] for k in ("rfc_id", "rev", "version", "edited_by", "note", "created_at")} for r in self.revisions if r["rfc_id"] == eq("rfc_id")]
+            return ok(sorted(rows, key=lambda r: r["rev"], reverse=True))
+        if path.endswith("/rest/v1/rfc_revisions"):
+            rows = [r for r in self.revisions if r["rfc_id"] == eq("rfc_id") and (eq("version") is None or r["version"] == eq("version"))]
+            rows = sorted(rows, key=lambda r: r["rev"], reverse=q.get("order", "").endswith("desc"))
+            return ok(rows[:int(q["limit"])] if "limit" in q else rows)
+        if "/rpc/" in path:
+            fn = path.rsplit("/", 1)[1]
+            self.calls.append((fn, body))
+            if fn == "reserve_rfc_id":
+                return ok(self.next_id("repo"))
+            if fn in ("create_rfc", "add_rfc_revision"):
+                if self.rate_limited:
+                    return ok({"message": "rate limit"}, 429)
+                for lang in ("pt", "en", "zh"):                                  # what rfc_check_input enforces
+                    if lang not in body["p_meta"].get("title", {}) or f"lang:{lang}" not in body["p_bundle"].replace(" ", ""):
+                        return ok({"message": f"invalid meta.title.{lang}"}, 400)
+                if fn == "create_rfc":
+                    rid = self.next_id("site")
+                    self.add_revision(rid, body["p_bundle"], body["p_meta"], body["p_authors"], body["p_collaborators"], body["p_by"])
+                    return ok({"rfc_id": rid, "version": "1.0"})
+                if self.ids.get(body["p_rfc_id"]) != "site":
+                    return ok({"message": "unknown RFC"}, 400)
+                row = self.add_revision(body["p_rfc_id"], body["p_bundle"], body["p_meta"], body["p_authors"], body["p_collaborators"],
+                                        body["p_by"], body.get("p_note"))
+                return ok({"rfc_id": row["rfc_id"], "version": row["version"]})
         route.fulfill(status=404, headers=CORS, body="not found")

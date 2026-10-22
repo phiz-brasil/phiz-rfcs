@@ -512,6 +512,17 @@ def check(folder, meta=None):
     return errors, warnings
 
 
+def wrap_fragment(page):
+    """A page that starts with <title>… (the shell is a fragment) needs the document skeleton around it."""
+    if page.lstrip().lower().startswith("<!doctype"):
+        return page
+    head = ('<!doctype html>\n<html lang="pt-BR">\n<head>\n<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n')
+    marker = re.search(r"<header|<body|<main|<h1", page)
+    i = marker.start() if marker else len(page)
+    return head + page[:i] + "\n</head>\n<body>\n" + page[i:] + "\n</body>\n</html>\n"
+
+
 # ---------------------------------------------------------------- OpenAPI reference (optional, per RFC)
 
 SWAGGER_VERSION = "5.17.14"

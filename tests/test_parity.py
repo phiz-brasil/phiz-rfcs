@@ -22,7 +22,8 @@ import * as page from "/assets/js/render/page.js";
 import * as blocks from "/assets/js/render/blocks.js";
 import * as sanitize from "/assets/js/render/sanitize.js";
 import * as bundle from "/assets/js/render/bundle.js";
-window.R = { markdown, page, blocks, sanitize, bundle };
+import * as check from "/assets/js/render/check.js";
+window.R = { markdown, page, blocks, sanitize, bundle, check };
 window.ready = true;
 </script>"""
 
