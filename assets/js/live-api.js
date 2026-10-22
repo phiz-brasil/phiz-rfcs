@@ -35,7 +35,16 @@ export const getLatestRevision = async id =>
 
 const post = (fn, body) => request(`rpc/${fn}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
-export const createRfc = ({ meta, bundle, authors, collaborators, by }) =>
-  post("create_rfc", { p_meta: meta, p_bundle: bundle, p_authors: authors, p_collaborators: collaborators, p_by: by });
-export const addRevision = ({ id, meta, bundle, authors, collaborators, by, note }) =>
-  post("add_rfc_revision", { p_rfc_id: id, p_meta: meta, p_bundle: bundle, p_authors: authors, p_collaborators: collaborators, p_by: by, p_note: note || null });
+// `token` ties the images staged with stageAsset() to this publication
+export const createRfc = ({ meta, bundle, authors, collaborators, by, token }) =>
+  post("create_rfc", { p_meta: meta, p_bundle: bundle, p_authors: authors, p_collaborators: collaborators, p_by: by, p_token: token || null });
+export const addRevision = ({ id, meta, bundle, authors, collaborators, by, note, token }) =>
+  post("add_rfc_revision", { p_rfc_id: id, p_meta: meta, p_bundle: bundle, p_authors: authors, p_collaborators: collaborators, p_by: by, p_note: note || null, p_token: token || null });
+
+/* Images: staged one by one before publishing, read back by name. `rev` is the version's revision number: the newest image of that
+   name up to it, so an old version keeps showing the image it had. */
+export const stageAsset = ({ token, name, mime, data, by }) => post("stage_rfc_asset", { p_token: token, p_name: name, p_mime: mime, p_data: data, p_by: by });
+export const LATEST = 2147483647;
+export const getAsset = async (id, name, rev) =>
+  (await request(`rfc_assets?select=mime,data&rfc_id=eq.${q(id)}&name=eq.${q(name)}&rev=lte.${rev}&order=rev.desc&limit=1`))[0] || null;
+export const listAssets = id => request(`rfc_assets?select=name,rev,mime,size&rfc_id=eq.${q(id)}&order=rev.desc`);

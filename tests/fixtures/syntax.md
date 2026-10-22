@@ -14,6 +14,10 @@ line two, an escaped \* star, snake_case_word, 2 * 3 * 4 and <angle> brackets & 
 
 **文字：**中文紧跟着粗体，还有 **状态。**若这样。
 
+![An attached diagram](asset:diagram-1.png "A title") and one with `code` ![alt *emph*](asset:photo.webp).
+
+A bad name stays an ordinary image: ![x](asset:Bad Name.png).
+
 ## Lists {#lists}
 
 - one

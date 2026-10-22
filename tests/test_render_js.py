@@ -148,6 +148,38 @@ class RenderJsTest(SiteCase):
         self.assertNotIn("onerror=\"", out)
         self.assertIn("&lt;script&gt;", out)
 
+    # -- images attached to the RFC ------------------------------------------
+    def with_image(self, pt="diagram.png", en="diagram.png", zh="diagram.png"):
+        good = (ROOT / "tests" / "fixtures" / "valid_bundle.md").read_text(encoding="utf-8")
+        out = good.replace("O problema em uma frase.", f"O problema em uma frase.\n\n![Arquitetura](asset:{pt})", 1)
+        out = out.replace("The problem in one sentence.", f"The problem in one sentence.\n\n![Architecture](asset:{en})", 1)
+        return out.replace("一句话说明问题。", f"一句话说明问题。\n\n![架构](asset:{zh})", 1)
+
+    def test_images_must_be_attached_and_the_same_in_the_three_languages(self):
+        js = "([t, a]) => { const r = R.check.checkBundle(t, { assets: a }); return { ok: r.ok, errors: r.errors, warnings: r.warnings, images: r.images }; }"
+        r = self.js(js, [self.with_image(), ["diagram.png"]])
+        self.assertTrue(r["ok"], r["errors"])
+        self.assertEqual(r["images"], ["diagram.png"])
+        r = self.js(js, [self.with_image(), []])
+        self.assertFalse(r["ok"])
+        self.assertTrue(any('uses the image "diagram.png" but it is not attached' in e for e in r["errors"]), r["errors"])
+        r = self.js(js, [self.with_image(zh="other.png"), ["diagram.png", "other.png"]])
+        self.assertTrue(any("same images" in e for e in r["errors"]), r["errors"])
+        r = self.js(js, [self.with_image(), ["diagram.png", "unused.png"]])
+        self.assertTrue(r["ok"])
+        self.assertTrue(any("unused.png" in w for w in r["warnings"]), r["warnings"])
+
+    def test_the_sanitizer_keeps_the_attachment_name_and_never_a_source(self):
+        out = self.js("(h) => R.sanitize.sanitize(h)", '<p><img data-asset="a.png" alt="x" src="https://evil.example/t.png" onerror="alert(1)"></p>'
+                      '<p><img data-asset="Bad Name.png" alt="y"></p><p><img data-asset="b.png" src="javascript:alert(1)"></p>')
+        self.assertIn('data-asset="a.png"', out)
+        self.assertIn('data-asset="b.png"', out)
+        self.assertNotIn("Bad Name", out)
+        self.assertNotIn("evil.example", out)
+        self.assertNotIn("javascript:", out)
+        self.assertNotIn("onerror", out)
+        self.assertNotIn("src=", out)
+
     def test_renderer_reports_authoring_mistakes(self):
         for text, expect in [("No heading here\n", "before the first"), ("## No id\n", "needs a lowercase id"),
                              ("## A {#a}\n\n[x](#nope)\n", "does not match any section id"),

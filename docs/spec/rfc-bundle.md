@@ -40,6 +40,9 @@ starts as draft (changed on the page afterwards) and the version is counted by t
 | B05 | Each language renders: every `##` has an id, no duplicate ids, links point to existing sections, code blocks name a language. |
 | B06 | Same section ids in the same order, same number of commentable blocks per section, same number of diagrams, and identical code blocks in the three languages (rules F04, F05 and F06 of `rfc-format.md`). |
 | B07 | Size: at most 600 KB. |
+| B08 | The three languages cite the same attached images (`![alt](asset:name.png)`). |
+| B09 | Every cited image is attached (or stored by an earlier version); attachments that are not cited are not sent (warning). |
+| B10 | Attachments: PNG, JPEG or WebP, at most 20 per RFC and 1 MB each (the page shrinks larger pictures to 1600 px and re-encodes them). |
 
 ## Safety
 
@@ -48,6 +51,11 @@ Text a visitor submits is untrusted and is shown on a domain shared with other p
 - It is rendered **without raw HTML** (HTML comments are dropped) and the result goes through DOMPurify with a short allow-list.
 - Images are kept only with `https://` links, and get `loading=lazy` and `referrerpolicy=no-referrer` (a remote image tells its host who
   is reading). Links to other sites open with `rel="noopener noreferrer"`. Only the copy button of code blocks may be a `<button>`.
+- Attached images are written `![alt](asset:name.png)` (name: `[a-z0-9][a-z0-9._-]{0,59}`). The renderer emits `<img data-asset="name">` with
+  no `src`; the viewer fetches the bytes from `rfc_assets` and shows them as blob URLs. Uploads go through `stage_rfc_asset` (a token
+  groups the pictures of one submission) and are finalised atomically inside `create_rfc` / `add_rfc_revision` (`p_token`). The server
+  checks the magic bytes, the 1 MB size and the 20 image limit. A version shows the newest picture of each name stored at or before
+  its revision, so replacing a picture does not change older versions. Migration: `supabase/migrations/20261023000000_rfc_assets.sql`.
 - Ids are limited to `pt-…`, `en-…`, `zh-…` section ids, so they cannot shadow page globals.
 
 RFCs that live in the repository are written by the team and may use raw HTML (status chips, legends, screenshot galleries); the

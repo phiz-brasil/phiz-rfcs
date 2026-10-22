@@ -5,8 +5,9 @@
 const TAGS = ["a", "b", "strong", "i", "em", "br", "hr", "p", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "pre",
   "table", "thead", "tbody", "tr", "th", "td", "div", "span", "section", "figure", "figcaption", "button", "img", "dl", "dt", "dd",
   "sup", "sub", "del", "s"];
-const ATTRS = ["id", "class", "href", "src", "alt", "title", "type", "data-copy", "colspan", "rowspan", "align", "rel", "target", "loading", "referrerpolicy"];
+const ATTRS = ["id", "class", "href", "src", "alt", "title", "type", "data-copy", "data-asset", "colspan", "rowspan", "align", "rel", "target", "loading", "referrerpolicy"];
 const ID_OK = /^(?:pt|en|zh)-[a-z0-9][a-z0-9-]*$/;
+const ASSET_OK = /^[a-z0-9][a-z0-9._-]{0,59}$/;
 
 let ready = false;
 function setup() {
@@ -19,7 +20,10 @@ function setup() {
       if (/^https?:/i.test(href)) { node.setAttribute("target", "_blank"); node.setAttribute("rel", "noopener noreferrer"); }
     }
     if (node.tagName === "IMG") {
-      if (!/^https:\/\//i.test(node.getAttribute("src") || "")) node.remove();       // https images only
+      const asset = node.getAttribute("data-asset");
+      if (asset !== null) {                                                        // an image attached to this RFC: the page loads it by name
+        if (ASSET_OK.test(asset)) { node.removeAttribute("src"); node.setAttribute("loading", "lazy"); } else node.remove();
+      } else if (!/^https:\/\//i.test(node.getAttribute("src") || "")) node.remove();   // otherwise https images only
       else { node.setAttribute("loading", "lazy"); node.setAttribute("referrerpolicy", "no-referrer"); }
     }
     if (node.tagName === "BUTTON" && !(node.hasAttribute("data-copy") && node.classList.contains("copy"))) node.remove();   // only the code figure's copy button
@@ -31,6 +35,7 @@ export function sanitize(html) {
   setup();
   return window.DOMPurify.sanitize(html, {
     ALLOWED_TAGS: TAGS, ALLOWED_ATTR: ATTRS, ALLOW_DATA_ATTR: false, KEEP_CONTENT: true,   // ids are limited by the hook above, so names cannot clobber globals
-    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#)/i
+    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|#)/i,
+    ADD_URI_SAFE_ATTR: ["data-asset"]       // a name, not a URL: the hook above checks it
   });
 }

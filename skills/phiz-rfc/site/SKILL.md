@@ -38,7 +38,7 @@ Translate the Portuguese into the `en` and `zh` sections keeping **the same sect
 - Same number of paragraphs, list items, tables, diagrams and code blocks in each section, in all languages.
 - Every code block names a language (`json`, `bash`, `http`, `python`, `yaml`, `java`, `javascript`, `typescript`, `dart`, `kotlin`, `go`, `sql`, `text`).
 - Links to other sections point to a section id that exists: `[text](#id)`.
-- Only Markdown: no HTML, no scripts, images only as `https://` links.
+- Only Markdown: no HTML, no scripts, images only as `https://` links or as attachments the user uploads on the page: write `![description](asset:name.png)` (lowercase name, no spaces), the same images in the three languages, description translated.
 
 ### 7. Deliver
 

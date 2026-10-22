@@ -148,3 +148,7 @@ li > .cmt-para-panel { margin-top: 8px; }
 .cmt-rxname input { font: 400 .85rem var(--f-body, system-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; width: 140px; }
 /* RFC page drawn from the database (/rfc/) */
 .live-state { padding: 40px 0; color: var(--muted); }
+.lang img[data-asset] { display: block; max-width: 100%; height: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.lang img[data-asset]:not([src]) { min-height: 80px; width: 100%; background: var(--surface) linear-gradient(90deg, transparent, var(--line), transparent) no-repeat; }
+.lang img.zoomable { cursor: zoom-in; }
+.lang img.missing { min-height: 0; border-style: dashed; padding: 12px; color: var(--muted); }

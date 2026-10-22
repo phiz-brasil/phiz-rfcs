@@ -407,6 +407,15 @@ def build_new_rfc_page():
 <p><label class="btn" for="file">{S("Escolher arquivo (.md)", "Choose a file (.md)", "选择文件 (.md)")}</label><input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
  <span class="note">{S("ou cole o conteúdo abaixo", "or paste the content below", "或在下方粘贴内容")}</span></p>
 <textarea id="text" rows="10" spellcheck="false" aria-label="RFC.md"></textarea>
+<div class="assetsbox">
+<h3>{S("Imagens e diagramas (opcional)", "Images and diagrams (optional)", "图片和图表（可选）")}</h3>
+<p>{S("Diagramas em texto (Mermaid) já funcionam direto no arquivo. Para prints e diagramas feitos em outra ferramenta (draw.io, Excalidraw…), exporte em PNG, anexe aqui e cite no texto com o trecho que aparece em cada imagem. Aceitamos PNG, JPEG e WebP; cada imagem é reduzida para até 1 MB, e o limite é de 20 imagens. Use a mesma imagem nos três idiomas.",
+      "Text diagrams (Mermaid) already work straight in the file. For screenshots and diagrams made in another tool (draw.io, Excalidraw…), export as PNG, attach them here and cite them in the text with the snippet shown for each image. We accept PNG, JPEG and WebP; each image is reduced to at most 1 MB, and the limit is 20 images. Use the same image in the three languages.",
+      "文本图表（Mermaid）可直接写在文件中。对于截图以及用其他工具（draw.io、Excalidraw 等）制作的图表，请导出为 PNG，在此附加，并使用每张图片旁显示的片段在正文中引用。支持 PNG、JPEG 和 WebP；每张图片会被缩小到最多 1 MB，上限为 20 张。三种语言请使用同一张图片。")}</p>
+<p><label class="btn" for="imgs">{S("Anexar imagens", "Attach images", "附加图片")}</label><input type="file" id="imgs" accept="image/png,image/jpeg,image/webp" multiple hidden>
+<span id="imgs-note" class="note" aria-live="polite"></span></p>
+<ul id="assets" class="assets"></ul>
+</div>
 <div id="result" aria-live="polite"></div>
 <p id="preview-bar" hidden><button type="button" class="btn" id="preview-toggle">{S("Ver prévia", "Preview", "预览")}</button>
 <span class="langs" role="group" id="preview-langs" hidden><button type="button" data-pl="pt" aria-pressed="true">PT-BR</button><button type="button" data-pl="en" aria-pressed="false">EN-US</button><button type="button" data-pl="zh" aria-pressed="false">中文</button></span></p>

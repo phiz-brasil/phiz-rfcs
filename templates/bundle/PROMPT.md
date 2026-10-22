@@ -10,7 +10,7 @@ Regras:
 4. Troque TODO marcador `TODO:` por conteúdo. Se uma informação não está nos meus documentos, não invente: escreva "a confirmar" e
    coloque a dúvida na seção de perguntas em aberto, endereçada a alguém.
 5. Frases curtas e concretas. Tabelas para comparações ("hoje x depois"). Cite arquivos, classes e documentos usados.
-6. Só Markdown: sem HTML, sem scripts, sem imagens que não sejam links https. Nunca coloque senhas, tokens, chaves ou dados de clientes.
+6. Só Markdown: sem HTML, sem scripts, imagens só como link https ou como anexo do site: se eu for anexar arquivos (PNG, JPEG ou WebP) escreva `![descrição](asset:nome.png)` (nome em minúsculas, sem espaços) e use a mesma imagem nos três idiomas, com a descrição traduzida. Nunca coloque senhas, tokens, chaves ou dados de clientes.
 7. Componentes que o modelo mostra e você pode usar: tabelas, `::: note|decision|risk Rótulo`, `::: stats`, `::: phases`
    (`##### FASE 1: Nome`), `::: questions`, `::: endpoints`, blocos ```json / bash / http / python …, e diagramas
    ```mermaid Legenda de uma frase (se a legenda tiver crases, abra o bloco com ~~~mermaid).

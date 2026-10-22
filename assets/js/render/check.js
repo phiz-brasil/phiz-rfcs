@@ -17,8 +17,15 @@ function todoErrors(md) {
   return errors;
 }
 
-/* → { ok, errors, warnings, meta, md, bodies } ; `bodies[lang]` is { body, ids } with `§` ids when every language rendered. */
-export function checkBundle(text) {
+// the image names (![alt](asset:name)) a rendered body uses
+export function assetNames(bodyHtml) {
+  const doc = new DOMParser().parseFromString(`<body>${bodyHtml}</body>`, "text/html");
+  return [...new Set([...doc.body.querySelectorAll("img[data-asset]")].map(i => i.dataset.asset))].sort();
+}
+
+/* → { ok, errors, warnings, meta, md, bodies, images } ; `bodies[lang]` is { body, ids } with `§` ids when every language rendered.
+   `assets` are the names of the images that will be available: the files attached now, plus the ones the RFC already has when editing. */
+export function checkBundle(text, { assets = [] } = {}) {
   const errors = [];
   const warnings = [];
   if (String(text).length > MAX_BUNDLE) errors.push(`The file is too large (${Math.round(String(text).length / 1000)} KB; the limit is ${MAX_BUNDLE / 1000} KB).`);
@@ -57,5 +64,15 @@ export function checkBundle(text) {
       }
     }
   }
-  return { ok: errors.length === 0, errors, warnings, meta, md, bodies };
+  let images = [];
+  if (LANGS.every(l => bodies[l])) {
+    const names = Object.fromEntries(LANGS.map(l => [l, assetNames(bodies[l].body)]));
+    images = [...new Set(LANGS.flatMap(l => names[l]))].sort();
+    if (LANGS.some(l => names[l].join() !== names.pt.join())) {
+      errors.push(`The three languages must use the same images: PT uses ${names.pt.join(", ") || "none"}; EN ${names.en.join(", ") || "none"}; ZH ${names.zh.join(", ") || "none"}.`);
+    }
+    for (const n of images) if (!assets.includes(n)) errors.push(`The text uses the image "${n}" but it is not attached.`);
+    for (const n of assets) if (!images.includes(n)) warnings.push(`The image "${n}" is attached but not used in the text, so it will not be sent.`);
+  }
+  return { ok: errors.length === 0, errors, warnings, meta, md, bodies, images };
 }
