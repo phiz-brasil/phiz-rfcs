@@ -1,2 +1,3 @@
 -r requirements.txt
 playwright==1.49.1
+pglast==8.3

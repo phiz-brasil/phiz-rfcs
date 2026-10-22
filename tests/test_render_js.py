@@ -105,6 +105,49 @@ class RenderJsTest(SiteCase):
             self.assertEqual(parts["pt"]["s"]["blocks"], parts[other]["s"]["blocks"])
             self.assertEqual(parts["pt"]["s"]["diagrams"], parts[other]["s"]["diagrams"])
 
+    # -- the checks that gate an upload -------------------------------------
+    def check(self, text):
+        return self.js("(t) => { const r = R.check.checkBundle(t); return { ok: r.ok, errors: r.errors, meta: r.meta }; }", text)
+
+    def test_a_complete_bundle_passes_every_check(self):
+        r = self.check((ROOT / "tests" / "fixtures" / "valid_bundle.md").read_text(encoding="utf-8"))
+        self.assertEqual(r["errors"], [])
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["meta"]["title"]["en"], "Test integration")
+
+    def test_the_raw_template_is_refused_because_of_its_placeholders(self):
+        r = self.check((ROOT / "templates" / "bundle" / "RFC.md").read_text(encoding="utf-8"))
+        self.assertFalse(r["ok"])
+        self.assertTrue(any("TODO:" in e for e in r["errors"]))
+
+    def test_each_kind_of_problem_is_reported(self):
+        good = (ROOT / "tests" / "fixtures" / "valid_bundle.md").read_text(encoding="utf-8")
+        cases = [
+            ("a different section id", good.replace("## Summary {#summary}", "## Summary {#resume}"), "Section ids differ"),
+            ("a missing paragraph", good.replace("The problem in one sentence.\n\n", "", 1), "different number of paragraphs"),
+            ("a missing diagram", good.replace("```mermaid Current flow.\nflowchart LR\n  A[\"System A\"] --> B[\"System B\"]\n```\n\n", "", 1), "different number of"),
+            ("a changed code sample", good.replace('curl -X GET "https://api.example.com/v1/items"', "curl https://other", 2).replace("curl https://other", "curl -X GET https://x", 1), "not identical"),
+            ("a TODO", good.replace("Another sentence.", "TODO: fill"), "TODO:"),
+            ("a broken link", good.replace("The problem in one sentence.", "See [x](#nowhere)."), "does not match any section id"),
+            ("a code block without language", good.replace("```bash\ncurl -X GET", "```\ncurl -X GET", 1), "needs a language"),
+            ("no metadata", good.replace("title_zh: 测试集成\n", ""), "title_zh"),
+            ("too large", good + "x" * 600001, "too large"),
+        ]
+        for name, text, expect in cases:
+            with self.subTest(name):
+                r = self.check(text)
+                self.assertFalse(r["ok"], name)
+                self.assertTrue(any(expect in e for e in r["errors"]), r["errors"])
+
+    def test_raw_html_in_an_upload_is_shown_as_text_never_run(self):
+        good = (ROOT / "tests" / "fixtures" / "valid_bundle.md").read_text(encoding="utf-8")
+        evil = good.replace("The problem in one sentence.", '<script>alert(1)</script> and <img src=x onerror=alert(2)>')
+        out = self.js("(t) => { const r = R.check.checkBundle(t); return R.sanitize.sanitize(R.page.pageBody(r.bodies.en.body, 'en').html); }", evil)
+        self.assertNotIn("<script", out)
+        self.assertNotIn("<img", out)
+        self.assertNotIn("onerror=\"", out)
+        self.assertIn("&lt;script&gt;", out)
+
     def test_renderer_reports_authoring_mistakes(self):
         for text, expect in [("No heading here\n", "before the first"), ("## No id\n", "needs a lowercase id"),
                              ("## A {#a}\n\n[x](#nope)\n", "does not match any section id"),

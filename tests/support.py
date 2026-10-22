@@ -42,7 +42,7 @@ class SiteCase(unittest.TestCase):
 
     def setUp(self):
         self.db = FakeSupabase()
-        self.context = self.browser.new_context(viewport={"width": 1400, "height": 900})
+        self.context = self.browser.new_context(viewport={"width": 1400, "height": 900}, locale="pt-BR")   # the site picks its language from the browser; CI runs in en-US
         self.context.set_default_timeout(8000)
         # everything outside the local server (fonts, CDNs) is dropped; Playwright tries the last registered route first,
         # so the Supabase route goes after it

@@ -1,0 +1,23 @@
+/* The new-RFC page (/nova/): steps, fields, checks, preview. Uses the index page's colours. */
+.nova h1 { margin-bottom: 4px; }
+.steps { list-style: none; padding: 0; margin: 22px 0 60px; display: grid; gap: 18px; counter-reset: s; }
+.steps > li { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 16px 18px; }
+.steps h2 { font: 700 1.1rem/1.3 "Schibsted Grotesk", system-ui, sans-serif; margin: 0 0 8px; }
+.steps p { margin: 0 0 10px; }
+.steps textarea, .steps input:not([type=file]) { width: 100%; box-sizing: border-box; font: 400 .9rem/1.5 "IBM Plex Sans", system-ui, sans-serif; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.steps textarea { resize: vertical; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .8rem; }
+.steps textarea:focus, .steps input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+.btn { display: inline-block; font: 600 .85rem "IBM Plex Sans", system-ui, sans-serif; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; text-decoration: none; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #052e16; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.note { color: var(--muted); font-size: .85rem; }
+.fields { display: grid; gap: 12px; margin-bottom: 12px; }
+.fields label { display: grid; gap: 4px; font-weight: 600; font-size: .88rem; }
+.req { color: var(--accent-ink); }
+#result .ok { color: var(--accent-ink); font-weight: 600; }
+#result .bad { color: #b3261e; font-weight: 600; margin-bottom: 4px; }
+.issues { margin: 0 0 10px; padding-left: 20px; font-size: .88rem; }
+.issues li { margin-bottom: 4px; }
+#preview { width: 100%; height: 70vh; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+[hidden] { display: none !important; }

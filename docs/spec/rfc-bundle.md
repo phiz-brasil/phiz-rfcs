@@ -58,3 +58,16 @@ renderer takes a flag for that, and only the build and the parity tests use it.
 The browser renderer (`assets/js/render/`) is a port of `tools/rfc_md.py`. `tests/test_parity.py` renders every RFC of the repository,
 the template and `tests/fixtures/syntax.md` with both and compares the HTML, the section ids, the commentable blocks per section,
 the header and the contents list. A change to either renderer that is not made in the other fails that test.
+
+## Where an uploaded RFC lives
+
+The site stores each upload in the database instead of the repository (`supabase/migrations/20261022000000_live_rfcs.sql`):
+
+- **Ids** come from one sequence shared with the repository (`rfc_ids`, function `reserve_rfc_id`, used by `tools/new_rfc.py`), so a site RFC and
+  a repository RFC never get the same `PHZ-NNNN`.
+- **Revisions** are append-only (`rfc_revisions`: the file as uploaded, the extracted metadata, authors, collaborators, who edited, an optional
+  note). Creating is `create_rfc`, editing is `add_rfc_revision`; the version is `1.0`, then `1.1`, `1.2`… Nothing is overwritten, and any version
+  can be read at `/rfc/?id=PHZ-NNNN&v=1.1` (read-only).
+- **Limits** per origin: 5 creations an hour (20 a day) and 30 revisions an hour (200 a day); 600 KB a file; 10 authors, 20 collaborators.
+- **Moderation**: set `hidden = true` on the row of `rfc_ids` in the Table Editor to take an RFC off the site (and `false` to bring it back).
+- Comments, reactions, status and per-paragraph comments work as for any RFC: they are keyed by the `PHZ-NNNN` id.

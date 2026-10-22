@@ -108,14 +108,7 @@ def banner_html(shown, cur):
 
 def render_rfc(d, meta, text, out, shown, frozen, status, up):
     """Writes one RFC page. `up` is the path from the page to the site root ('../../')."""
-    page = text
-    if not page.lstrip().lower().startswith("<!doctype"):
-        # the source is a fragment (the Artifact viewer adds the skeleton); hosted pages need their own
-        head = ('<!doctype html>\n<html lang="pt-BR">\n<head>\n<meta charset="utf-8">\n'
-                '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n')
-        marker = re.search(r"<header|<body|<main|<h1", page)
-        i = marker.start() if marker else len(page)
-        page = head + page[:i] + "\n</head>\n<body>\n" + page[i:] + "\n</body>\n</html>\n"
+    page = rfc_md.wrap_fragment(text)
     cur, _ = versions_of(d, meta)
     page = page.replace("{{UP}}", up)
     page = page.replace('<span class="rfcno">', f'<a class="back" href="{up}">← RFCs</a><span class="rfcno">', 1)
@@ -185,6 +178,7 @@ h1{font:800 clamp(1.8rem,5vw,2.6rem)/1.1 "Schibsted Grotesk",system-ui,sans-seri
 .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .id{font:600 .78rem "JetBrains Mono",ui-monospace,monospace;color:var(--muted)}
 .ver{font:600 .72rem "JetBrains Mono",ui-monospace,monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.navc.newrfc{background:var(--accent)!important;border-color:var(--accent)!important;color:#052e16!important;font-weight:600}
 .badge{font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
 [data-st=draft]{color:var(--muted)}[data-st=in-review]{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
 [data-st=approved]{background:#dff3e4;color:#17692f;border-color:transparent}[data-st=implemented]{background:#dbeafe;color:#1d4ed8;border-color:transparent}
@@ -210,13 +204,14 @@ function set(l){document.documentElement.dataset.lang=l;document.documentElement
 document.querySelectorAll("[data-set-lang]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.setLang===l))})}
 document.querySelectorAll("[data-set-lang]").forEach(function(b){b.onclick=function(){set(b.dataset.setLang)}});set(g());
 var fl=document.querySelector(".filters");
-fl.addEventListener("click",function(e){var b=e.target.closest("[data-filter]");if(!b)return;
+if(fl)fl.addEventListener("click",function(e){var b=e.target.closest("[data-filter]");if(!b)return;
 fl.querySelectorAll("[data-filter]").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});
 document.querySelectorAll(".card-li").forEach(function(c){c.hidden=b.dataset.filter!=="all"&&c.dataset.status!==b.dataset.filter})})})();
 """
 
 
 T_COMMENTS = {"pt": "Comentários", "en": "Comments", "zh": "评论"}
+T_NEW = {"pt": "Nova RFC", "en": "New RFC", "zh": "新建 RFC"}
 
 INDEX_COUNTS_JS = """
 (function(){var c=window.PHIZ_CMT||{};if(!c.supabaseUrl||!c.supabaseKey)return;
@@ -239,6 +234,7 @@ if(open){var o=document.createElement("span");o.className="o";o.textContent="· 
 if(nw){var n=document.createElement("span");n.className="n";n.textContent=nw+" "+w[2];s.appendChild(n)}});
 var cc=document.querySelector(".ccount"),nb=document.querySelector(".cnewb");
 if(cc){cc.textContent=String(tot);cc.hidden=!tot}if(nb){nb.textContent=fresh+" "+(W[lg()]||W.pt)[2];nb.hidden=!fresh}}
+window.phizCountsRepaint=paint;
 fetch(c.supabaseUrl.replace(/\\/+$/,"")+"/rest/v1/rfc_comments?select=id,rfc_id,parent_id,author,created_at&limit=5000",{headers:h})
 .then(function(r){return r.ok?r.json():[]}).then(function(d){var tops={};d.forEach(function(x){if(!x.parent_id)tops[x.id]=1});
 data=d.filter(function(x){return!x.parent_id||tops[x.parent_id]});paint()}).catch(function(){});
@@ -335,13 +331,99 @@ def build_index(items):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap">
 <style>{INDEX_CSS}</style></head><body>
 <header><div class="wrap"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>PHIZCHAT</span></div>
-<div class="hright"><a class="navc" href="comments/">💬 {spans(T_COMMENTS)}<span class="ccount" hidden></span><span class="cnewb" hidden></span></a>
+<div class="hright"><a class="navc newrfc" href="nova/">＋ {spans(T_NEW)}</a><a class="navc" href="comments/">💬 {spans(T_COMMENTS)}<span class="ccount" hidden></span><span class="cnewb" hidden></span></a>
 <div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></div></header>
 <main class="wrap"><h1>RFCs</h1>
 <p class="lead">{spans({"pt": "Propostas técnicas da plataforma, com status e comentários por seção.", "en": "Platform technical proposals, with status and per-section comments.", "zh": "平台技术提案，含状态与分节评论。"})}</p>
 <div class="filters" role="group">{fl}</div>
-<ul class="list">{"".join(lis)}</ul></main><script>window.PHIZ_CMT={json.dumps(CFG.get("comments", {}))};{INDEX_JS}{INDEX_COUNTS_JS}window.PHIZ_STATUS_INDEX=true;</script>
-<script src="assets/status.js"></script></body></html>'''
+<ul class="list">{"".join(lis)}</ul></main><script>window.PHIZ_CMT={json.dumps(CFG.get("comments", {}))};window.PHIZ_SITE={json.dumps({"comments": CFG.get("comments", {})})};{INDEX_JS}{INDEX_COUNTS_JS}window.PHIZ_STATUS_INDEX=true;</script>
+<script src="assets/status.js"></script>
+<script type="module" src="assets/js/index-live.js"></script></body></html>'''
+
+
+def live_config():
+    return {"repo": CFG["repo"], "giscus": CFG["giscus"], "comments": CFG.get("comments", {})}
+
+
+def build_viewer():
+    """dist/rfc/index.html: the page that shows an RFC created on the site (/rfc/?id=PHZ-1001); assets/js/live.js fills it in."""
+    shell = (ROOT / "templates" / "shell.html").read_text(encoding="utf-8")
+    css = (ROOT / "templates" / "page.css").read_text(encoding="utf-8")
+    loading = {"pt": "Carregando a RFC…", "en": "Loading the RFC…", "zh": "正在加载 RFC…"}
+    page = re.sub(r"<title>.*?</title>", "<title>RFC</title>", shell, count=1, flags=re.S)
+    page = (page.replace("RFC {{ID}}", "RFC").replace("/*CSS*/", css)
+            .replace("<!--CONTENT-->", f'<p class="live-state">{spans(loading)}</p>').replace("<!--TOC-->", ""))
+    page = rfc_md.wrap_fragment(page)
+    page = page.replace('<span class="rfcno">', '<a class="back" href="../">← RFCs</a><span class="rfcno">', 1)
+    page = page.replace("</title>", '</title>\n<link rel="stylesheet" href="../assets/rfc-site.css">', 1)
+    inject = (f'<script>window.PHIZ_SITE={json.dumps(live_config())};</script>\n<script src="../assets/mermaid.min.js"></script>\n'
+              '<script src="../assets/vendor/markdown-it.min.js"></script>\n<script src="../assets/vendor/markdown-it-container.min.js"></script>\n'
+              '<script src="../assets/vendor/purify.min.js"></script>\n<script type="module" src="../assets/js/live.js"></script>\n</body>')
+    return page.replace("</body>", inject, 1)
+
+
+def build_new_rfc_page():
+    """dist/nova/index.html: the page where anyone creates (or edits) an RFC from the single-file template."""
+    def S(pt, en, zh):
+        return spans({"pt": pt, "en": en, "zh": zh})
+    return f'''<!doctype html><html lang="pt-BR" data-lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{e(CFG["title"])} · Nova RFC</title><meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap">
+<style>{INDEX_CSS}</style><link rel="stylesheet" href="../assets/nova.css"></head><body>
+<header><div class="wrap"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>PHIZCHAT</span></div>
+<div class="hright"><a class="navc" href="../">← RFCs</a>
+<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></div></header>
+<main class="wrap nova">
+<h1 id="nova-title"><span class="only-new">{S("Nova RFC", "New RFC", "新建 RFC")}</span><span class="only-edit" hidden>{S("Nova versão de", "New version of", "新版本：")} <span id="edit-id"></span></span></h1>
+<p class="lead">{S("Monte a sua RFC em quatro passos. Não precisa de conta nem de código: o arquivo que você enviar vira uma página do site, com comentários, status e histórico de versões.",
+                    "Build your RFC in four steps. No account and no code needed: the file you upload becomes a page of the site, with comments, status and version history.",
+                    "四步完成你的 RFC。无需账号，也无需代码：你上传的文件会变成站点上的一个页面，带有评论、状态和版本历史。")}</p>
+<ol class="steps">
+<li><h2>1. {S("Baixe o modelo", "Download the template", "下载模板")}</h2>
+<p class="only-new">{S("É um arquivo só, com português, inglês e chinês. Cada ponto a preencher está marcado com TODO:.", "It is a single file with Portuguese, English and Chinese. Every spot to fill is marked TODO:.", "这是一个同时包含葡萄牙语、英语和中文的单一文件。每个待填写处都标有 TODO:。")}</p>
+<p class="only-edit" hidden>{S("O arquivo da versão atual já está abaixo, no passo 3. Você também pode baixá-lo para editar no seu computador.", "The current version's file is already in step 3. You can also download it to edit on your computer.", "当前版本的文件已在第 3 步中。你也可以下载后在自己的电脑上编辑。")}</p>
+<p><a class="btn" id="dl-template" href="../assets/templates/RFC.md" download="RFC.md">{S("Baixar o modelo (RFC.md)", "Download the template (RFC.md)", "下载模板 (RFC.md)")}</a>
+<a class="btn" id="dl-current" href="#" download="RFC.md" hidden>{S("Baixar a versão atual", "Download the current version", "下载当前版本")}</a></p></li>
+<li><h2>2. {S("Peça a uma IA para preencher", "Ask an AI to fill it in", "请 AI 帮忙填写")}</h2>
+<p>{S("Abra a IA de sua preferência (Claude, ChatGPT…), cole o texto abaixo, anexe o modelo e os seus documentos. Com o Claude Code, a skill phiz-rfc faz isso direto no repositório.",
+      "Open the AI you prefer (Claude, ChatGPT…), paste the text below and attach the template and your documents. With Claude Code, the phiz-rfc skill does this in the repository.",
+      "打开你喜欢的 AI（Claude、ChatGPT 等），粘贴下面的文字，并附上模板和你的文档。使用 Claude Code 时，phiz-rfc skill 可直接在仓库中完成。")}</p>
+<textarea id="prompt" rows="8" readonly aria-label="Prompt"></textarea>
+<p><button type="button" class="btn" id="copy-prompt">{S("Copiar o texto", "Copy the text", "复制文字")}</button> <span id="copied" class="note" aria-live="polite"></span></p></li>
+<li><h2>3. {S("Envie o arquivo preenchido", "Upload the filled file", "上传填写好的文件")}</h2>
+<p><label class="btn" for="file">{S("Escolher arquivo (.md)", "Choose a file (.md)", "选择文件 (.md)")}</label><input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
+ <span class="note">{S("ou cole o conteúdo abaixo", "or paste the content below", "或在下方粘贴内容")}</span></p>
+<textarea id="text" rows="10" spellcheck="false" aria-label="RFC.md"></textarea>
+<div id="result" aria-live="polite"></div>
+<p id="preview-bar" hidden><button type="button" class="btn" id="preview-toggle">{S("Ver prévia", "Preview", "预览")}</button>
+<span class="langs" role="group" id="preview-langs" hidden><button type="button" data-pl="pt" aria-pressed="true">PT-BR</button><button type="button" data-pl="en" aria-pressed="false">EN-US</button><button type="button" data-pl="zh" aria-pressed="false">中文</button></span></p>
+<iframe id="preview" title="Preview" sandbox="allow-scripts" hidden></iframe></li>
+<li><h2>4. {S("Quem escreveu", "Who wrote it", "作者")}</h2>
+<div class="fields">
+<label><span>{S("Seu nome", "Your name", "你的名字")} <span class="req">*</span></span><input id="by" maxlength="60" autocomplete="name"></label>
+<label class="only-edit" hidden>{S("Autores (um por linha)", "Authors (one per line)", "作者（每行一位）")}<textarea id="authors" rows="2"></textarea></label>
+<label>{S("Colaboradores (um por linha ou separados por vírgula)", "Collaborators (one per line or comma separated)", "协作者（每行一位或用逗号分隔）")}<textarea id="collabs" rows="2"></textarea></label>
+<label class="only-edit" hidden>{S("O que mudou (opcional)", "What changed (optional)", "改动说明（可选）")}<input id="note" maxlength="300"></label>
+</div>
+<p class="note">{S("Ao publicar, a RFC aparece no índice como Rascunho. Qualquer pessoa com o link pode ler, comentar e enviar novas versões; o histórico fica guardado e nada é sobrescrito.",
+                   "When you publish, the RFC shows in the index as a Draft. Anyone with the link can read it, comment and upload new versions; the history is kept and nothing is overwritten.",
+                   "发布后，RFC 会以草稿状态出现在索引中。任何持有链接的人都可以阅读、评论并上传新版本；历史会被保留，不会覆盖任何内容。")}</p>
+<p><button type="button" class="btn primary" id="publish" disabled><span class="only-new">{S("Publicar RFC", "Publish RFC", "发布 RFC")}</span><span class="only-edit" hidden>{S("Publicar nova versão", "Publish new version", "发布新版本")}</span></button>
+<span id="publish-note" class="note" aria-live="polite"></span></p></li>
+</ol></main>
+<script>window.PHIZ_SITE={json.dumps(live_config())};</script>
+<script src="../assets/vendor/markdown-it.min.js"></script><script src="../assets/vendor/markdown-it-container.min.js"></script><script src="../assets/vendor/purify.min.js"></script>
+<script type="module" src="../assets/js/nova.js"></script></body></html>'''
+
+
+def build_live_pages():
+    shutil.copytree(ROOT / "templates" / "bundle", DIST / "assets" / "templates")
+    shutil.copy(ROOT / "templates" / "page.css", DIST / "assets" / "page.css")     # the preview frame of the new-RFC page
+    (DIST / "rfc").mkdir()
+    (DIST / "rfc" / "index.html").write_text(build_viewer(), encoding="utf-8")
+    (DIST / "nova").mkdir()
+    (DIST / "nova" / "index.html").write_text(build_new_rfc_page(), encoding="utf-8")
 
 
 def main():
@@ -353,6 +435,7 @@ def main():
     for d, m in items:
         build_rfc(d, m)
     (DIST / "index.html").write_text(build_index(items), encoding="utf-8")
+    build_live_pages()
     (DIST / "comments").mkdir()
     (DIST / "comments" / "index.html").write_text(build_comments(items), encoding="utf-8")
     print(f"built {len(items)} RFC(s) -> {DIST}")

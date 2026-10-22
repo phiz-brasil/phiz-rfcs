@@ -110,7 +110,7 @@ The page scripts have smoke tests that run in a real browser against the built s
 PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests -v   # uses your Chrome; CI installs Playwright's Chromium
 ```
 
-The Python and JavaScript renderers are compared by `tests/test_parity.py`; `tests/test_render_js.py` covers the single-file reader and the sanitizer (including XSS vectors).
+RFCs created on the site are covered by `tests/test_live.py` (new-RFC page, viewer, edit, index, hostile content); the migrations are parsed by `tests/test_sql.py`. The Python and JavaScript renderers are compared by `tests/test_parity.py`; `tests/test_render_js.py` covers the single-file reader and the sanitizer (including XSS vectors).
 
 The page scripts live in `assets/js/` as ES modules (`main.js` is the entry; `state.js` holds the config and the only shared mutable state).
 
@@ -141,6 +141,14 @@ Open it as a pull request if you want review before it appears in the index.
 ## The single-file RFC and the browser renderer
 
 An RFC can also be written as **one `.md` file** with a metadata block and the three languages ([`docs/spec/rfc-bundle.md`](docs/spec/rfc-bundle.md); template: [`templates/bundle/RFC.md`](templates/bundle/RFC.md); prompt to give any AI together with your documents: [`templates/bundle/PROMPT.md`](templates/bundle/PROMPT.md)). The file is read and rendered **in the browser** by `assets/js/render/` (markdown-it and DOMPurify from `assets/vendor/`), with no raw HTML and sanitized output, because it comes from people outside the team. That renderer is a port of `tools/rfc_md.py`; `tests/test_parity.py` renders every RFC with both and fails when they differ, so a change to one renderer has to be made in the other.
+
+## RFCs created on the site
+
+Anyone can create an RFC from the site, with no account and no code: **＋ Nova RFC** on the index (`/nova/`) walks through four steps: download the template, ask an AI to fill it in (the page shows a ready prompt), upload the file (checked in the browser, with a preview in the three languages), and say who wrote it (author and collaborators). The RFC is stored in Supabase and shown at `/rfc/?id=PHZ-NNNN` straight away, with comments, reactions, status and version history; **Nova versão** on its page uploads a new version (anyone can; every version is kept). It appears in the index next to the repository RFCs. Format: [`docs/spec/rfc-bundle.md`](docs/spec/rfc-bundle.md).
+
+1. **Database**: apply [`20261022000000_live_rfcs.sql`](supabase/migrations/20261022000000_live_rfcs.sql) (it creates the shared id sequence, the revisions and the functions the page calls). Until then the page says it cannot publish.
+2. **Take one down**: **Table Editor → rfc_ids**, set `hidden = true` on the row.
+3. `tools/new_rfc.py` now asks the same sequence for the next id, so a repository RFC and a site RFC never collide (it falls back to the next id in the repository, with a warning, when the database cannot be reached).
 
 ## Versions
 

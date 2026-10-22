@@ -151,5 +151,5 @@
   }
 
   if (rfcId) initPage();
-  else if (window.PHIZ_STATUS_INDEX) initIndex();
+  else if (window.PHIZ_STATUS_INDEX) { window.phizStatusIndexRefresh = initIndex; initIndex(); }
 })();

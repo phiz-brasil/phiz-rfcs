@@ -61,6 +61,10 @@
       if (r.status === 400) r = await fetch(sb.url + q(base), { headers: sb.headers });   // translation columns not created yet
       if (!r.ok) throw new Error("HTTP " + r.status);
       const data = await r.json();
+      try {      // RFCs created on the site are not in the build-time list: take their titles from the database
+        const lr = await fetch(sb.url.replace(/rfc_comments$/, "rfc_live_current?select=rfc_id,meta"), { headers: sb.headers });
+        if (lr.ok) for (const x of await lr.json()) rfcById[x.rfc_id] = { id: x.rfc_id, title: x.meta.title, sections: {}, live: true };
+      } catch (e) { /* the list still works with ids only */ }
       const tops = new Set(data.filter(c => !c.parent_id).map(c => c.id));
       rows = data.filter(c => !c.parent_id || tops.has(c.parent_id));
       const me = store.get("phiz-rfc-author");
@@ -156,7 +160,8 @@
         li.append(rl);
       }
       const a = el("a", "cgo", L().open);
-      a.href = `../rfcs/${encodeURIComponent(c.rfc_id)}/?c=${encodeURIComponent(c.id)}#${lang()}-${c.section}`;
+      const live = rfcById[c.rfc_id] && rfcById[c.rfc_id].live;
+      a.href = (live ? `../rfc/?id=${encodeURIComponent(c.rfc_id)}&` : `../rfcs/${encodeURIComponent(c.rfc_id)}/?`) + `c=${encodeURIComponent(c.id)}#${lang()}-${c.section}`;
       li.append(a);
       list.append(li);
     }

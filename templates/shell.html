@@ -83,5 +83,7 @@
 
   if (matchMedia("(max-width: 960px)").matches) document.getElementById("toc-details").removeAttribute("open");
   setLang(pick());
+  // pages whose content is drawn after load (RFCs from the database) call this once it exists
+  window.phizApplyLang = () => { current = null; setLang(pick()); };
 })();
 </script>
