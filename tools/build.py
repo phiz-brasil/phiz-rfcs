@@ -8,7 +8,7 @@
   rfcs/<ID>/*            other files (images…) are copied as is
 Folders that start with "_" (e.g. _template) are ignored.
 """
-import html, json, re, shutil, sys
+import html, json, re, shutil, sys, zipfile
 from pathlib import Path
 
 import rfc_md
@@ -390,7 +390,19 @@ def build_new_rfc_page():
       "Open the AI you prefer (Claude, ChatGPT…), paste the text below and attach the template and your documents. With Claude Code, the phiz-rfc skill does this in the repository.",
       "打开你喜欢的 AI（Claude、ChatGPT 等），粘贴下面的文字，并附上模板和你的文档。使用 Claude Code 时，phiz-rfc skill 可直接在仓库中完成。")}</p>
 <textarea id="prompt" rows="8" readonly aria-label="Prompt"></textarea>
-<p><button type="button" class="btn" id="copy-prompt">{S("Copiar o texto", "Copy the text", "复制文字")}</button> <span id="copied" class="note" aria-live="polite"></span></p></li>
+<p><button type="button" class="btn" id="copy-prompt">{S("Copiar o texto", "Copy the text", "复制文字")}</button> <span id="copied" class="note" aria-live="polite"></span></p>
+<details class="skillbox" id="skillbox"><summary>{S("Prefere uma skill? Baixe ou copie a skill phiz-rfc", "Prefer a skill? Download or copy the phiz-rfc skill", "更喜欢 skill？下载或复制 phiz-rfc skill")}</summary>
+<p>{S("A skill ensina a IA a preencher o modelo do jeito certo (estrutura, tradução, diagramas) e a conferir o resultado antes de entregar o arquivo. Ela já traz o modelo dentro.",
+      "The skill teaches the AI to fill in the template the right way (structure, translation, diagrams) and to check the result before handing over the file. It already contains the template.",
+      "该 skill 教 AI 以正确的方式填写模板（结构、翻译、图表），并在交付文件前检查结果。模板已包含在内。")}</p>
+<p><a class="btn" id="dl-skill" href="../assets/skill/phiz-rfc.zip" download="phiz-rfc.zip">{S("Baixar a skill (.zip)", "Download the skill (.zip)", "下载 skill (.zip)")}</a>
+<button type="button" class="btn" id="copy-skill">{S("Copiar o texto completo da skill", "Copy the full text of the skill", "复制 skill 全文")}</button> <span id="skill-copied" class="note" aria-live="polite"></span></p>
+<ul class="how">
+<li><b>Claude Code:</b> {S("descompacte em ~/.claude/skills e peça: “use a skill phiz-rfc para preencher o RFC.md com estes documentos”.", "unzip into ~/.claude/skills and ask: “use the phiz-rfc skill to fill in RFC.md from these documents”.", "解压到 ~/.claude/skills，然后说：“用 phiz-rfc skill，根据这些文档填写 RFC.md”。")}
+<pre class="cmd">mkdir -p ~/.claude/skills &amp;&amp; unzip -o ~/Downloads/phiz-rfc.zip -d ~/.claude/skills</pre></li>
+<li><b>Claude (claude.ai / app):</b> {S("na tela de Skills das configurações, envie o arquivo .zip e depois peça o mesmo.", "in the Skills screen of the settings, upload the .zip file and then ask the same.", "在设置的 Skills 页面上传 .zip 文件，然后提出同样的请求。")}</li>
+<li><b>{S("Outras IAs", "Other AIs", "其他 AI")}:</b> {S("use o texto acima, ou copie o texto completo da skill e cole como instruções junto com os seus documentos.", "use the text above, or copy the full text of the skill and paste it as instructions together with your documents.", "使用上面的文字，或复制 skill 全文，连同你的文档一起作为指令粘贴。")}</li>
+</ul></details></li>
 <li><h2>3. {S("Envie o arquivo preenchido", "Upload the filled file", "上传填写好的文件")}</h2>
 <p><label class="btn" for="file">{S("Escolher arquivo (.md)", "Choose a file (.md)", "选择文件 (.md)")}</label><input type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
  <span class="note">{S("ou cole o conteúdo abaixo", "or paste the content below", "或在下方粘贴内容")}</span></p>
@@ -417,9 +429,41 @@ def build_new_rfc_page():
 <script type="module" src="../assets/js/nova.js"></script></body></html>'''
 
 
+SKILL_FILES = ["references/structure.md", "references/markdown.md", "references/mermaid.md"]     # the download is self-contained
+
+
+def skill_files():
+    """{path inside the skill folder: text} of the edition people download from the new-RFC page."""
+    src = ROOT / "skills" / "phiz-rfc"
+    files = {"SKILL.md": (src / "site" / "SKILL.md").read_text(encoding="utf-8"),
+             "assets/RFC.md": (ROOT / "templates" / "bundle" / "RFC.md").read_text(encoding="utf-8")}
+    for rel in SKILL_FILES:
+        files[rel] = (src / rel).read_text(encoding="utf-8")
+    files["references/structure.md"] = files["references/structure.md"].split("\n## rfc.json")[0].rstrip() + "\n"     # repository-only part
+    return files
+
+
+def build_skill():
+    """dist/assets/skill/: phiz-rfc.zip (unzip into ~/.claude/skills or upload it as a skill) and phiz-rfc-skill.md (the whole skill as
+    one text, to paste as instructions into any AI)."""
+    out = DIST / "assets" / "skill"
+    out.mkdir(parents=True, exist_ok=True)
+    files = skill_files()
+    with zipfile.ZipFile(out / "phiz-rfc.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        for rel, text in files.items():
+            info = zipfile.ZipInfo(f"phiz-rfc/{rel}", date_time=(2026, 1, 1, 0, 0, 0))      # same bytes every build
+            info.external_attr = 0o644 << 16
+            z.writestr(info, text, compress_type=zipfile.ZIP_DEFLATED)
+    parts = [files["SKILL.md"].strip()]
+    for rel in SKILL_FILES + ["assets/RFC.md"]:
+        parts.append(f"\n\n---\n\n# File: {rel}\n\n" + files[rel].strip())
+    (out / "phiz-rfc-skill.md").write_text("\n".join(parts) + "\n", encoding="utf-8")
+
+
 def build_live_pages():
     shutil.copytree(ROOT / "templates" / "bundle", DIST / "assets" / "templates")
     shutil.copy(ROOT / "templates" / "page.css", DIST / "assets" / "page.css")     # the preview frame of the new-RFC page
+    build_skill()
     (DIST / "rfc").mkdir()
     (DIST / "rfc" / "index.html").write_text(build_viewer(), encoding="utf-8")
     (DIST / "nova").mkdir()

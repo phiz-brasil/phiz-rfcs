@@ -87,6 +87,15 @@ Every comment (and reply) has a **Excluir / Delete / 删除** link; it asks once
 1. **Database**: apply [`20261021000000_paragraph_comments.sql`](supabase/migrations/20261021000000_paragraph_comments.sql): the `para` column and the insert trigger (replies inherit `para`; the rate limit is 15 a minute / 150 a day so reactions do not hit it). Until it runs, the page works as before without the paragraph buttons.
 2. **Translation function**: redeploy [`supabase/functions/translate-comment`](supabase/functions/translate-comment/index.ts) (Edge Functions → translate-comment → paste the file → Deploy). It now skips emoji-only text, so reactions do not use the translation allowance.
 
+## The phiz-rfc skill
+
+The skill that helps write RFCs lives in the repository, in [`skills/phiz-rfc/`](skills/phiz-rfc), in two editions:
+
+- **Maintainer edition** (`SKILL.md`): the full workflow in this repository (research the PHIZ code, `new_rfc.py`, check, build, publish). Install it with `ln -sfn ~/Projetos/phiz-rfcs/skills/phiz-rfc ~/.claude/skills/phiz-rfc`, so it follows the repository.
+- **Site edition** (`site/SKILL.md`): self-contained, for people outside the repository. It fills `RFC.md` from their documents, ready to upload on **＋ Nova RFC**. The build packs it with the template and the references it needs into `phiz-rfc.zip`, and also as one text (`phiz-rfc-skill.md`, to paste as instructions into any AI). Both are offered on the new-RFC page (*Prefer a skill?*), with install steps for Claude Code, Claude and other AIs.
+
+Edit the skill in the repository, not in `~/.claude`; the downloads are rebuilt on every deploy.
+
 ## Database migrations
 
 The database is described by numbered files in [`supabase/migrations`](supabase/migrations) (`<timestamp>_<name>.sql`, the Supabase CLI convention), one per feature, applied in order:
@@ -134,7 +143,7 @@ This takes the next free `PHZ-NNNN` and copies [`templates/rfc/`](templates/rfc)
 4. Preview: `.venv/bin/python tools/build.py && python3 -m http.server -d dist 8000`.
 5. `git add rfcs/<ID> && git commit -m "<ID>: …" && git push`.
 
-With Claude Code, the `phiz-rfc` skill follows this workflow: it reads the documents you give it, fills the template, translates, runs the check and builds.
+With Claude Code, the `phiz-rfc` skill ([`skills/phiz-rfc`](skills/phiz-rfc)) follows this workflow: it reads the documents you give it, fills the template, translates, runs the check and builds.
 
 Open it as a pull request if you want review before it appears in the index.
 

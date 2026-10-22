@@ -23,6 +23,7 @@ const T = {
   off: { pt: "O envio não está configurado neste site.", en: "Uploading is not set up on this site.", zh: "此站点未配置上传功能。" },
   noEdit: { pt: "RFC não encontrada para editar.", en: "RFC to edit not found.", zh: "未找到要编辑的 RFC。" },
   copied: { pt: "Copiado.", en: "Copied.", zh: "已复制。" },
+  copyFail: { pt: "Não foi possível copiar. Baixe o .zip.", en: "Could not copy. Download the .zip instead.", zh: "无法复制，请下载 .zip。" },
   copyManual: { pt: "Selecione o texto e copie.", en: "Select the text and copy it.", zh: "请选中文字后复制。" },
   tooBig: { pt: "O arquivo é grande demais (limite de 600 KB).", en: "The file is too large (limit 600 KB).", zh: "文件过大（上限 600 KB）。" },
   empty: { pt: "Escolha o arquivo ou cole o conteúdo para verificar.", en: "Choose the file or paste the content to check it.", zh: "请选择文件或粘贴内容以进行检查。" }
@@ -59,6 +60,15 @@ $("copy-prompt").onclick = async () => {
   try { await navigator.clipboard.writeText($("prompt").value); $("copied").textContent = say("copied"); }
   catch (e) { $("prompt").select(); $("copied").textContent = say("copyManual"); }
   setTimeout(() => { $("copied").textContent = ""; }, 2500);
+};
+
+$("copy-skill").onclick = async () => {
+  try {
+    const text = await (await fetch("../assets/skill/phiz-rfc-skill.md")).text();
+    await navigator.clipboard.writeText(text);
+    $("skill-copied").textContent = say("copied");
+  } catch (e) { $("skill-copied").textContent = say("copyFail"); }
+  setTimeout(() => { $("skill-copied").textContent = ""; }, 2500);
 };
 
 /* ---------- step 3: the file and its checks ---------- */
