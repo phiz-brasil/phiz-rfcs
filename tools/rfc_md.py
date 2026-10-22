@@ -201,6 +201,21 @@ def _parser():
         return code_figure(lang, tok.content)
 
     md.add_render_rule("fence", fence)
+
+    # ![alt](asset:name.png): an image attached to an RFC created on the site (the browser fills in src); same markup as assets/js/render/markdown.js
+    from markdown_it.renderer import RendererHTML
+    asset = re.compile(r"asset:([a-z0-9][a-z0-9._-]{0,59})")
+
+    def image(self, tokens, idx, options, env):
+        tok = tokens[idx]
+        m = asset.fullmatch(tok.attrGet("src") or "")
+        if not m:
+            return RendererHTML.image(self, tokens, idx, options, env)
+        title = tok.attrGet("title")
+        alt = self.renderInlineAsText(tok.children, options, env)
+        return f'<img data-asset="{html.escape(m.group(1))}" alt="{html.escape(alt)}"' + (f' title="{html.escape(title)}"' if title else "") + ' loading="lazy">'
+
+    md.add_render_rule("image", image)
     md.core.ruler.push("rfc_blocks", _core_rule)
     return md
 

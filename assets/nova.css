@@ -25,3 +25,12 @@
 .skillbox summary { cursor: pointer; font-weight: 600; }
 .skillbox .how { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 8px; font-size: .9rem; }
 .skillbox .cmd { margin: 6px 0 0; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; font: 500 .78rem "JetBrains Mono", ui-monospace, monospace; }
+.assetsbox { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.assetsbox h3 { margin: 0 0 6px; font-size: 1rem; }
+.assets { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 10px; }
+.assets li { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); }
+.assets li > img { width: 96px; height: 72px; object-fit: contain; background: var(--surface); border-radius: 6px; }
+.assets li > div { display: grid; gap: 6px; min-width: 0; }
+.assets code { font: 500 .78rem "JetBrains Mono", ui-monospace, monospace; overflow-wrap: anywhere; color: var(--muted); }
+.assets .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.issues.warn { color: #9a6408; }

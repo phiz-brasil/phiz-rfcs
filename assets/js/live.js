@@ -1,7 +1,8 @@
 /* The page of an RFC created on the site: /rfc/?id=PHZ-1001[&v=1.2]. It reads the revision from the database, turns the
    single-file RFC into the same page the build produces for repository RFCs (assets/js/render/, no raw HTML, sanitized) and then
    starts the usual page scripts: comments, reactions, status, versions. */
-import { LiveError, enabled, getLatestRevision, getRevision, listRevisions } from "./live-api.js";
+import { base64ToBlob } from "./images.js";
+import { LiveError, enabled, getAsset, getLatestRevision, getRevision, listRevisions } from "./live-api.js";
 import { parseBundle } from "./render/bundle.js";
 import { renderBody } from "./render/markdown.js";
 import { BCP, LANGS, STATUS, heroHtml, pageBody } from "./render/page.js";
@@ -45,6 +46,24 @@ function versionsHtml(revs, shown, rfcId) {
     `<p class="vnote-wrap"><a href="../nova/?edit=${esc(rfcId)}">${spans(T.newVersion)}</a></p></div></details>`;
 }
 
+/* The images of the RFC: `![alt](asset:name)` renders as <img data-asset="name">; each is read from the database (the newest of that
+   name up to this version) and shown from a local blob. A click opens it full size. */
+async function hydrateAssets(root, rfcId, rev) {
+  const urls = new Map();
+  const imgs = [...root.querySelectorAll("img[data-asset]")];
+  await Promise.all(imgs.map(async img => {
+    const name = img.dataset.asset;
+    if (!urls.has(name)) {
+      urls.set(name, getAsset(rfcId, name, rev).then(a => (a ? URL.createObjectURL(base64ToBlob(a.data, a.mime)) : null)).catch(() => null));
+    }
+    const url = await urls.get(name);
+    if (!url) { img.classList.add("missing"); return; }
+    img.src = url;
+    img.classList.add("zoomable");
+    img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
+  }));
+}
+
 async function start() {
   if (!/^PHZ-\d{4}$/.test(id) || !enabled) return message("notFound");
   message("loading");
@@ -82,6 +101,7 @@ async function start() {
       `<a href="?id=${esc(id)}">${spans(T.goCurrent)}</a></div>`);
   }
   main().innerHTML = blocks.join("\n");
+  hydrateAssets(main(), id, row.rev);
   document.querySelector(".toc details").insertAdjacentHTML("beforeend", tocs.join("\n"));
   window.phizApplyLang();
 

@@ -1,5 +1,6 @@
 """Shared setup of the browser tests: build the site once, serve dist/ on a free port, start a browser, and give every test a
 fresh context where Supabase is a FakeSupabase and nothing else leaves the machine."""
+import base64
 import functools
 import http.server
 import os
@@ -7,7 +8,9 @@ import re
 import subprocess
 import sys
 import threading
+import struct
 import unittest
+import zlib
 from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
@@ -24,6 +27,15 @@ expect.set_options(timeout=15000)
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
+
+
+def png_bytes(width=2, height=2, color=(200, 30, 30)):
+    """A real, tiny PNG (solid colour)."""
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    raw = b"".join(b"\x00" + bytes(color) * width for _ in range(height))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
 
 
 class SiteCase(unittest.TestCase):

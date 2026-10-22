@@ -15,6 +15,7 @@ export const NOTE_LABELS = {
 const TABLE_VARIANTS = ["changes", "num", "map"];
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
+const ASSET = /^asset:([a-z0-9][a-z0-9._-]{0,59})$/;
 
 function parser(html) {
   if (!window.markdownit || !window.markdownitContainer) throw new RfcError("markdown-it is not loaded");
@@ -60,6 +61,16 @@ function parser(html) {
     }
     if (!CODE_LANGS.includes(lang)) throw new RfcError(`line ${tok.map[0] + 1}: code block needs a language (${CODE_LANGS.join(", ")} or mermaid), got '${lang}'`);
     return codeFigure(lang, tok.content);
+  };
+
+  // ![alt](asset:name.png) is an image attached to an RFC created on the site: the page fills in `src` after loading it from the database
+  const defaultImage = md.renderer.rules.image;
+  md.renderer.rules.image = (tokens, idx, options, env, slf) => {
+    const tok = tokens[idx];
+    const m = ASSET.exec(tok.attrGet("src") || "");
+    if (!m) return defaultImage(tokens, idx, options, env, slf);
+    const title = tok.attrGet("title");
+    return `<img data-asset="${esc(m[1])}" alt="${esc(slf.renderInlineAsText(tok.children, options, env))}"${title ? ` title="${esc(title)}"` : ""} loading="lazy">`;
   };
 
   md.core.ruler.push("rfc_blocks", coreRule);
