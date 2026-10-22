@@ -121,8 +121,8 @@ def s01():
     hero = f'''<div style="background:#0d0d0d;color:#fff;border-radius:10px;padding:24px 26px;margin-top:22px">
 <div style="display:flex;align-items:center;gap:12px"><span style="font-size:21px;font-weight:600">{STORE()}</span><span class="tag" style="color:#4ade80;border-color:#14532d;background:#0d1f13">● {T('Em operação','Operating','运营中')}</span><span class="tag" style="color:#e5e7eb;border-color:#374151;background:#111">{T('Organização verificada','Verified organization','已认证组织')}</span></div>
 <div style="display:flex;gap:28px;margin-top:16px;font-size:13px;color:#a3a3a3">
-<span>Developer ID <b style="color:#fff;font-weight:500" class="mono">dev_suPb10cTzMQ</b></span>
-<span>Merchant ID <b style="color:#fff;font-weight:500" class="mono">7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57</b></span>
+<span>Developer ID {T('(antigo Merchant ID)','(former Merchant ID)','（原 Merchant ID）')} <b style="color:#fff;font-weight:500" class="mono">7f3e2a10-5b8c-4d21-9e6f-2a1c0b9d4e57</b></span>
+<span>Dev Account <b style="color:#fff;font-weight:500">gleison · Phiz ID</b></span>
 <span>{T('Responsável','Owner','负责人')} <b style="color:#fff;font-weight:500">gleison</b></span></div>
 <div style="display:flex;gap:28px;margin-top:10px;font-size:13px;color:#a3a3a3"><span>{T('Membros','Members','成员')} <b style="color:#fff">4</b></span><span>{T('Aplicações','Applications','应用')} <b style="color:#fff">4</b></span><span>Business Accounts <b style="color:#fff">3</b></span></div>
 <div style="margin-top:18px;display:flex;gap:10px"><span class="btn2" style="background:#0d0d0d;color:#fff;border-color:#4b5563">{T('Gerenciar aplicações','Manage applications','管理应用')} ›</span><span class="btn2" style="background:#0d0d0d;color:#fff;border-color:#4b5563">Business Accounts ›</span></div></div>'''
