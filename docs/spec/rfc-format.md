@@ -29,6 +29,7 @@ templates/shell.html, templates/page.css   page frame and styles shared by all M
 `id` (= folder name), `title` / `summary` (`pt`, `en`, `zh`), `status`, `authors`, `reviewers`, `created`, `updated`,
 `version`, `changelog`. Optional: `systems` (list of strings shown in the header), `short` (short title for the browser tab; default: the English title).
 `status` is one of `draft`, `in-review`, `approved`, `implemented`, `rejected`, `superseded`.
+`collaborators` (optional) lists the people who helped write it, shown in the header next to the authors, as text entries.
 `authors` entries are text or `{"pt": …, "en": …, "zh": …}` when the text differs by language. `reviewers` entries are names, or
 `{"name": "Pedro Bettani", "country": "BR"}` (`BR` or `CN`), which the header shows as `Pedro Bettani (Brasil / Brazil / 巴西)`.
 `details` adds rows to the header: `[{"label": {"pt": …, "en": …, "zh": …}, "value": {"pt": …, "en": …, "zh": …}}]` (the value may

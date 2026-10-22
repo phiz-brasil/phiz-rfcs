@@ -110,6 +110,8 @@ The page scripts have smoke tests that run in a real browser against the built s
 PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests -v   # uses your Chrome; CI installs Playwright's Chromium
 ```
 
+The Python and JavaScript renderers are compared by `tests/test_parity.py`; `tests/test_render_js.py` covers the single-file reader and the sanitizer (including XSS vectors).
+
 The page scripts live in `assets/js/` as ES modules (`main.js` is the entry; `state.js` holds the config and the only shared mutable state).
 
 ## Add a new RFC
@@ -135,6 +137,10 @@ This takes the next free `PHZ-NNNN` and copies [`templates/rfc/`](templates/rfc)
 With Claude Code, the `phiz-rfc` skill follows this workflow: it reads the documents you give it, fills the template, translates, runs the check and builds.
 
 Open it as a pull request if you want review before it appears in the index.
+
+## The single-file RFC and the browser renderer
+
+An RFC can also be written as **one `.md` file** with a metadata block and the three languages ([`docs/spec/rfc-bundle.md`](docs/spec/rfc-bundle.md); template: [`templates/bundle/RFC.md`](templates/bundle/RFC.md); prompt to give any AI together with your documents: [`templates/bundle/PROMPT.md`](templates/bundle/PROMPT.md)). The file is read and rendered **in the browser** by `assets/js/render/` (markdown-it and DOMPurify from `assets/vendor/`), with no raw HTML and sanitized output, because it comes from people outside the team. That renderer is a port of `tools/rfc_md.py`; `tests/test_parity.py` renders every RFC with both and fails when they differ, so a change to one renderer has to be made in the other.
 
 ## Versions
 

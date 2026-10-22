@@ -1,4 +1,5 @@
 import { L, lang } from "./i18n.js";
+import { paraBlocks } from "./render/blocks.js";
 import { forSection } from "./model.js";
 import { S, cfg, rfcId, sb } from "./state.js";
 import { buildForm, renderThreads, setQuote, setReply } from "./threads.js";
@@ -52,14 +53,6 @@ export function paintMarks() {
 }
 
 /* ---------- one comment box per paragraph ---------- */
-// paragraphs are numbered per section (0, 1, 2…) in document order, the same in the three languages
-export const PARA_SEL = "p:not(.cap), li, .tbl, .diagram, figure.code";
-export function paraBlocks(sec) {
-  return [...sec.querySelectorAll(PARA_SEL)].filter(e =>
-    !e.closest(".cmt-panel") && !(e.parentElement && e.parentElement.closest(".tbl, .diagram, figure, .eps-wrap")) &&
-    !(e.matches("p") && e.parentElement.matches("li")));
-}
-
 export function decoratePara() {
   if (!S.HAS_PARA) return;
   document.querySelectorAll(".lang section").forEach(sec => {

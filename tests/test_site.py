@@ -5,64 +5,19 @@
 Locally, use your installed Chrome:  PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests -v
 (CI installs Playwright's own Chromium). The tests build the site first (tools/build.py) and serve dist/ on a free port.
 """
-import functools
-import http.server
-import os
-import re
-import subprocess
 import sys
-import threading
 import unittest
 from pathlib import Path
 
-from playwright.sync_api import expect, sync_playwright
+from playwright.sync_api import expect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fake_supabase import FakeSupabase  # noqa: E402
-
-ROOT = Path(__file__).resolve().parent.parent
+from support import SiteCase  # noqa: E402
 RFC = "PHZ-0002"          # a Markdown RFC with diagrams, tables and an archived version (v1.0)
 SECTION = "summary"       # its first section
 
 
-class Quiet(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, *args):
-        pass
-
-
-class SiteTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        subprocess.run([sys.executable, str(ROOT / "tools" / "build.py")], cwd=ROOT, check=True, capture_output=True)
-        handler = functools.partial(Quiet, directory=str(ROOT / "dist"))
-        cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
-        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
-        cls.base = f"http://127.0.0.1:{cls.server.server_address[1]}"
-        cls.pw = sync_playwright().start()
-        cls.browser = cls.pw.chromium.launch(channel=os.environ.get("PW_CHANNEL") or None)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.browser.close()
-        cls.pw.stop()
-        cls.server.shutdown()
-
-    def setUp(self):
-        self.db = FakeSupabase()
-        self.context = self.browser.new_context(viewport={"width": 1400, "height": 900})
-        self.context.set_default_timeout(8000)
-        # everything outside the local server (fonts, CDNs) is dropped; Playwright tries the last registered route first,
-        # so the Supabase route goes after it
-        self.context.route(re.compile(r"^(?!http://127\.0\.0\.1).*"), lambda route: route.abort())
-        self.context.route(re.compile(r"https://[^/]*supabase\.co/.*"), lambda route: self.db.handle(route))
-        self.page = self.context.new_page()
-        self.errors = []
-        self.page.on("pageerror", lambda e: self.errors.append(str(e)))
-
-    def tearDown(self):
-        self.context.close()
-        self.assertEqual(self.errors, [], "JavaScript errors on the page")
-
+class SiteTest(SiteCase):
     # -- helpers --------------------------------------------------------
     def open(self, path=f"/rfcs/{RFC}/", wait_comments=True):
         self.page.goto(self.base + path)

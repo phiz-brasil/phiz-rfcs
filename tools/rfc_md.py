@@ -26,9 +26,9 @@ STATUS = {
 }
 
 HERO = {
-    "pt": {"status": "Status", "author": "Autor", "date": "Data", "reviewers": "Revisores", "systems": "Sistemas", "tbd": "A definir"},
-    "en": {"status": "Status", "author": "Author", "date": "Date", "reviewers": "Reviewers", "systems": "Systems", "tbd": "To be defined"},
-    "zh": {"status": "状态", "author": "作者", "date": "日期", "reviewers": "评审人", "systems": "系统", "tbd": "待定"},
+    "pt": {"status": "Status", "author": "Autor", "collaborators": "Colaboradores", "date": "Data", "reviewers": "Revisores", "systems": "Sistemas", "tbd": "A definir"},
+    "en": {"status": "Status", "author": "Author", "collaborators": "Collaborators", "date": "Date", "reviewers": "Reviewers", "systems": "Systems", "tbd": "To be defined"},
+    "zh": {"status": "状态", "author": "作者", "collaborators": "协作者", "date": "日期", "reviewers": "评审人", "systems": "系统", "tbd": "待定"},
 }
 NOTE_LABELS = {
     "note": {"pt": "Nota", "en": "Note", "zh": "备注"},
@@ -580,6 +580,8 @@ def hero_html(meta, lang, status=None):
     rows = [
         f'<div><dt>{h["status"]}</dt><dd><span class="pill" data-st="{st}">{label}</span></dd></div>',
         f'<div><dt>{h["author"]}</dt><dd>{html.escape(", ".join(loc(a, lang) for a in meta.get("authors") or []) or "—")}</dd></div>',
+        *([f'<div><dt>{h["collaborators"]}</dt><dd>{html.escape(", ".join(loc(c, lang) for c in meta["collaborators"]))}</dd></div>']
+          if meta.get("collaborators") else []),
         f'<div><dt>{h["date"]}</dt><dd>{html.escape(_date(meta.get("created"), lang))}</dd></div>',
         f'<div><dt>{h["reviewers"]}</dt><dd>{"<br>".join(html.escape(reviewer_text(r, lang)) for r in meta.get("reviewers") or []) or h["tbd"]}</dd></div>',
     ]
