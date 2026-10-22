@@ -10,12 +10,15 @@ import threading
 import unittest
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fake_supabase import FakeSupabase  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# a loaded machine (or a shared CI runner) can take several seconds to load a page full of Mermaid diagrams
+expect.set_options(timeout=15000)
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -43,7 +46,7 @@ class SiteCase(unittest.TestCase):
     def setUp(self):
         self.db = FakeSupabase()
         self.context = self.browser.new_context(viewport={"width": 1400, "height": 900}, locale="pt-BR")   # the site picks its language from the browser; CI runs in en-US
-        self.context.set_default_timeout(8000)
+        self.context.set_default_timeout(20000)
         # everything outside the local server (fonts, CDNs) is dropped; Playwright tries the last registered route first,
         # so the Supabase route goes after it
         self.context.route(re.compile(r"^(?!http://127\.0\.0\.1).*"), lambda route: route.abort())
