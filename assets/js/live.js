@@ -34,14 +34,15 @@ function message(key) {
   window.phizApplyLang && window.phizApplyLang();
 }
 
-function versionsHtml(revs, shown, rfcId) {
+function versionsHtml(revs, shown, rfcId, archived = []) {
   const latest = revs[0].version;
   const items = revs.map(r => {
     const cur = r.version === latest;
     const head = `<a href="?id=${esc(rfcId)}&v=${esc(r.version)}"><b>v${esc(r.version)}</b>${cur ? spans(T.current, "vtag") : ""}<time>${esc((r.created_at || "").slice(0, 10))}</time></a>`;
     const who = `<div class="vnote-wrap"><span class="vnote">${esc(r.edited_by)}${r.note ? " · " + esc(r.note) : ""}</span></div>`;
     return `<li${r.version === shown ? ' aria-current="true"' : ""}>${head}${who}</li>`;
-  }).join("");
+  }).join("") + archived.map(a =>
+    `<li><a href="../${esc(a.href)}"><b>v${esc(a.version)}</b><time>${esc(a.date || "")}</time></a><div class="vnote-wrap">${spans(a.note || {}, "vnote")}</div></li>`).join("");
   return `<details class="vers"><summary class="rfcno ver" aria-label="Version">v${esc(shown)}</summary><div class="vers-pop"><h3>${spans(T.versions)}</h3><ul>${items}</ul>` +
     `<p class="vnote-wrap"><a href="../nova/?edit=${esc(rfcId)}">${spans(T.newVersion)}</a></p></div></details>`;
 }
@@ -64,6 +65,16 @@ async function hydrateAssets(root, rfcId, rev) {
   }));
 }
 
+/* Versions that exist only as pages built from the repository (dist/archive.json), older than what the database holds. */
+async function archivedVersions(revs) {
+  try {
+    const r = await fetch("../archive.json");
+    if (!r.ok) return [];
+    const have = new Set(revs.map(x => x.version));
+    return ((await r.json())[id] || []).filter(a => !have.has(a.version)).sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
+  } catch (e) { return []; }
+}
+
 async function start() {
   if (!/^PHZ-\d{4}$/.test(id) || !enabled) return message("notFound");
   message("loading");
@@ -79,7 +90,8 @@ async function start() {
   const parsed = parseBundle(row.bundle);
   if (parsed.errors.length) return message("broken");
   const meta = { id, title: row.meta.title, summary: row.meta.summary, systems: row.meta.systems || [], status: "draft",
-                 authors: row.authors, collaborators: row.collaborators || [], reviewers: [], created: (revs[revs.length - 1].created_at || "").slice(0, 10) };
+                 authors: row.authors, collaborators: row.collaborators || [], reviewers: row.meta.reviewers || [],
+                 created: row.meta.created || (revs[revs.length - 1].created_at || "").slice(0, 10) };
   const blocks = [], tocs = [];
   try {
     for (const l of LANGS) {
@@ -94,7 +106,8 @@ async function start() {
   const no = document.querySelector(".rfcno");
   no.textContent = `RFC ${id}`;
   const badge = `<span class="rfcno st" data-st="draft">${LANGS.map(l => `<span class="lang-st" data-l="${l}">${esc(STATUS.draft[l])}</span>`).join("")}</span>`;
-  no.insertAdjacentHTML("afterend", badge + versionsHtml(revs, row.version, id));
+  const edit = `<a class="rfcno newver" href="../nova/?edit=${esc(id)}">✎ ${spans(T.newVersion)}</a>`;      // always in sight, not only inside the history
+  no.insertAdjacentHTML("afterend", badge + versionsHtml(revs, row.version, id, await archivedVersions(revs)) + edit);
   if (frozen) {
     document.querySelector("header.bar").insertAdjacentHTML("afterend",
       `<div class="ver-banner" role="note">${LANGS.map(l => `<span data-l="${l}">${esc(T.archived[l](row.version, revs[0].version))}</span>`).join("")} ` +

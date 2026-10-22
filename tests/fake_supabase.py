@@ -47,10 +47,11 @@ class FakeSupabase:
         self.ids[new] = source
         return new
 
-    def add_revision(self, rfc_id, bundle, meta, authors, collaborators=(), by="Ana", note=None):
-        rev = len([r for r in self.revisions if r["rfc_id"] == rfc_id]) + 1
+    def add_revision(self, rfc_id, bundle, meta, authors, collaborators=(), by="Ana", note=None, rev=None, created_at=None):
+        """`rev` is given for imported RFCs (version 1.7 is revision 8, with no earlier ones); otherwise the next number, as the SQL does."""
+        rev = rev or max([r["rev"] for r in self.revisions if r["rfc_id"] == rfc_id], default=0) + 1
         row = {"id": str(uuid.uuid4()), "rfc_id": rfc_id, "rev": rev, "version": f"1.{rev - 1}", "meta": meta, "bundle": bundle,
-               "authors": list(authors), "collaborators": list(collaborators), "edited_by": by, "note": note, "created_at": now()}
+               "authors": list(authors), "collaborators": list(collaborators), "edited_by": by, "note": note, "created_at": created_at or now()}
         self.revisions.append(row)
         return row
 
@@ -71,7 +72,7 @@ class FakeSupabase:
         for rid in sorted({r["rfc_id"] for r in self.revisions}, reverse=True):
             if rfc_id and rid != rfc_id:
                 continue
-            revs = [r for r in self.revisions if r["rfc_id"] == rid]
+            revs = sorted((r for r in self.revisions if r["rfc_id"] == rid), key=lambda r: r["rev"])
             last = revs[-1]
             out.append({k: last[k] for k in ("rfc_id", "rev", "version", "meta", "authors", "collaborators", "edited_by", "created_at")}
                        | {"first_created_at": revs[0]["created_at"]})
@@ -96,7 +97,7 @@ class FakeSupabase:
         if not self.MAGIC[mime](raw):
             return ok({"message": f"file is not a valid {mime}"}, 400)
         staged = self.staging.setdefault(body["p_token"], {})
-        if len([n for n in staged if n != name]) >= 20:
+        if len([n for n in staged if n != name]) >= 160:
             return ok({"message": "too many images"}, 400)
         staged[name] = {"name": name, "mime": mime, "size": len(raw), "data": body["p_data"], "uploaded_by": body["p_by"]}
         return ok(self._empty())
@@ -198,7 +199,7 @@ class FakeSupabase:
                     rid = body["p_rfc_id"]
                     if self.ids.get(rid) != "site":
                         return ok({"message": "unknown RFC"}, 400)
-                    rev = len([r for r in self.revisions if r["rfc_id"] == rid]) + 1
+                    rev = max([r["rev"] for r in self.revisions if r["rfc_id"] == rid], default=0) + 1
                 problem = self.finalize_assets(rid, rev, body["p_bundle"], body.get("p_token"))
                 if problem:
                     if fn == "create_rfc":

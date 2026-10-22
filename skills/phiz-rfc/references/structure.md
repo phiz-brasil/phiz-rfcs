@@ -4,13 +4,13 @@ The template ships 10 sections. Keep the order; add, split or drop sections when
 
 | # | id | PT / EN / 中文 | What goes in it |
 |---|---|---|---|
-| hero | — | — | Generated, not written: the title, a one-sentence summary as the lede (what changes, for whom, how it is rolled out), and a list with status, author, collaborators, date, reviewers and systems. It comes from the metadata of the file (`title_*`, `summary_*`, `systems` in the single-file RFC; `rfc.json` for repository RFCs). Write the summary sentence with care: it is the first thing reviewers read. |
+| hero | — | — | Generated, not written: the title, a one-sentence summary as the lede (what changes, for whom, how it is rolled out), and a list with status, author, collaborators, date, reviewers and systems. It comes from the metadata of the file (`title_*`, `summary_*`, `systems`, `reviewers` in the block at the top of the file). Write the summary sentence with care: it is the first thing reviewers read. |
 | 01 | `summary` | Resumo / Summary / 摘要 | The problem in one sentence, then the proposal as 3–5 bold-led bullets. What the RFC does *not* solve, with a link to open questions. Optional stats row with 3–4 numbers that size the problem. |
 | 02 | `context` | Contexto: como funciona hoje / Context: how it works today / 背景：当前的工作方式 | How it works today, from the code: a flowchart of the systems involved, a numbered "how an operation flows" list citing classes, and a `note-box decision` linking context to proposal. |
 | 03 | `goals` | Objetivos e fora de escopo / Goals and non-goals / 目标与非目标 | Verifiable goals; explicit non-goals. |
 | 04 | `proposal` | Proposta / Proposal / 方案 | The design. "Today → with this RFC" table, per-repository changes table, a cutover/rollback diagram when relevant, credential or data decisions in `note-box decision`. |
 | 05 | `flows` | Fluxos / Flows / 流程 | Sequence diagrams for the 1–2 flows that change most, plus state diagrams for lifecycles. Point out steps that move to another system (e.g. into the browser). |
-| 06 | `changes` | Mudanças e compatibilidade / Changes and compatibility / 变更与兼容性 | Breaking changes: Change, Today, After, What to do. Units, identifiers, time windows, auth, status labels are the usual suspects. For migrations add a route-by-route mapping table (see components.md) and a "gaps" table for things with no equivalent. |
+| 06 | `changes` | Mudanças e compatibilidade / Changes and compatibility / 变更与兼容性 | Breaking changes: Change, Today, After, What to do. Units, identifiers, time windows, auth, status labels are the usual suspects. For migrations add a route-by-route mapping table (see `::: table map` in markdown.md) and a "gaps" table for things with no equivalent. |
 | 07 | `rollout` | Plano de implantação / Rollout plan / 实施计划 | Phase cards (Phase 0 = preparation/inventory). Then "in every phase": contract tests, pilot, metrics to watch, batch rollout. Dates only after Phase 0. |
 | 08 | `risks` | Riscos / Risks / 风险 | Risk → mitigation table. |
 | 09 | `questions` | Perguntas em aberto / Open questions / 待定问题 | Numbered, bold topic first, addressed to someone ("para a CredPay", "para Produto"). Everything inferred but not confirmed ends here. |
@@ -25,28 +25,17 @@ The template ships 10 sections. Keep the order; add, split or drop sections when
 - Mark uncertainty explicitly ("a confirmar", "não consultado") instead of smoothing it over.
 - Portuguese is the reference language; translations follow it, not the other way round.
 
-## rfc.json (repository RFCs only)
+## Metadata block
 
-RFCs created on the site have no rfc.json: their metadata is the block at the top of `RFC.md` and the upload form.
+The block at the top of `RFC.md` holds what the header of the page shows besides the body:
 
-```json
-{
-  "id": "PHZ-0003",
-  "title": { "pt": "…", "en": "…", "zh": "…" },
-  "summary": { "pt": "Uma frase.", "en": "One sentence.", "zh": "一句话。" },
-  "status": "draft",
-  "authors": ["Gleison"],
-  "reviewers": ["Pedro Bettani", "Luciana Geromel", "Richard Liang", "Henry Wu"],
-  "systems": ["channel", "card-vault"],
-  "version": "1.0",
-  "changelog": [
-    { "version": "1.0", "date": "2026-10-16", "note": { "pt": "Primeira versão.", "en": "First version.", "zh": "首个版本。" } }
-  ],
-  "created": "2026-10-16",
-  "updated": "2026-10-16"
-}
+```
+---
+title_pt: …   title_en: …   title_zh: …
+summary_pt: …   summary_en: …   summary_zh: …
+systems: channel, card-vault
+reviewers: Pedro Bettani (BR), Richard Liang (CN)
+---
 ```
 
-`systems` is optional. `version` and `changelog` are managed by `tools/new_version.py`. In Markdown RFCs the header of the page (eyebrow, title, lede, status pill, authors, date, reviewers, systems) comes from this file.
-
-Bump `updated` when content changes meaningfully.
+`systems` and `reviewers` are optional (`(BR)` or `(CN)` after a name shows the country). Author and collaborators are not in the file: whoever publishes types them. The status is changed on the page; the date and the version are set by the site.

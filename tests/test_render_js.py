@@ -155,7 +155,7 @@ class RenderJsTest(SiteCase):
         out = out.replace("The problem in one sentence.", f"The problem in one sentence.\n\n![Architecture](asset:{en})", 1)
         return out.replace("一句话说明问题。", f"一句话说明问题。\n\n![架构](asset:{zh})", 1)
 
-    def test_images_must_be_attached_and_the_same_in_the_three_languages(self):
+    def test_images_must_be_attached(self):
         js = "([t, a]) => { const r = R.check.checkBundle(t, { assets: a }); return { ok: r.ok, errors: r.errors, warnings: r.warnings, images: r.images }; }"
         r = self.js(js, [self.with_image(), ["diagram.png"]])
         self.assertTrue(r["ok"], r["errors"])
@@ -163,8 +163,9 @@ class RenderJsTest(SiteCase):
         r = self.js(js, [self.with_image(), []])
         self.assertFalse(r["ok"])
         self.assertTrue(any('uses the image "diagram.png" but it is not attached' in e for e in r["errors"]), r["errors"])
-        r = self.js(js, [self.with_image(zh="other.png"), ["diagram.png", "other.png"]])
-        self.assertTrue(any("same images" in e for e in r["errors"]), r["errors"])
+        r = self.js(js, [self.with_image(zh="other.png"), ["diagram.png", "other.png"]])       # a screenshot may be translated: one file per language
+        self.assertTrue(r["ok"], r["errors"])
+        self.assertEqual(r["images"], ["diagram.png", "other.png"])
         r = self.js(js, [self.with_image(), ["diagram.png", "unused.png"]])
         self.assertTrue(r["ok"])
         self.assertTrue(any("unused.png" in w for w in r["warnings"]), r["warnings"])

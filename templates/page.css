@@ -223,6 +223,9 @@ html { scroll-behavior: smooth; }
 .shot a { display: block; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
 .shot a:hover { border-color: var(--accent); }
 .shot img { display: block; width: 100%; height: auto; }
+.shot > img { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.shot > img.zoomable { cursor: zoom-in; }
+.shot > img.missing { min-height: 120px; }
 .shot .cap { margin: 8px 2px 0; }
 .shot .cap b { color: var(--ink); font-weight: 600; }
 

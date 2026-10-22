@@ -13,6 +13,9 @@ export const NOTE_LABELS = {
   risk: { pt: "A confirmar", en: "To confirm", zh: "待确认" }
 };
 const TABLE_VARIANTS = ["changes", "num", "map"];
+const CHIPS = { eq: "st eq", ch: "st ch", gap: "st gap", new: "st new", yes: "yes", no: "no", part: "part" };
+const CHIP_RE = new RegExp("^\\[([^\\[\\]\\n]+)\\]\\{(" + Object.keys(CHIPS).join("|") + ")\\}");
+const BR_RE = /^<br\s*\/?>/;
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 const ASSET = /^asset:([a-z0-9][a-z0-9._-]{0,59})$/;
@@ -40,7 +43,25 @@ function parser(html) {
     }
     return "";
   });
-  for (const name of ["stats", "phases", "questions", "endpoints"]) container(name, () => "");   // rewritten by the core rule below
+  for (const name of ["stats", "phases", "questions", "endpoints", "gallery", "screens", "legend", "caption"]) container(name, () => "");   // rewritten by the core rule below
+
+  // [text]{eq}: a small coloured label; <br> is the only HTML a table cell may use (same as tools/rfc_md.py)
+  md.inline.ruler.before("link", "rfc_chip", (state, silent) => {
+    const m = state.src[state.pos] === "[" ? CHIP_RE.exec(state.src.slice(state.pos)) : null;
+    if (!m) return false;
+    if (!silent) { const tok = state.push("rfc_chip", "", 0); tok.content = m[1]; tok.meta = { kind: m[2] }; }
+    state.pos += m[0].length;
+    return true;
+  });
+  md.inline.ruler.before("html_inline", "rfc_br", (state, silent) => {
+    const m = state.src[state.pos] === "<" ? BR_RE.exec(state.src.slice(state.pos)) : null;
+    if (!m) return false;
+    if (!silent) state.push("rfc_br", "br", 0);
+    state.pos += m[0].length;
+    return true;
+  });
+  md.renderer.rules.rfc_chip = (tokens, idx) => `<span class="${CHIPS[tokens[idx].meta.kind]}">${esc(tokens[idx].content)}</span>`;
+  md.renderer.rules.rfc_br = () => "<br>";
 
   md.renderer.rules.table_open = (tokens, idx, options, env) => {
     const v = env.tbl || "";
@@ -121,13 +142,13 @@ function coreRule(state) {
       if (t.type === "html_block" && t.content.trim().startsWith("<!--")) { i += 1; continue; }
       throw new RfcError(`line ${line(t)}: content before the first '##' section heading`);
     }
-    const m = /^container_(stats|phases|questions|endpoints)_open$/.exec(t.type);
+    const m = /^container_(stats|phases|questions|endpoints|gallery|screens|legend|caption)_open$/.exec(t.type);
     if (m) {
       const name = m[1];
       let j = i + 1;
       while (j < toks.length && toks[j].type !== `container_${name}_close`) j += 1;
       if (j >= toks.length) throw new RfcError(`line ${line(t)}: ':::' ${name} block is not closed`);
-      out.push(...directive(state, name, toks.slice(i + 1, j), line(t)));
+      out.push(...directive(state, name, toks.slice(i + 1, j), line(t), t.info));
       i = j + 1;
       continue;
     }
@@ -138,12 +159,60 @@ function coreRule(state) {
   state.tokens = out;
 }
 
-function directive(state, name, inner, line) {
+function directive(state, name, inner, line, info = "") {
   if (name === "questions") {
     const lists = inner.filter(t => t.type === "ordered_list_open");
     if (!lists.length) throw new RfcError(`line ${line}: ::: questions needs a numbered list`);
     lists[0].attrSet("class", "qs");
     return inner;
+  }
+  if (name === "gallery") {
+    // a list; each item is an attached image followed by its caption: '- ![alt](asset:b01.png) **B01.** Caption'
+    const items = listItems(inner);
+    if (!items.length) throw new RfcError(`line ${line}: ::: gallery needs a list like '- ![alt](asset:name.png) **A1.** Caption'`);
+    const variant = info.trim().slice("gallery".length).trim();
+    if (variant !== "" && variant !== "phones") throw new RfcError(`line ${line}: ::: gallery ${variant}: unknown variant (use phones, or nothing)`);
+    const render = kids => state.md.renderer.renderInline(kids, state.md.options, state.env);
+    const shots = items.map(it => {
+      const kids = it.children || [];
+      const at = kids.findIndex(c => c.type === "image");
+      if (at === -1) throw new RfcError(`line ${line}: each gallery item starts with an image: '- ![alt](asset:name.png) Caption'`);
+      const cap = render([...kids.slice(0, at), ...kids.slice(at + 1)]).trim();
+      return `<div class="shot">${render([kids[at]])}` + (cap ? `<p class="cap">${cap}</p>` : "") + "</div>";
+    });
+    return [htmlBlock(state, `<div class="shots${variant ? " phones" : ""}">\n` + shots.join("\n") + "\n</div>\n")];
+  }
+  if (name === "caption") {       // a note under a table or a code block; it takes no comment number
+    const inlines = inner.filter(t => t.type === "inline");
+    if (inlines.length !== 1) throw new RfcError(`line ${line}: ::: caption holds one paragraph`);
+    return [htmlBlock(state, `<p class="cap">${renderInlineTokens(state, inlines[0])}</p>\n`)];
+  }
+  if (name === "legend") {
+    const items = listItems(inner);
+    if (!items.length) throw new RfcError(`line ${line}: ::: legend needs a list like '- [same]{eq} what it means'`);
+    return [htmlBlock(state, '<div class="legend">' + items.map(it => `<span>${renderInlineTokens(state, it)}</span>`).join("") + "</div>\n")];
+  }
+  if (name === "screens") {
+    // '##### Title | Where it shows' headings, each followed by a list: a card per menu item
+    const out = [];
+    let open = false, k = 0;
+    while (k < inner.length) {
+      const t = inner[k];
+      if (t.type === "heading_open" && t.tag === "h5") {
+        const text = inner[k + 1].content, cut = text.indexOf(" | ");
+        const title = cut === -1 ? text : text.slice(0, cut), path = cut === -1 ? "" : text.slice(cut + 3);
+        out.push(htmlBlock(state, (open ? "</div>\n" : "") + `<div class="screen"><h5>${esc(title.trim())}</h5>` +
+          (path.trim() ? `<span class="path">${esc(path.trim())}</span>` : "") + "\n"));
+        open = true;
+        k += 3;
+        continue;
+      }
+      if (!open) throw new RfcError(`line ${line}: ::: screens must start with a '##### Title | Where it shows' heading`);
+      out.push(t);
+      k += 1;
+    }
+    if (!open) throw new RfcError(`line ${line}: ::: screens needs at least one '##### Title | Where it shows' heading`);
+    return [htmlBlock(state, '<div class="screens">\n'), ...out, htmlBlock(state, "</div>\n</div>\n")];
   }
   if (name === "stats") {
     const items = listItems(inner);

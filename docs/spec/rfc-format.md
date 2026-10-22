@@ -1,7 +1,9 @@
 # Spec: RFC format (Markdown)
 
-Status: implemented by `tools/rfc_md.py` (render + checks), `tools/check_rfc.py` (CLI), `tools/new_rfc.py` (scaffold).
-Every RFC follows it. Versions archived before the Markdown format stay as frozen HTML pages (`versions/<v>/source.html`).
+Status: **legacy folder format**. The first two RFCs were written this way; they now live in the database as single-file RFCs
+(`rfc-bundle.md`, `tools/import_rfcs.py`), and new RFCs are written that way. This document stays for the Markdown syntax (sections,
+directives, diagrams, code, tables), which both formats share, and for the folder layout `tools/import_rfcs.py` reads.
+Implemented by `tools/rfc_md.py` (render). Versions archived before the Markdown format stay as frozen HTML pages (`versions/<v>/source.html`).
 
 ## Why
 
@@ -20,7 +22,6 @@ rfcs/PHZ-NNNN/
   openapi_gen.py optional: defines build(lang) returning the OpenAPI spec; the page ends with a Swagger UI and the YAML files are published
   <other files>   images…: copied to the site next to the page
   versions/<v>/   frozen copy of the three .md files and rfc.json of an older version
-templates/rfc/    skeleton copied by tools/new_rfc.py (same layout, with TODO: markers)
 templates/shell.html, templates/page.css   page frame and styles shared by all Markdown RFCs
 ```
 
@@ -61,27 +62,16 @@ in running text, so write bold the same way in the three languages.
 
 Everything the template shows is part of the contract; nothing else is required. Add, split or drop sections as the topic needs.
 
-## Rules checked (`tools/check_rfc.py`, run in CI and by `tools/build.py`)
+## Rules (now checked by the page and `tools/publish_rfc.py`)
 
-Errors stop the build; warnings do not.
-
-| id | rule |
-|---|---|
-| F01 | `rfc.json` exists, is valid, `id` matches the folder, `status` and `version` are valid, `version` is in `changelog`. |
-| F02 | The three files `rfc.pt.md`, `rfc.en.md`, `rfc.zh.md` exist. |
-| F03 | Every `##` has an id; ids are unique slugs; nothing before the first `##`. |
-| F04 | Same section ids in the same order in the three languages. |
-| F05 | Same number of commentable blocks per section in the three languages (paragraph, list item, table, diagram, code block: the numbering used by per-paragraph comments, so a mismatch would attach comments to the wrong paragraph). |
-| F06 | Same number of diagrams, and code blocks with the same content, in the three languages. |
-| F07 | Every `[..](#id)` points to an existing section id; directives are known and well formed. |
-| F08 | No `TODO:` markers left (error), no default `summary` text (warning). |
-| F09 | `openapi_gen.py`, when present, builds a spec for the three languages. |
+The structure rules F03–F07 of the folder format are rules B05–B06 of `rfc-bundle.md` today: every `##` has an id, same section ids in the three
+languages, same number of commentable blocks per section (paragraph, list item, table, diagram, code block: the numbering used by per-paragraph
+comments), same number of diagrams, identical code blocks, links to existing sections, no `TODO:` markers.
 
 ## Versions
 
-`tools/new_version.py` archives the three `.md` files and `rfc.json` into `versions/<current>/`, bumps the version and adds the
-changelog entry. The archived version is rendered with the templates of the day, at `/rfcs/<ID>/v<version>.html`.
-Typos and small fixes do not need a new version.
+In the database every publication is a version (`rfc-bundle.md`). The folder format archived the three `.md` files and `rfc.json` into
+`versions/<v>/` by hand; the versions archived that way as HTML stay as pages.
 
 ## Comments depend on structure
 

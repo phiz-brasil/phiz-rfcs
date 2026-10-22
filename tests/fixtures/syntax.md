@@ -18,6 +18,15 @@ line two, an escaped \* star, snake_case_word, 2 * 3 * 4 and <angle> brackets & 
 
 A bad name stays an ordinary image: ![x](asset:Bad Name.png).
 
+::: gallery
+- ![Screen one](asset:screen-1.png) **S1.** A caption with `code`
+- ![Screen two](asset:screen-2.png)
+:::
+
+::: gallery phones
+- ![Phone](asset:phone-1.png) **P1.** Narrow screens
+:::
+
 ## Lists {#lists}
 
 - one
@@ -64,6 +73,32 @@ Body with `code` and a [link](#basics).
 Pending confirmation.
 
 A second paragraph.
+:::
+
+::: caption
+A note under a table, with `code` and a [link](#basics).
+:::
+
+::: legend
+- [equivalent]{eq} same operation
+- [changes]{ch} different rule
+- [gap]{gap} missing
+- [new]{new} did not exist
+:::
+
+| Item | Supported |
+|---|---|
+| line one<br>line two | [yes]{yes} · [no]{no} · [partly]{part} |
+
+::: screens
+##### Dashboard | Changes · Screen 1
+
+- Metrics with `code`
+- Alerts
+
+##### Members | No change
+
+- Roles
 :::
 
 ::: stats

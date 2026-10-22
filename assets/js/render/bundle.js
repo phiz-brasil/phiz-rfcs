@@ -4,6 +4,8 @@
    title_pt: …     title_en: …     title_zh: …
    summary_pt: …   summary_en: …   summary_zh: …
    systems: channel, card-vault
+   reviewers: Pedro Bettani (BR), Richard Liang (CN)     (optional)
+   created: 2026-10-15                                   (optional; imported RFCs keep their original date)
    ---
    <!-- lang:pt -->  …Markdown…
    <!-- lang:en -->  …Markdown…
@@ -30,6 +32,15 @@ export function parseBundle(text) {
   }
   if (/TODO:/.test(kv.systems || "")) errors.push("Metadata systems still has a TODO: marker (list the systems, or leave it empty).");
   const meta = { title: {}, summary: {}, systems: (kv.systems || "").split(",").map(s => s.trim()).filter(Boolean) };
+  const reviewers = (kv.reviewers || "").split(",").map(s => s.trim()).filter(Boolean).map(s => {
+    const m = /^(.*?)\s*\((BR|CN)\)$/.exec(s);
+    return m ? { name: m[1], country: m[2] } : { name: s };
+  });
+  if (reviewers.length) meta.reviewers = reviewers;
+  if (kv.created) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(kv.created)) meta.created = kv.created;
+    else errors.push("Metadata created must look like 2026-10-15.");
+  }
   for (const l of LANGS) {
     for (const key of ["title", "summary"]) {
       const v = kv[`${key}_${l}`];
@@ -65,6 +76,8 @@ export function parseBundle(text) {
 /* The inverse: the file a person downloads to edit an existing RFC. */
 export function buildBundle(meta, md) {
   const head = ["---", ...LANGS.map(l => `title_${l}: ${meta.title[l]}`), ...LANGS.map(l => `summary_${l}: ${meta.summary[l]}`),
-    `systems: ${(meta.systems || []).join(", ")}`, "---", ""];
+    `systems: ${(meta.systems || []).join(", ")}`,
+    ...(meta.reviewers && meta.reviewers.length ? [`reviewers: ${meta.reviewers.map(r => (r.country ? `${r.name} (${r.country})` : r.name)).join(", ")}`] : []),
+    ...(meta.created ? [`created: ${meta.created}`] : []), "---", ""];
   return head.join("\n") + LANGS.map(l => `<!-- lang:${l} -->\n\n${md[l].trim()}\n`).join("\n");
 }

@@ -68,9 +68,6 @@ export function checkBundle(text, { assets = [] } = {}) {
   if (LANGS.every(l => bodies[l])) {
     const names = Object.fromEntries(LANGS.map(l => [l, assetNames(bodies[l].body)]));
     images = [...new Set(LANGS.flatMap(l => names[l]))].sort();
-    if (LANGS.some(l => names[l].join() !== names.pt.join())) {
-      errors.push(`The three languages must use the same images: PT uses ${names.pt.join(", ") || "none"}; EN ${names.en.join(", ") || "none"}; ZH ${names.zh.join(", ") || "none"}.`);
-    }
     for (const n of images) if (!assets.includes(n)) errors.push(`The text uses the image "${n}" but it is not attached.`);
     for (const n of assets) if (!images.includes(n)) warnings.push(`The image "${n}" is attached but not used in the text, so it will not be sent.`);
   }

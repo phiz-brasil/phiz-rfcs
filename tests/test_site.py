@@ -1,4 +1,5 @@
 """Smoke tests of the built site in a real browser, with the Supabase API replaced by tests/fake_supabase.py.
+The RFCs are the ones of rfcs/ as the importer leaves them in the database (tests/support.py, import_rfc).
 
   .venv/bin/python -m unittest discover -s tests -v
 
@@ -12,15 +13,22 @@ from pathlib import Path
 from playwright.sync_api import expect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from support import SiteCase  # noqa: E402
-RFC = "PHZ-0002"          # a Markdown RFC with diagrams, tables and an archived version (v1.0)
+from support import SiteCase, import_rfc  # noqa: E402
+RFC = "PHZ-0002"          # an RFC with diagrams and tables; its first version (v1.0) is an archived page
 SECTION = "summary"       # its first section
 
 
 class SiteTest(SiteCase):
+    def setUp(self):
+        super().setUp()
+        for rid in ("PHZ-0001", "PHZ-0002"):
+            import_rfc(self.db, rid)
+
     # -- helpers --------------------------------------------------------
-    def open(self, path=f"/rfcs/{RFC}/", wait_comments=True):
+    def open(self, path=f"/rfc/?id={RFC}", wait_comments=True):
         self.page.goto(self.base + path)
+        if path.startswith("/rfc/"):
+            self.page.wait_for_selector(".lang.active h2")              # the page is drawn from the database after it loads
         if wait_comments:
             self.page.wait_for_selector(".lang.active h2 .cmt-btn")
             self.page.wait_for_function("document.querySelector('.cmt-all')")   # comments loaded
@@ -61,18 +69,41 @@ class SiteTest(SiteCase):
         page = self.open(wait_comments=False)
         page.click(".vers summary")
         items = page.locator(".vers-pop li")
-        self.assertGreaterEqual(items.count(), 2)
-        self.assertTrue(items.nth(1).locator("a").count() == 1)         # the archived version links to its page
+        self.assertEqual(items.count(), 2)                              # v1.1 from the database, v1.0 an archived page
+        self.assertEqual(items.nth(1).locator("a").get_attribute("href"), f"../rfcs/{RFC}/v1.0.html")
         page.goto(self.base + f"/rfcs/{RFC}/v1.0.html")
         expect(page.locator(".ver-banner")).to_be_visible()
         page.wait_for_selector(".lang.active h2")
         self.assertEqual(page.locator(".cmt-btn").count(), 0, "archived versions are read-only")
+        self.assertEqual(page.locator('.ver-banner a').first.get_attribute("href"), f"../../rfc/?id={RFC}")   # and lead to the current one
+
+    def test_the_old_address_of_an_rfc_leads_to_the_database_page(self):
+        self.page.goto(self.base + f"/rfcs/{RFC}/?c=abc#pt-summary")
+        self.page.wait_for_url(f"{self.base}/rfc/?id={RFC}&c=abc#pt-summary")
+        self.page.wait_for_selector(".lang.active h2")
+
+    def test_the_new_version_button_is_in_the_header(self):
+        page = self.open(wait_comments=False)
+        btn = page.locator("header.bar a.newver")
+        expect(btn).to_be_visible()
+        self.assertEqual(btn.get_attribute("href"), f"../nova/?edit={RFC}")
+
+    def test_the_openapi_page_and_files_are_published(self):
+        page = self.page
+        page.goto(self.base + "/rfcs/PHZ-0001/openapi/")
+        page.wait_for_selector("#copy-yaml")
+        self.assertGreater(len(page.evaluate("window.PHIZ_YAML.pt")), 1000)
+        self.assertIn("openapi:", self.context.request.get(self.base + "/rfcs/PHZ-0001/openapi.en.yaml").text())
+        self.page.goto(self.base + "/rfc/?id=PHZ-0001")
+        self.page.wait_for_selector(".lang.active h2")
+        link = self.page.locator('.lang.active a[href$="/rfcs/PHZ-0001/openapi/"]')
+        expect(link).to_have_count(1)
 
     def test_index_lists_rfcs_and_filters_by_status(self):
         self.db.status_log.append({"rfc_id": RFC, "status": "approved", "author": "Ana", "created_at": "2026-10-21T10:00:00Z"})
         page = self.open("/", wait_comments=False)
         page.wait_for_selector(".card-li")
-        self.assertGreaterEqual(page.locator(".card-li").count(), 2)
+        self.assertEqual(page.locator(".card-li").count(), 2)
         self.assertEqual(page.locator(f'.card-li[data-rfc="{RFC}"]').get_attribute("data-status"), "approved")   # live status wins
         page.click('.filters [data-filter="approved"]')
         shown = page.locator(".card-li:not([hidden])")

@@ -242,7 +242,7 @@ async function fillImages(html) {
 async function previewDoc(l) {
   if (pageCss === null) pageCss = await (await fetch("../assets/page.css")).text();
   const meta = { id: editId || "PHZ-????", title: current.meta.title, summary: current.meta.summary, systems: current.meta.systems, status: "draft",
-                 authors: [$("by").value.trim() || "—"], collaborators: names($("collabs").value), reviewers: [], created: new Date().toISOString().slice(0, 10) };
+                 authors: [$("by").value.trim() || "—"], collaborators: names($("collabs").value), reviewers: current.meta.reviewers || [], created: current.meta.created || new Date().toISOString().slice(0, 10) };
   const { html } = pageBody(current.bodies[l].body, l);
   const withImages = await fillImages(sanitize(html));
   const mermaid = new URL("../assets/mermaid.min.js", location.href).href;

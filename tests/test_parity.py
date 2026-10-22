@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import rfc_md  # noqa: E402
-from support import ROOT, SiteCase  # noqa: E402
+from support import ROOT, SiteCase, imported  # noqa: E402
 
 HOST = """<!doctype html><meta charset="utf-8"><title>render host</title>
 <script src="/assets/vendor/markdown-it.min.js"></script>
@@ -104,10 +104,15 @@ class ParityTest(SiteCase):
             with self.subTest(f=str(f.relative_to(ROOT))):
                 self.assertSameBody(f.parent.name, f.read_text(encoding="utf-8"), lang)
 
-    def test_template_renders_the_same(self):
-        for lang in rfc_md.LANGS:
-            with self.subTest(lang=lang):
-                self.assertSameBody("template", (ROOT / "templates" / "rfc" / f"rfc.{lang}.md").read_text(encoding="utf-8"), lang)
+    def test_imported_rfcs_render_the_same_without_raw_html(self):
+        """What the importer makes of the repository RFCs is rendered by the browser (no raw HTML) like the build renders it."""
+        for rid in ("PHZ-0001", "PHZ-0002"):
+            for rev in imported(rid):
+                parsed = self.js("(t) => { const p = R.bundle.parseBundle(t); return { md: p.md, errors: p.errors }; }", rev["bundle"])
+                self.assertEqual(parsed["errors"], [])
+                for lang in rfc_md.LANGS:
+                    with self.subTest(rfc=rid, lang=lang):
+                        self.assertSameBody(rid, parsed["md"][lang], lang, html=False)
 
     def test_syntax_fixture_renders_the_same(self):
         text = (ROOT / "tests" / "fixtures" / "syntax.md").read_text(encoding="utf-8")

@@ -1,6 +1,6 @@
 # Markdown syntax for RFCs
 
-Everything below is written the same way in each language section of `RFC.md` (and in `rfc.pt.md`, `rfc.en.md` and `rfc.zh.md` for RFCs kept in the repository, whose format is `docs/spec/rfc-format.md`).
+Everything below is written the same way in each language section of `RFC.md`. The site shows submitted text **without raw HTML** (the one exception is `<br>` for a line break inside a table cell); everything else has a Markdown form below.
 
 ## Sections
 
@@ -22,19 +22,25 @@ Plain GFM tables get the site style. Variants wrap one table:
 :::
 ```
 
-`changes` (four wide columns), `num` (mono first column), `map` (route mapping: first two columns mono). Inline verdicts and chips are raw HTML, allowed anywhere:
+`changes` (four wide columns), `num` (mono first column), `map` (route mapping: first two columns mono). A small coloured label goes in a cell, or anywhere in text, as `[text]{kind}` with kind `eq`, `ch`, `gap`, `new` (green, amber, red, blue) or `yes`, `part`, `no`. A line break inside a cell is `<br>`.
 
 ```markdown
-<div class="legend"><span><span class="st eq">equivalente</span> mesma operação</span><span><span class="st ch">muda</span> regra diferente</span><span><span class="st new">novo</span> não existia</span><span><span class="st gap">sem equivalente</span> fica no antigo</span></div>
+::: legend
+- [equivalente]{eq} mesma operação
+- [muda]{ch} regra diferente
+- [novo]{new} não existia
+:::
 
 ::: table map
 | Hoje | API nova | Situação | O que muda |
 |---|---|---|---|
-| POST /Tokenizacao/Pagar | POST /v1/pagamento | <span class="st ch">muda</span> | … |
+| POST /Tokenizacao/Pagar<br>B21 | POST /v1/pagamento | [muda]{ch} | … |
 :::
 ```
 
-Chip labels: PT equivalente / muda / novo / sem equivalente; EN equivalent / changes / new / no equivalent; ZH 对应 / 变化 / 新增 / 无对应. Also `<span class="yes">`, `<span class="part">`, `<span class="no">`.
+Label text: PT equivalente / muda / novo / sem equivalente; EN equivalent / changes / new / no equivalent; ZH 对应 / 变化 / 新增 / 无对应. `::: legend` is a list of what each label means.
+
+A note under a table or a code block, without taking a paragraph number: `::: caption` with one paragraph.
 
 ## Callouts
 
@@ -103,10 +109,44 @@ flowchart LR
 
 Fenced blocks with a language: `json`, `bash`, `http`, `python`, `yaml`, `java`, `javascript`, `typescript`, `dart`, `kotlin`, `go`, `sql`, `text`. Identical in the three languages. Realistic but fake values; never real keys, tokens, documents or customer data. Comments in English.
 
-## Raw HTML
+## Images and galleries
 
-Allowed anywhere as an escape hatch (for example `<code>` lists, `<br>`, the chips above). Prefer Markdown.
+Mermaid draws most diagrams as text. For screenshots and drawings made elsewhere (draw.io, Excalidraw, app screens), export PNG, JPEG or WebP (at most 1 MB each; up to 160 per RFC) and cite them by name; whoever publishes attaches the files:
+
+```markdown
+![Arquitetura em duas camadas](asset:arquitetura.png)
+```
+
+Names are lowercase letters, digits, `.`, `_`, `-` (up to 60). An image that changes by language (a translated screen) gets one file per language (`tela-pt.png`, `tela-en.png`, `tela-zh.png`). The alt text is translated. `https://` links also work for images, but a file is better: it stays with the RFC.
+
+Several related images with captions:
+
+```markdown
+::: gallery
+- ![Tela de login](asset:login-pt.png) **A1.** Tela de login
+- ![Tela inicial](asset:home-pt.png) **A2.** Tela inicial
+:::
+```
+
+`::: gallery phones` shows tall phone screens in narrow columns. Each item is an image followed by its caption.
+
+## Screens (cards)
+
+One card per menu item or screen, each with where it shows and a list:
+
+```markdown
+::: screens
+##### Painel | Muda · Tela 1
+
+- Métricas de mensagens
+- Alertas de segredo antigo
+
+##### Membros | Sem mudança
+
+- Os papéis definem quem gerencia as aplicações
+:::
+```
 
 ## Placeholders
 
-The template marks what to fill with `TODO:`; the checker (rule F08) refuses any left.
+The template marks what to fill with `TODO:`; the page refuses the file while any is left.

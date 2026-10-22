@@ -36,7 +36,8 @@ NOTE_LABELS = {
     "risk": {"pt": "A confirmar", "en": "To confirm", "zh": "待确认"},
 }
 COUNTRY = {"BR": {"pt": "Brasil", "en": "Brazil", "zh": "巴西"}, "CN": {"pt": "China", "en": "China", "zh": "中国"}}
-DIRECTIVES = ("note", "decision", "risk", "stats", "phases", "questions", "endpoints", "table")
+DIRECTIVES = ("note", "decision", "risk", "stats", "phases", "questions", "endpoints", "gallery", "screens", "legend", "caption", "table")
+CHIPS = {"eq": "st eq", "ch": "st ch", "gap": "st gap", "new": "st new", "yes": "yes", "no": "no", "part": "part"}
 TABLE_VARIANTS = ("changes", "num", "map")
 METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 CODE_LANGS = ("json", "bash", "http", "python", "yaml", "java", "javascript", "typescript", "dart", "kotlin", "go", "sql", "text")
@@ -180,8 +181,36 @@ def _parser():
     for name in ("note", "decision", "risk"):
         container(name, note_render(name))
     container("table", table_render)
-    for name in ("stats", "phases", "questions", "endpoints"):
+    for name in ("stats", "phases", "questions", "endpoints", "gallery", "screens", "legend", "caption"):
         container(name, lambda self, tokens, idx, options, env: "")   # rewritten by the core rule below
+
+    # [text]{eq}: a small coloured label (same markup as assets/js/render/markdown.js); <br> is the only HTML a table cell may use
+    chip_re = re.compile(r"\[([^\[\]\n]+)\]\{(%s)\}" % "|".join(CHIPS))
+    br_re = re.compile(r"<br\s*/?>")
+
+    def chip_rule(state, silent):
+        m = chip_re.match(state.src, state.pos) if state.src[state.pos] == "[" else None
+        if not m:
+            return False
+        if not silent:
+            tok = state.push("rfc_chip", "", 0)
+            tok.content, tok.meta = m.group(1), {"kind": m.group(2)}
+        state.pos = m.end()
+        return True
+
+    def br_rule(state, silent):
+        m = br_re.match(state.src, state.pos) if state.src[state.pos] == "<" else None
+        if not m:
+            return False
+        if not silent:
+            state.push("rfc_br", "br", 0)
+        state.pos = m.end()
+        return True
+
+    md.inline.ruler.before("link", "rfc_chip", chip_rule)
+    md.inline.ruler.before("html_inline", "rfc_br", br_rule)
+    md.add_render_rule("rfc_chip", lambda self, tokens, idx, options, env: f'<span class="{CHIPS[tokens[idx].meta["kind"]]}">{html.escape(tokens[idx].content)}</span>')
+    md.add_render_rule("rfc_br", lambda self, tokens, idx, options, env: "<br>")
 
     def table_open(self, tokens, idx, options, env):
         return f'<div class="tbl{env.pop("tbl", "")}"><table>\n'
@@ -271,7 +300,7 @@ def _core_rule(state):
                 i += 1
                 continue
             raise RfcError(f"line {(t.map[0] + 1) if t.map else '?'}: content before the first '##' section heading")
-        m = re.match(r"container_(stats|phases|questions|endpoints)_open$", t.type)
+        m = re.match(r"container_(stats|phases|questions|endpoints|gallery|screens|legend|caption)_open$", t.type)
         if m:
             name = m.group(1)
             j = i + 1
@@ -279,7 +308,7 @@ def _core_rule(state):
                 j += 1
             if j >= n:
                 raise RfcError(f"line {(t.map[0] + 1) if t.map else '?'}: ':::' {name} block is not closed")
-            out += _directive(state, name, toks[i + 1:j], (t.map[0] + 1) if t.map else "?")
+            out += _directive(state, name, toks[i + 1:j], (t.map[0] + 1) if t.map else "?", t.info)
             i = j + 1
             continue
         out.append(t)
@@ -289,13 +318,61 @@ def _core_rule(state):
     state.tokens = out
 
 
-def _directive(state, name, inner, line):
+def _directive(state, name, inner, line, info=""):
     if name == "questions":
         lists = [t for t in inner if t.type == "ordered_list_open"]
         if not lists:
             raise RfcError(f"line {line}: ::: questions needs a numbered list")
         lists[0].attrSet("class", "qs")
         return inner
+    if name == "gallery":
+        # a list; each item is an attached image followed by its caption: '- ![alt](asset:b01.png) **B01.** Caption'
+        items = _list_items(inner)
+        if not items:
+            raise RfcError(f"line {line}: ::: gallery needs a list like '- ![alt](asset:name.png) **A1.** Caption'")
+        variant = info.strip()[len("gallery"):].strip()
+        if variant not in ("", "phones"):
+            raise RfcError(f"line {line}: ::: gallery {variant}: unknown variant (use phones, or nothing)")
+        shots = []
+        for it in items:
+            kids = it.children or []
+            at = next((k for k, c in enumerate(kids) if c.type == "image"), None)
+            if at is None:
+                raise RfcError(f"line {line}: each gallery item starts with an image: '- ![alt](asset:name.png) Caption'")
+            img = state.md.renderer.renderInline([kids[at]], state.md.options, state.env)
+            cap = state.md.renderer.renderInline(kids[:at] + kids[at + 1:], state.md.options, state.env).strip()
+            shots.append(f'<div class="shot">{img}' + (f'<p class="cap">{cap}</p>' if cap else "") + "</div>")
+        return [_html_block(f'<div class="shots{" phones" if variant else ""}">\n' + "\n".join(shots) + "\n</div>\n")]
+    if name == "caption":       # a note under a table or a code block; it takes no comment number
+        inlines = [t for t in inner if t.type == "inline"]
+        if len(inlines) != 1:
+            raise RfcError(f"line {line}: ::: caption holds one paragraph")
+        return [_html_block(f'<p class="cap">{_render_inline(state, inlines[0])}</p>\n')]
+    if name == "legend":
+        items = _list_items(inner)
+        if not items:
+            raise RfcError(f"line {line}: ::: legend needs a list like '- [same]{{eq}} what it means'")
+        return [_html_block('<div class="legend">' + "".join(f"<span>{_render_inline(state, it)}</span>" for it in items) + "</div>\n")]
+    if name == "screens":
+        # '##### Title | Where it shows' headings, each followed by a list: a card per menu item
+        out, open_card, k = [], False, 0
+        while k < len(inner):
+            t = inner[k]
+            if t.type == "heading_open" and t.tag == "h5":
+                title, _, path = inner[k + 1].content.partition(" | ")
+                out.append(_html_block(("</div>\n" if open_card else "") +
+                                       f'<div class="screen"><h5>{html.escape(title.strip())}</h5>' +
+                                       (f'<span class="path">{html.escape(path.strip())}</span>' if path.strip() else "") + "\n"))
+                open_card = True
+                k += 3
+                continue
+            if not open_card:
+                raise RfcError(f"line {line}: ::: screens must start with a '##### Title | Where it shows' heading")
+            out.append(t)
+            k += 1
+        if not open_card:
+            raise RfcError(f"line {line}: ::: screens needs at least one '##### Title | Where it shows' heading")
+        return [_html_block('<div class="screens">\n')] + out + [_html_block("</div>\n</div>\n")]
     if name == "stats":
         items = _list_items(inner)
         if not items:
@@ -453,80 +530,6 @@ def render_all(folder):
     return out
 
 
-def check(folder, meta=None):
-    """(errors, warnings) for one Markdown RFC folder; rules F01-F08 of docs/spec/rfc-format.md."""
-    folder = Path(folder)
-    errors, warnings = [], []
-    try:
-        meta = meta or read_meta(folder)
-    except (OSError, ValueError) as e:
-        return [f"F01 rfc.json: {e}"], warnings
-    for key in ("id", "title", "summary", "status", "version", "changelog"):
-        if key not in meta:
-            errors.append(f"F01 rfc.json: missing {key!r}")
-    if meta.get("id") != folder.name:
-        errors.append(f"F01 rfc.json: id {meta.get('id')!r} does not match the folder {folder.name!r}")
-    if meta.get("status") not in STATUS:
-        errors.append(f"F01 rfc.json: status {meta.get('status')!r} is not one of {', '.join(STATUS)}")
-    ver = str(meta.get("version", ""))
-    if not re.fullmatch(r"\d+\.\d+", ver):
-        errors.append(f"F01 rfc.json: version {ver!r} must look like 1.0")
-    elif ver not in [str(c.get("version")) for c in meta.get("changelog") or []]:
-        errors.append(f"F01 rfc.json: version {ver} is not in the changelog")
-    for lang in LANGS:
-        if not isinstance(meta.get("title"), dict) or not meta["title"].get(lang):
-            errors.append(f"F01 rfc.json: title.{lang} is missing")
-    for r in meta.get("reviewers") or []:
-        if not (isinstance(r, str) or (isinstance(r, dict) and ("name" in r or set(r) >= set(LANGS)))):
-            errors.append(f"F01 rfc.json: reviewers entries are names, or {{\"name\": …, \"country\": \"BR\"|\"CN\"}}: {r!r}")
-        elif isinstance(r, dict) and r.get("country") not in (None, *COUNTRY):
-            errors.append(f"F01 rfc.json: reviewer country {r.get('country')!r} is not one of {', '.join(COUNTRY)}")
-    for x in meta.get("details") or []:
-        if not (isinstance(x, dict) and "label" in x and "value" in x):
-            errors.append(f"F01 rfc.json: details entries need label and value: {x!r}")
-    if (meta.get("summary") or {}).get("pt") in ("Uma frase.", "One sentence."):
-        warnings.append("F08 rfc.json: summary still has the default text")
-
-    missing = [p.name for p in md_files(folder).values() if not p.exists()]
-    if missing:
-        return errors + [f"F02 missing {', '.join(missing)}"], warnings
-    for lang, path in md_files(folder).items():
-        todo = [n for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1) if "TODO:" in line]
-        if todo:
-            more = f" (+{len(todo) - 1} more)" if len(todo) > 1 else ""
-            errors.append(f"F08 {path.name}: {len(todo)} TODO marker{'s' if len(todo) > 1 else ''} left, first at line {todo[0]}{more}")
-
-    try:
-        rendered = render_all(folder)
-    except RfcError as e:
-        return errors + [f"F03 {e}"], warnings
-    try:
-        openapi_specs(folder)
-    except RfcError as e:
-        errors.append(f"F09 {e}")
-    ids = {l: rendered[l][1] for l in LANGS}
-    if not (ids["pt"] == ids["en"] == ids["zh"]):
-        for l in ("en", "zh"):
-            if ids[l] != ids["pt"]:
-                errors.append(f"F04 section ids differ between pt and {l}: pt={ids['pt']} {l}={ids[l]}")
-        return errors, warnings
-    st = {l: structure(rendered[l][0]) for l in LANGS}
-    for k, sid in enumerate(ids["pt"]):
-        counts = {l: st[l]["blocks"][k] if k < len(st[l]["blocks"]) else 0 for l in LANGS}
-        if len(set(counts.values())) > 1:
-            errors.append(f"F05 section {sid!r} has a different number of paragraphs/list items/tables/diagrams/code blocks: "
-                          f"pt {counts['pt']} · en {counts['en']} · zh {counts['zh']} (per-paragraph comments use these numbers)")
-    d = {l: st[l]["diagrams"] for l in LANGS}
-    if len(set(d.values())) > 1:
-        errors.append(f"F06 different number of diagrams: pt {d['pt']} · en {d['en']} · zh {d['zh']}")
-    for l in ("en", "zh"):
-        if st[l]["code"] != st["pt"]["code"] and len(st[l]["code"]) == len(st["pt"]["code"]):
-            errors.append(f"F06 code blocks in {l} are not identical to pt (samples are shared across languages; comments in English)")
-        elif len(st[l]["code"]) != len(st["pt"]["code"]):
-            errors.append(f"F06 different number of code blocks: pt {len(st['pt']['code'])} · {l} {len(st[l]['code'])}")
-    return errors, warnings
-
-
 def wrap_fragment(page):
     """A page that starts with <title>… (the shell is a fragment) needs the document skeleton around it."""
     if page.lstrip().lower().startswith("<!doctype"):
@@ -619,6 +622,26 @@ def hero_html(meta, lang, status=None):
             f'  <h1>{html.escape(meta["title"][lang])}</h1>\n'
             f'  <p class="lede">{html.escape(meta["summary"][lang])}</p>\n'
             f'  <dl class="meta">\n    ' + "\n    ".join(rows) + "\n  </dl>\n</header>\n")
+
+
+def render_openapi_page(folder, meta):
+    """dist/rfcs/<ID>/openapi/index.html: the interactive OpenAPI reference of an RFC, on a page of its own."""
+    specs = openapi_specs(folder)
+    blocks = [f'<div class="lang" data-lang="{lang}" lang="{BCP[lang]}"><header class="hero">\n'
+              f'  <div class="eyebrow">RFC {html.escape(meta["id"])} · OpenAPI</div>\n  <h1>{html.escape(meta["title"][lang])}</h1>\n'
+              f'  <p class="lede"><a href="../../../rfc/?id={html.escape(meta["id"])}">{html.escape(meta["id"])}</a></p>\n</header></div>' for lang in LANGS]
+    shell = (TEMPLATES / "shell.html").read_text(encoding="utf-8")
+    css = (TEMPLATES / "page.css").read_text(encoding="utf-8")
+    page = (shell.replace("{{ID}}", html.escape(meta["id"])).replace("{{SHORT_TITLE}}", "OpenAPI")
+            .replace("/*CSS*/", css).replace("<!--CONTENT-->", "\n".join(blocks) + OPENAPI_BLOCK).replace("<!--TOC-->", ""))
+    data = ("window.PHIZ_SPECS=" + json.dumps(specs, ensure_ascii=False).replace("</", "<\\/") + ";"
+            "window.PHIZ_YAML=" + json.dumps(openapi_yaml(specs), ensure_ascii=False).replace("</", "<\\/") + ";")
+    page += (f'\n<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui.css">'
+             f'\n<script>{data}</script>'
+             f'\n<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui-bundle.js"></script>'
+             '\n<script src="../../../assets/openapi.js"></script>')
+    page = wrap_fragment(page).replace("</title>", '</title>\n<link rel="stylesheet" href="../../../assets/rfc-site.css">', 1)
+    return page
 
 
 def render_page(folder, meta, status=None, rfc_dir=None):

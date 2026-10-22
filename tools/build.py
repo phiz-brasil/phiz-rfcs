@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Builds the static site into dist/.
 
-  rfcs/<ID>/rfc.json     metadata (status, authors, reviewers, titles, summaries)
-  rfcs/<ID>/rfc.{pt,en,zh}.md   the RFC (Markdown, see docs/spec/rfc-format.md)
-  rfcs/<ID>/openapi_gen.py      optional: builds the OpenAPI spec shown at the end of the page
-  rfcs/<ID>/versions/<v>/       archived older versions (Markdown, or the HTML page of versions archived before Markdown)
-  rfcs/<ID>/*            other files (images…) are copied as is
-Folders that start with "_" (e.g. _template) are ignored.
+The RFCs live in the database (tools/import_rfcs.py moved the ones of this repository there); the pages that show them
+(dist/rfc/, dist/nova/, the index, the comments page) read it in the browser. What is built from rfcs/ is only what the database
+cannot hold:
+
+  rfcs/<ID>/versions/<v>/source.html   versions archived as HTML pages: published as dist/rfcs/<ID>/v<v>.html and listed in the
+                                       history of the RFC through dist/archive.json
+  rfcs/<ID>/openapi_gen.py             the OpenAPI spec: published as YAML and as an interactive page (dist/rfcs/<ID>/openapi/)
+  rfcs/<ID>/*                          images and other files the archived pages use, copied as they are
+  dist/rfcs/<ID>/index.html            sends the old address of an RFC to dist/rfc/?id=<ID>
+Folders that start with "_" are ignored.
 """
 import html, json, re, shutil, sys, zipfile
 from pathlib import Path
@@ -33,14 +37,6 @@ def load():
         meta = json.loads((d / "rfc.json").read_text(encoding="utf-8"))
         if meta["status"] not in STATUS:
             sys.exit(f"{d.name}: invalid status {meta['status']!r}; use one of {', '.join(STATUS)}")
-        try:
-            errors, warnings = rfc_md.check(d, meta)
-        except rfc_md.RfcError as err:
-            errors, warnings = [str(err)], []
-        for w in warnings:
-            print(f"warning: {d.name}: {w}")
-        if errors:
-            sys.exit(f"{d.name}: " + "\n  ".join(["cannot build, fix with tools/check_rfc.py:"] + errors))
         out.append((d, meta))
     return out
 
@@ -71,22 +67,12 @@ def snapshot(d, v):
     return folder if rfc_md.is_markdown_rfc(folder) else folder / "source.html"
 
 
-_PAGES = {}
-
-
-def page_text(d, meta):
-    """The full RFC page of the current version."""
-    if d.name not in _PAGES:
-        _PAGES[d.name] = rfc_md.render_page(d, meta)
-    return _PAGES[d.name]
-
-
-def versions_html(d, meta, shown):
+def versions_html(d, meta, shown, current_href="./"):
     cur, log = versions_of(d, meta)
     lis = []
     for ent in log:
         v = str(ent["version"])
-        href = "./" if v == cur else (f"v{v}.html" if snapshot(d, v).exists() else None)
+        href = current_href if v == cur else (f"v{v}.html" if snapshot(d, v).exists() else None)
         tag = spans(T_CURRENT, "vtag") if v == cur else ("" if href else spans(T_NOFILE, "vtag"))
         head = f'<b>v{e(v)}</b>{tag}<time>{e(ent.get("date", ""))}</time>'
         head = f'<a href="{href}">{head}</a>' if href else f"<span>{head}</span>"
@@ -97,13 +83,13 @@ def versions_html(d, meta, shown):
             f'<div class="vers-pop"><h3>{spans(T_VERSIONS)}</h3><ul>{"".join(lis)}</ul></div></details>')
 
 
-def banner_html(shown, cur):
+def banner_html(shown, cur, current_href="./"):
     msg = {"pt": f"Você está lendo a versão {shown}, arquivada e somente leitura. A versão atual é a {cur}.",
            "en": f"You are reading version {shown}, archived and read-only. The current version is {cur}.",
            "zh": f"你正在阅读已存档的只读版本 {shown}。当前版本为 {cur}。"}
     go = {"pt": "Ver versão atual", "en": "View current version", "zh": "查看当前版本"}
     return (f'<div class="ver-banner" role="note">{spans(msg)} '
-            f'<a href="./">{spans(go)}</a></div>')
+            f'<a href="{current_href}">{spans(go)}</a></div>')
 
 
 def render_rfc(d, meta, text, out, shown, frozen, status, up):
@@ -114,10 +100,11 @@ def render_rfc(d, meta, text, out, shown, frozen, status, up):
     page = page.replace('<span class="rfcno">', f'<a class="back" href="{up}">← RFCs</a><span class="rfcno">', 1)
     badge = (f'<span class="rfcno st" data-st="{status}">'
              + "".join(f'<span class="lang-st" data-l="{l}">{e(STATUS[status][l])}</span>' for l in LANGS) + "</span>")
-    extra = badge + versions_html(d, meta, shown)
+    to_current = f"{up}rfc/?id={meta['id']}"                 # the current version is the one in the database
+    extra = badge + versions_html(d, meta, shown, to_current)
     page = re.sub(r'(<span class="rfcno">[^<]*</span>)', lambda m: m.group(1) + extra, page, count=1)
     if frozen:
-        page = page.replace("</header>", "</header>\n" + banner_html(shown, cur), 1)
+        page = page.replace("</header>", "</header>\n" + banner_html(shown, cur, to_current), 1)
         page = page.replace("</title>", f" · v{shown}</title>", 1)
     page = page.replace("</title>", f"</title>\n<link rel=\"stylesheet\" href=\"{up}assets/rfc-site.css\">", 1)
     cfg = {"repo": CFG["repo"], "giscus": CFG["giscus"], "comments": CFG.get("comments", {})}
@@ -128,15 +115,25 @@ def render_rfc(d, meta, text, out, shown, frozen, status, up):
     out.write_text(page, encoding="utf-8")
 
 
+REDIRECT = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<title>{id}</title><meta http-equiv="refresh" content="0;url=../../rfc/?id={id}">
+<script>location.replace("../../rfc/?id={id}" + location.search.replace(/^\\?/, "&") + location.hash);</script></head>
+<body><p><a href="../../rfc/?id={id}">{id}</a></p></body></html>"""
+
+
 def build_rfc(d, meta):
+    """The files an RFC of rfcs/ still needs; → its archived versions, for dist/archive.json."""
     dest = DIST / "rfcs" / d.name
     shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html", "versions", "rfc.*.md", "openapi_gen.py", "__pycache__"))
     specs = rfc_md.openapi_specs(d)
-    if specs:       # the spec is generated from openapi_gen.py: published as files next to the page
+    if specs:       # the spec is generated from openapi_gen.py: published as files and as an interactive page
         for lang, text in rfc_md.openapi_yaml(specs).items():
             (dest / f"openapi.{lang}.yaml").write_text(text, encoding="utf-8")
+        (dest / "openapi").mkdir()
+        (dest / "openapi" / "index.html").write_text(rfc_md.render_openapi_page(d, meta), encoding="utf-8")
     cur, log = versions_of(d, meta)
-    render_rfc(d, meta, page_text(d, meta), dest / "index.html", cur, False, meta["status"], "../../")
+    (dest / "index.html").write_text(REDIRECT.format(id=meta["id"]), encoding="utf-8")     # the old address of the RFC
+    archived = []
     for ent in log:
         v = str(ent["version"])
         if v == cur:
@@ -154,7 +151,9 @@ def build_rfc(d, meta):
         else:
             text = snap.read_text(encoding="utf-8")
         render_rfc(d, meta, text, dest / f"v{v}.html", v, True, st, "../../")
-
+        archived.append({"version": v, "date": ent.get("date", ""), "note": {l: ent.get("note", {}).get(l, "") for l in LANGS},
+                         "href": f"rfcs/{d.name}/v{v}.html"})
+    return archived
 
 
 INDEX_CSS = """
@@ -244,17 +243,6 @@ new MutationObserver(paint).observe(document.documentElement,{attributes:true,at
 SECTION_RE = re.compile(r'<h2 id="(pt|en|zh)-([a-z0-9-]+)"[^>]*>(.*?)</h2>', re.S)
 
 
-def sections_of(d, meta):
-    """{section key: {pt, en, zh}} titles from the RFC page, used by the comments page."""
-    out = {}
-    for lg, key, inner in SECTION_RE.findall(page_text(d, meta)):
-        num = re.search(r'<span class="n">(.*?)</span>', inner)
-        text = re.sub(r"<[^>]+>", "", re.sub(r'<span class="n">.*?</span>', "", inner))
-        text = html.unescape(re.sub(r"\s+", " ", text)).strip()
-        out.setdefault(key, {})[lg] = (f"{num.group(1)} · " if num else "") + text
-    return out
-
-
 COMMENTS_CSS = """
 .cbar{display:grid;gap:10px;margin-bottom:10px}.cbar .filters{margin:0}
 .filters button b{font-weight:700;margin-left:2px}
@@ -285,10 +273,9 @@ COMMENTS_CSS = """
 """
 
 
-def build_comments(items):
-    """dist/comments/index.html: every comment of every RFC, with filters (data loaded in the browser)."""
-    meta = {"cfg": CFG.get("comments", {}),
-            "rfcs": [{"id": m["id"], "title": m["title"], "sections": sections_of(d, m)} for d, m in items]}
+def build_comments():
+    """dist/comments/index.html: every comment of every RFC, with filters (data and RFC titles loaded in the browser)."""
+    meta = {"cfg": CFG.get("comments", {}), "rfcs": []}
     data = json.dumps(meta, ensure_ascii=False).replace("</", "<\\/")
     title = e(CFG["title"])
     lead = {"pt": "Todos os comentários das RFCs em um só lugar. Filtre por RFC, veja o que está sem resposta ou o que chegou desde sua última visita, e abra o comentário na RFC para responder.",
@@ -310,20 +297,9 @@ def spans_plain(d):
     return e(d["pt"])
 
 
-def build_index(items):
-    items = sorted(items, key=lambda x: x[1]["id"], reverse=True)
-    lis = []
-    for d, m in items:
-        st = m["status"]
-        authors = ", ".join(rfc_md.person_name(a) for a in m.get("authors", [])) or "—"
-        revs = ", ".join(rfc_md.person_name(r) for r in m.get("reviewers", [])) or "—"
-        lis.append(f'''<li class="card-li" data-status="{st}" data-rfc="{e(m["id"])}"><a class="card" href="rfcs/{e(d.name)}/">
-<div class="top"><span class="id">{e(m["id"])}</span><span class="ver">v{e(versions_of(d, m)[0])}</span><span class="badge" data-st="{st}">{spans(STATUS[st])}</span></div>
-<h2>{spans(m["title"])}</h2><p>{spans(m["summary"])}</p>
-<div class="meta"><span>{e(authors)}</span><span>Reviewers: {e(revs)}</span><span>{e(m.get("updated", ""))}</span><span class="cc" data-rfc="{e(m["id"])}" hidden></span></div></a></li>''')
-    used = sorted({m["status"] for _, m in items}, key=list(STATUS).index)
+def build_index():
+    """dist/index.html: the frame; assets/js/index-live.js fills the list from the database."""
     fl = '<button type="button" data-filter="all" aria-pressed="true">' + spans({"pt": "Todas", "en": "All", "zh": "全部"}) + "</button>"
-    fl += "".join(f'<button type="button" data-filter="{s}" aria-pressed="false">{spans(STATUS[s])}</button>' for s in used)
     title = e(CFG["title"])
     return f'''<!doctype html><html lang="pt-BR" data-lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title><meta name="robots" content="noindex">
@@ -336,7 +312,7 @@ def build_index(items):
 <main class="wrap"><h1>RFCs</h1>
 <p class="lead">{spans({"pt": "Propostas técnicas da plataforma, com status e comentários por seção.", "en": "Platform technical proposals, with status and per-section comments.", "zh": "平台技术提案，含状态与分节评论。"})}</p>
 <div class="filters" role="group">{fl}</div>
-<ul class="list">{"".join(lis)}</ul></main><script>window.PHIZ_CMT={json.dumps(CFG.get("comments", {}))};window.PHIZ_SITE={json.dumps({"comments": CFG.get("comments", {})})};{INDEX_JS}{INDEX_COUNTS_JS}window.PHIZ_STATUS_INDEX=true;</script>
+<ul class="list"></ul></main><script>window.PHIZ_CMT={json.dumps(CFG.get("comments", {}))};window.PHIZ_SITE={json.dumps({"comments": CFG.get("comments", {})})};{INDEX_JS}{INDEX_COUNTS_JS}window.PHIZ_STATUS_INDEX=true;</script>
 <script src="assets/status.js"></script>
 <script type="module" src="assets/js/index-live.js"></script></body></html>'''
 
@@ -409,9 +385,9 @@ def build_new_rfc_page():
 <textarea id="text" rows="10" spellcheck="false" aria-label="RFC.md"></textarea>
 <div class="assetsbox">
 <h3>{S("Imagens e diagramas (opcional)", "Images and diagrams (optional)", "图片和图表（可选）")}</h3>
-<p>{S("Diagramas em texto (Mermaid) já funcionam direto no arquivo. Para prints e diagramas feitos em outra ferramenta (draw.io, Excalidraw…), exporte em PNG, anexe aqui e cite no texto com o trecho que aparece em cada imagem. Aceitamos PNG, JPEG e WebP; cada imagem é reduzida para até 1 MB, e o limite é de 20 imagens. Use a mesma imagem nos três idiomas.",
-      "Text diagrams (Mermaid) already work straight in the file. For screenshots and diagrams made in another tool (draw.io, Excalidraw…), export as PNG, attach them here and cite them in the text with the snippet shown for each image. We accept PNG, JPEG and WebP; each image is reduced to at most 1 MB, and the limit is 20 images. Use the same image in the three languages.",
-      "文本图表（Mermaid）可直接写在文件中。对于截图以及用其他工具（draw.io、Excalidraw 等）制作的图表，请导出为 PNG，在此附加，并使用每张图片旁显示的片段在正文中引用。支持 PNG、JPEG 和 WebP；每张图片会被缩小到最多 1 MB，上限为 20 张。三种语言请使用同一张图片。")}</p>
+<p>{S("Diagramas em texto (Mermaid) já funcionam direto no arquivo. Para prints e diagramas feitos em outra ferramenta (draw.io, Excalidraw…), exporte em PNG, anexe aqui e cite no texto com o trecho que aparece em cada imagem. Aceitamos PNG, JPEG e WebP; cada imagem é reduzida para até 1 MB, e o limite é de 160 imagens. Se a imagem muda por idioma (telas traduzidas), anexe uma por idioma.",
+      "Text diagrams (Mermaid) already work straight in the file. For screenshots and diagrams made in another tool (draw.io, Excalidraw…), export as PNG, attach them here and cite them in the text with the snippet shown for each image. We accept PNG, JPEG and WebP; each image is reduced to at most 1 MB, and the limit is 160 images. If the picture changes by language (translated screens), attach one per language.",
+      "文本图表（Mermaid）可直接写在文件中。对于截图以及用其他工具（draw.io、Excalidraw 等）制作的图表，请导出为 PNG，在此附加，并使用每张图片旁显示的片段在正文中引用。支持 PNG、JPEG 和 WebP；每张图片会被缩小到最多 1 MB，上限为 160 张。如果图片因语言而异（翻译后的截图），请为每种语言各附加一张。")}</p>
 <p><label class="btn" for="imgs">{S("Anexar imagens", "Attach images", "附加图片")}</label><input type="file" id="imgs" accept="image/png,image/jpeg,image/webp" multiple hidden>
 <span id="imgs-note" class="note" aria-live="polite"></span></p>
 <ul id="assets" class="assets"></ul>
@@ -448,7 +424,6 @@ def skill_files():
              "assets/RFC.md": (ROOT / "templates" / "bundle" / "RFC.md").read_text(encoding="utf-8")}
     for rel in SKILL_FILES:
         files[rel] = (src / rel).read_text(encoding="utf-8")
-    files["references/structure.md"] = files["references/structure.md"].split("\n## rfc.json")[0].rstrip() + "\n"     # repository-only part
     return files
 
 
@@ -485,13 +460,13 @@ def main():
     shutil.copytree(ROOT / "assets", DIST / "assets")
     (DIST / ".nojekyll").write_text("")
     items = load()
-    for d, m in items:
-        build_rfc(d, m)
-    (DIST / "index.html").write_text(build_index(items), encoding="utf-8")
+    archive = {m["id"]: build_rfc(d, m) for d, m in items}
+    (DIST / "archive.json").write_text(json.dumps({k: v for k, v in archive.items() if v}, ensure_ascii=False), encoding="utf-8")
+    (DIST / "index.html").write_text(build_index(), encoding="utf-8")          # the list is read from the database in the browser
     build_live_pages()
     (DIST / "comments").mkdir()
-    (DIST / "comments" / "index.html").write_text(build_comments(items), encoding="utf-8")
-    print(f"built {len(items)} RFC(s) -> {DIST}")
+    (DIST / "comments" / "index.html").write_text(build_comments(), encoding="utf-8")
+    print(f"built the site -> {DIST} ({len(items)} legacy RFC folder(s), {sum(len(v) for v in archive.values())} archived version page(s))")
 
 
 main()
