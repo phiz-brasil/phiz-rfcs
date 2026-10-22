@@ -38,6 +38,24 @@ def png_bytes(width=2, height=2, color=(200, 30, 30)):
             + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
 
 
+@functools.lru_cache(maxsize=None)
+def imported(rfc_id):
+    """The revisions tools/import_rfcs.py makes of an RFC of rfcs/ (converted once per run)."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import import_rfcs
+    return import_rfcs.revisions_of(ROOT / "rfcs" / rfc_id)
+
+
+def import_rfc(db, rfc_id):
+    """What the importer leaves in the database for an RFC of rfcs/: its revisions and images (tiny stand-ins), under its own id."""
+    db.ids[rfc_id] = "site"
+    for rev in imported(rfc_id):
+        db.add_revision(rfc_id, rev["bundle"], rev["meta"], rev["authors"], rev["collaborators"], by=rev["edited_by"],
+                        note=rev["note"] or None, rev=rev["rev"], created_at=rev["created_at"])
+        for name in rev["assets"].files:
+            db.add_asset(rfc_id, name, rev["rev"], png_bytes(4, 3))
+
+
 class SiteCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

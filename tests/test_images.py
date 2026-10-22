@@ -50,7 +50,7 @@ class ImagesTest(SiteCase):
         page.locator("#text").fill("## Resumo {#summary}\n\nTexto.\n")
         item.get_by_role("button", name="Inserir no texto").click()
         self.assertIn("![descrição](asset:arquitetura-final.png)", page.locator("#text").input_value())
-        expect(page.locator("#imgs-note")).to_have_text("1/20")
+        expect(page.locator("#imgs-note")).to_have_text("1/160")
 
     def test_only_png_jpeg_and_webp_are_accepted(self):
         page = self.nova()
@@ -62,11 +62,11 @@ class ImagesTest(SiteCase):
         expect(page.locator("#imgs-note")).to_contain_text("Não foi possível ler")
         expect(page.locator("#assets li")).to_have_count(0)
 
-    def test_at_most_twenty_images(self):
+    def test_at_most_160_images(self):
         page = self.nova()
-        self.attach(*[file(f"img{i}.png") for i in range(22)])
-        expect(page.locator("#assets li")).to_have_count(20)
-        expect(page.locator("#imgs-note")).to_contain_text("No máximo 20")
+        self.attach(*[file(f"img{i}.png") for i in range(162)])
+        expect(page.locator("#assets li")).to_have_count(160)
+        expect(page.locator("#imgs-note")).to_contain_text("No máximo 160")
 
     def test_same_file_name_twice_gets_a_distinct_name(self):
         page = self.nova()

@@ -5,14 +5,14 @@
       - Cada ponto a preencher está marcado com TODO: (com dois-pontos). Troque todos; o envio é recusado enquanto sobrar algum.
       - Escreva primeiro a seção em português, depois traduza para inglês e chinês mantendo as MESMAS seções, ids {#...}, parágrafos,
         itens de lista, tabelas, diagramas e blocos de código, na mesma ordem (os comentários por parágrafo usam essa numeração).
-      - Nada de HTML, scripts ou segredos. Imagens só com link https.
+      - Nada de HTML, scripts ou segredos. Imagens: link https ou anexo (![descrição](asset:nome.png), anexado na página de envio).
       - Título e resumo nos três idiomas ficam no bloco do topo; o autor e os colaboradores você informa na página de envio.
 
   EN  Fill in this file (an AI can do it: see the prompt on the "New RFC" page), then upload it on the "New RFC" page of the site.
       - Every spot to fill is marked TODO: (with a colon). Replace them all; the upload is refused while any is left.
       - Write the Portuguese section first, then translate to English and Chinese keeping the SAME sections, {#...} ids, paragraphs,
         list items, tables, diagrams and code blocks, in the same order (per-paragraph comments use that numbering).
-      - No HTML, scripts or secrets. Images only as https links.
+      - No HTML, scripts or secrets. Images: an https link, or an attachment (![description](asset:name.png), attached on the upload page).
       - Title and summary in the three languages go in the block at the top; you give author and collaborators on the upload page.
 -->
 ---
@@ -23,6 +23,7 @@ summary_pt: TODO: uma frase em português: o que muda, para quem e por quê
 summary_en: TODO: one sentence in English: what changes, for whom and why
 summary_zh: TODO: 一句话（中文）：改变什么、面向谁、为什么
 systems: TODO: sistema-a, sistema-b
+# reviewers: Nome Sobrenome (BR), Nome Sobrenome (CN)     (opcional / optional: tire o # / remove the #)
 ---
 <!-- lang:pt -->
 

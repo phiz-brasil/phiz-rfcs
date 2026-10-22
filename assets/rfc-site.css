@@ -56,6 +56,8 @@ mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transpar
 .vers-pop time { color: var(--muted); font-size: .78rem; }
 .vers-pop .vtag { font: 600 .66rem var(--f-body, system-ui); text-transform: uppercase; letter-spacing: .05em; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
 .vers-pop .vnote-wrap { margin-top: 2px; color: var(--muted); }
+.rfcno.newver { text-decoration: none; background: var(--accent); color: #06210f; border-color: var(--accent); }
+.rfcno.newver:hover { filter: brightness(.92); }
 .ver-banner { background: var(--warn-soft, #fbf0d6); color: var(--warn, #9a6408); border-bottom: 1px solid var(--line); padding: 9px 16px; text-align: center; font: 500 .88rem var(--f-body, system-ui); }
 .ver-banner a { color: inherit; font-weight: 700; margin-left: 6px; }
 @media (max-width: 600px) { .vers { position: static; } .vers-pop { position: fixed; left: 12px; right: 12px; top: 56px; width: auto; } }

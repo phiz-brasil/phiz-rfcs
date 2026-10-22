@@ -5,22 +5,11 @@ description: Writes, updates and publishes PHIZ RFCs (technical proposals, migra
 
 # PHIZ RFCs
 
-RFCs live in the `phiz-rfcs` repository (`~/Projetos/phiz-rfcs`, remote `phiz-brasil/phiz-rfcs`) and are published by GitHub Pages at `https://phiz-brasil.github.io/phiz-rfcs/`. Each RFC is one page in three languages. New RFCs are written in **Markdown**; the format and its checked rules are in `docs/spec/rfc-format.md` of the repository (read it when unsure).
+RFCs live in the **database** (Supabase) of the `phiz-rfcs` site (`~/Projetos/phiz-rfcs`, remote `phiz-brasil/phiz-rfcs`, Pages at `https://phiz-brasil.github.io/phiz-rfcs/`). Each one is **one file**: a metadata block and the same content in Portuguese, English and Chinese, separated by `<!-- lang:pt|en|zh -->`. The site turns it into a page (`/rfc/?id=PHZ-NNNN`) with contents rail, numbered sections, Mermaid diagrams, tables, phases, risks, open questions and on-page comments. The format and its checked rules are in `docs/spec/rfc-bundle.md` of the repository (read it when unsure); the template is `templates/bundle/RFC.md`.
 
-```
-rfcs/PHZ-NNNN/
-  rfc.json        id, titles, summary, status, authors, reviewers, systems, version, changelog
-  rfc.pt.md       content in Portuguese, written first (reference language)
-  rfc.en.md       translation, same sections, paragraphs, diagrams and code blocks
-  rfc.zh.md       translation (Simplified Chinese), same structure
-templates/rfc/    the skeleton `tools/new_rfc.py` copies; every spot to fill is marked `TODO:`
-```
+Writing an RFC does not touch git: you write the file, check it with `tools/publish_rfc.py` and publish it. Every publication is a new version (1.0, 1.1…); anyone can edit on the site (**＋ Nova RFC**, `/nova/?edit=PHZ-NNNN`). The folder `rfcs/` is the legacy of the first two RFCs, kept for what the database cannot hold: older versions archived as HTML pages, PHZ-0001's OpenAPI generator and the pictures those pages use. Do not add RFCs there; `tools/import_rfcs.py` moved the current versions to the database.
 
-The header of the page (title, lede, status, authors, date, reviewers, systems) is generated from `rfc.json`; the `.md` files hold only the body. `tools/build.py` turns `rfcs/*` into `dist/`; the Pages workflow runs `tools/check_rfc.py` and the build on every push to `main`.
-
-Every RFC, including PHZ-0001 and PHZ-0002, follows this format. PHZ-0001 also has `openapi_gen.py` (the OpenAPI spec shown as a Swagger UI at the end of its page); its older versions (v1.0–v1.6) and PHZ-0002 v1.0 are frozen HTML pages in `versions/` that are never edited.
-
-This is the maintainer edition. It lives in the repository at `skills/phiz-rfc/`; install it with `ln -sfn ~/Projetos/phiz-rfcs/skills/phiz-rfc ~/.claude/skills/phiz-rfc` so it follows the repository.
+This is the maintainer edition. It lives in the repository at `skills/phiz-rfc/`; install it with `ln -sfn ~/Projetos/phiz-rfcs/skills/phiz-rfc ~/.claude/skills/phiz-rfc` so it follows the repository. People outside the repository get the self-contained edition (`site/SKILL.md`) from the site.
 
 Setup once per machine: `cd ~/Projetos/phiz-rfcs && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`, then use `.venv/bin/python` for the tools below.
 
@@ -36,56 +25,48 @@ An RFC is only as good as the investigation behind it. Before drafting:
 - For partner documentation behind a login, open it in the built-in browser and let the user sign in; read with `get_page_text` or the page's own API calls.
 - Separate what you verified from what you inferred. Inferences become open questions, not facts.
 
-### 2. Create the RFC from the template
+### 2. Start from the template
 
-```bash
-cd ~/Projetos/phiz-rfcs
-.venv/bin/python tools/new_rfc.py --pt "Título" --en "Title" --zh "标题" --author "Gleison"
-```
+Copy `templates/bundle/RFC.md` to a working file outside the repository (for example `~/rfc-drafts/<slug>/rfc.md`; put the images next to it). For a new version of an RFC that exists, start from its current text: `/nova/?edit=PHZ-NNNN` shows it, or read it from the database (`rfc_revisions`, newest `rev`). Every spot to fill is marked `TODO:`; the check refuses the file while one is left.
 
-It picks the next free `PHZ-NNNN`, copies `templates/rfc/` to `rfcs/<ID>/` (10 standard sections in the three languages) and prints the next steps. For an existing RFC, edit its files; to publish a change as a new version, run `tools/new_version.py` first (see the repository README).
+### 3. Fill the Portuguese section
 
-### 3. Fill the Portuguese version
-
-Fill `rfc.pt.md` completely before translating, so structure and facts settle once. Keep, add, split or drop sections as the topic needs; every section is `## Title {#id}` with a short English slug. Read `references/structure.md` for what goes in each section and `references/markdown.md` for the syntax of each component (tables, mapping chips, callouts, stats, phases, questions, endpoints, diagrams, code). Replace every `TODO:` marker; the checker refuses the file while one is left.
+Fill the `pt` section completely before translating, so structure and facts settle once. Keep, add, split or drop sections as the topic needs; every section is `## Title {#id}` with a short English slug. Read `references/structure.md` for what goes in each section and `references/markdown.md` for the syntax of each component (tables, coloured labels, callouts, stats, phases, questions, endpoints, diagrams, code, images and galleries, screen cards). The metadata block holds the three titles, the three summaries (one sentence each), `systems` and, optionally, `reviewers: Name (BR), Name (CN)`.
 
 Writing that works for this audience (reviewers in Brazil and China, some reading in a second language):
 
 - Short sentences, concrete nouns, one idea per paragraph. Tables for anything that is "today vs. after" or "old vs. new".
 - Say what is not done or not verified. "A confirmar na Fase 0" is better than a silent assumption.
 - Every number in the stats list must be countable from the document (e.g. rows in the mapping tables).
-- Keep internal names in backticks; never put secrets, tokens or customer data on the page — the site is public.
+- Keep internal names in backticks; never put secrets, tokens or customer data in the file — the RFC is public to anyone with the link.
 
-### 4. Diagrams
+### 4. Diagrams and images
 
-Use 4–6 Mermaid diagrams where a picture explains the mechanism: current architecture (flowchart), before/after (flowchart with subgraphs), a key flow (sequenceDiagram), lifecycle (stateDiagram-v2), cutover/rollback (flowchart with a decision node). Read `references/mermaid.md` for the patterns and the syntax traps that break rendering. A diagram is a ```` ```mermaid Caption ```` block; the caption sits on the opening line.
+Use 4–6 Mermaid diagrams where a picture explains the mechanism: current architecture (flowchart), before/after (flowchart with subgraphs), a key flow (sequenceDiagram), lifecycle (stateDiagram-v2), cutover/rollback (flowchart with a decision node). Read `references/mermaid.md` for the patterns and the syntax traps that break rendering. A diagram is a ```` ```mermaid Caption ```` block; the caption sits on the opening line. Pictures made elsewhere are PNG/JPEG/WebP files cited as `![alt](asset:name.png)`.
 
 ### 5. Translate
 
-Translate to `rfc.en.md` and `rfc.zh.md` keeping the same sections, ids, paragraphs, list items, tables, diagrams and code blocks, **in the same order**: the page numbers paragraphs per section and comments are stored by that number, so a missing or extra paragraph in one language would attach comments to the wrong text (the checker reports it). Translate diagram labels too (node text, messages, state transitions), but keep identifiers such as endpoints, status codes, class names and Mermaid subgraph ids unchanged. Code blocks must be identical in the three languages (comments in English). Chinese uses full-width punctuation (`，。：（）`) and `、` in lists; phase headings use `：`.
+Translate to the `en` and `zh` sections keeping the same sections, ids, paragraphs, list items, tables, diagrams and code blocks, **in the same order**: the page numbers paragraphs per section and comments are stored by that number, so a missing or extra paragraph in one language would attach comments to the wrong text (the check reports it). Translate diagram labels too (node text, messages, state transitions), but keep identifiers such as endpoints, status codes, class names and Mermaid subgraph ids unchanged. Code blocks must be identical in the three languages (comments in English). Chinese uses full-width punctuation (`，。：（）`) and `、` in lists; phase headings use `：`.
 
-Fill `rfcs/<ID>/rfc.json`: `summary` in the three languages (one sentence each), `reviewers` (names only), `systems`, `status`.
-
-### 6. Check and build locally
+### 6. Check
 
 ```bash
 cd ~/Projetos/phiz-rfcs
-.venv/bin/python tools/check_rfc.py <ID>     # F01–F08: ids, TODOs, same structure in the three languages, links
-.venv/bin/python tools/build.py              # the build runs the same check
+.venv/bin/python tools/publish_rfc.py ~/rfc-drafts/<slug>/rfc.md --check
 ```
 
-Fix every error before going on; warnings are advice. Optionally preview with `python3 -m http.server -d dist 8000` and look at the three languages.
+It runs the checks of the page (B01–B10 of `docs/spec/rfc-bundle.md`): metadata, the three languages, same section ids, same paragraphs/tables/diagrams/code, no `TODO:`, no raw HTML, every image cited exists. Fix every error; warnings are advice.
 
 ### 7. Publish and verify
 
-Publishing makes the RFC public. Confirm with the user before the first push of a new RFC, and say plainly that internal service names and partner details will be readable by anyone with the link. Then follow `references/publish.md`: commit (message in Portuguese, attribution line from the session's reminder), push, wait for the Pages run, and verify the live page in the browser in all three languages — sections, contents rail and every Mermaid diagram rendered without "Syntax error". Report what you checked.
+Publishing makes the RFC public. Confirm with the user first, and say plainly that internal service names and partner details will be readable by anyone with the link. Then follow `references/publish.md`: `tools/publish_rfc.py … --by "<name>"` (add `--id PHZ-NNNN --note "…"` for a new version), open the address it prints in the built-in browser and verify all three languages — sections, contents rail and every Mermaid diagram rendered without "Syntax error". Report what you checked.
 
-## RFCs from the site (single file)
+## RFCs from other people (single file)
 
-People outside the repository create RFCs on the site's **＋ Nova RFC** page: they download `templates/bundle/RFC.md` (one file: a metadata block and the three languages separated by `<!-- lang:pt|en|zh -->`), get an AI to fill it in from their documents, and upload it. The site offers them a self-contained edition of this skill for that (`skills/phiz-rfc/site/SKILL.md`, built into `phiz-rfc.zip` by `tools/build.py`). When someone asks you to fill that template from their documents, follow `skills/phiz-rfc/site/SKILL.md` and the format in `docs/spec/rfc-bundle.md`: same sections, ids, paragraphs, diagrams and code blocks in the three languages, no `TODO:` left, no raw HTML. Author and collaborators are not in the file: the person types them on the upload page. Do not publish it yourself; the person uploads it.
+People outside the repository create RFCs on the site's **＋ Nova RFC** page: they download `templates/bundle/RFC.md`, get an AI to fill it in from their documents, and upload it (the page checks it, shows a preview and publishes). The site offers them a self-contained edition of this skill for that (`skills/phiz-rfc/site/SKILL.md`, built into `phiz-rfc.zip` by `tools/build.py`). When someone asks you to fill that template from their documents, follow `skills/phiz-rfc/site/SKILL.md`: same sections, ids, paragraphs, diagrams and code blocks in the three languages, no `TODO:` left, no raw HTML. Author and collaborators are not in the file: the person types them on the upload page. Do not publish it yourself unless they ask.
 
 ## Common follow-ups
 
-- **Reviewers / status / systems**: edit `rfc.json` only (`reviewers`: names or `{"name": …, "country": "BR"|"CN"}`; `status`: `draft`, `in-review`, `approved`, `implemented`, `rejected`, `superseded`). The header, the index and the status badge follow; nothing to change in the `.md` files.
-- **A change to a published RFC**: run `tools/new_version.py <ID> --note-pt … --note-en … --note-zh …` before editing, so the published version is archived.
-- **Comments**: stored in Supabase and shown on the page (per section, per paragraph, reactions); setup and moderation are in the repository README and `references/publish.md`. Comments are keyed by section id and paragraph number — renaming an id orphans its comments and adding a paragraph shifts the ones after it, so keep ids stable once an RFC is in review and prefer a new version for big edits.
+- **Status**: changed on the page, from the badge in the header (anyone can; each change is logged with a name). **Reviewers / systems**: the metadata block, in a new version.
+- **A change to a published RFC**: a new version through `tools/publish_rfc.py --id` or `/nova/?edit=`; the previous versions stay readable under the version menu.
+- **Comments**: stored in Supabase and shown on the page (per section, per paragraph, reactions); setup and moderation are in `references/publish.md`. Comments are keyed by section id and paragraph number — renaming an id orphans its comments and adding a paragraph shifts the ones after it, so keep ids stable once an RFC is in review and prefer a new version for big edits.

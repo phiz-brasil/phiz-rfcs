@@ -4,7 +4,7 @@
 
 export const ACCEPT = ["image/png", "image/jpeg", "image/webp"];
 export const MAX_BYTES = 1048576;       // 1 MiB, the limit of the database column
-export const MAX_IMAGES = 20;
+export const MAX_IMAGES = 160;
 export const MAX_WIDTH = 1600;
 export const NAME_RE = /^[a-z0-9][a-z0-9._-]{0,59}$/;
 const EXT = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
