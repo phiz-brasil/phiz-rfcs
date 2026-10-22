@@ -28,10 +28,12 @@ const q = s => encodeURIComponent(s);
 export const listLive = () => request("rfc_live_current?select=*&order=rfc_id.desc");
 export const getCurrent = async id => (await request(`rfc_live_current?select=*&rfc_id=eq.${q(id)}`))[0] || null;
 export const listRevisions = id => request(`rfc_live_revisions?select=*&rfc_id=eq.${q(id)}&order=rev.desc`);
+// `select=*` is refused: the public key may read only these columns (not ip_hash)
+const REV_COLS = "id,rfc_id,rev,version,meta,bundle,authors,collaborators,edited_by,note,created_at";
 export const getRevision = async (id, version) =>
-  (await request(`rfc_revisions?select=*&rfc_id=eq.${q(id)}&version=eq.${q(version)}`))[0] || null;
+  (await request(`rfc_revisions?select=${REV_COLS}&rfc_id=eq.${q(id)}&version=eq.${q(version)}`))[0] || null;
 export const getLatestRevision = async id =>
-  (await request(`rfc_revisions?select=*&rfc_id=eq.${q(id)}&order=rev.desc&limit=1`))[0] || null;
+  (await request(`rfc_revisions?select=${REV_COLS}&rfc_id=eq.${q(id)}&order=rev.desc&limit=1`))[0] || null;
 
 const post = (fn, body) => request(`rpc/${fn}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 

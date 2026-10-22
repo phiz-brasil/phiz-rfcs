@@ -177,6 +177,10 @@ class FakeSupabase:
             rows = [{k: r[k] for k in ("rfc_id", "rev", "version", "edited_by", "note", "created_at")} for r in self.revisions if r["rfc_id"] == eq("rfc_id")]
             return ok(sorted(rows, key=lambda r: r["rev"], reverse=True))
         if path.endswith("/rest/v1/rfc_revisions"):
+            granted = {"id", "rfc_id", "rev", "version", "meta", "bundle", "authors", "collaborators", "edited_by", "note", "created_at"}
+            wanted = set(q.get("select", "*").split(","))
+            if not wanted <= granted:                                           # column grants: `*` includes ip_hash, which the public key cannot read
+                return ok({"code": "42501", "message": "permission denied for table rfc_revisions"}, 401)
             rows = [r for r in self.revisions if r["rfc_id"] == eq("rfc_id") and (eq("version") is None or r["version"] == eq("version"))]
             rows = sorted(rows, key=lambda r: r["rev"], reverse=q.get("order", "").endswith("desc"))
             return ok(rows[:int(q["limit"])] if "limit" in q else rows)
