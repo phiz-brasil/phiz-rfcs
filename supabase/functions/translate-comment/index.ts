@@ -32,13 +32,14 @@ type Piece = { body: string; quote: string | null };
 const PT_WORDS = /\b(que|não|nao|uma|para|com|como|mais|isso|esse|essa|está|sobre|também|então|pode|deve|seria|ainda|já|mas|por|dos|das|nos|nas|ao|se|é)\b/gi;
 const EN_WORDS = /\b(the|and|that|this|with|for|not|are|is|was|would|should|could|can|will|have|has|from|but|what|how|why|it|of|to|in)\b/gi;
 
-function detect(text: string): Lang | null {
-  const letters = text.replace(/[\s\d\p{P}\p{S}]/gu, "");
+function detect(text: string, hint: Lang | null = null): Lang | null {
+  const clean = text.replace(/https?:\/\/\S+|www\.\S+|\S+@\S+\.\S+/g, " ");   // a link says nothing about the language ("pay.phiz.com" has the word "com")
+  const letters = clean.replace(/[\s\d\p{P}\p{S}]/gu, "");
   if (!letters) return null;
   const cjk = (letters.match(/[㐀-鿿]/g) ?? []).length;
-  if (cjk / letters.length > 0.3) return "zh";
-  const pt = (text.match(PT_WORDS) ?? []).length + (text.match(/[ãõçáéíóúâêô]/gi) ?? []).length * 2;
-  const en = (text.match(EN_WORDS) ?? []).length;
+  if (cjk / letters.length > 0.3 || (hint === "zh" && cjk > 0)) return "zh";
+  const pt = (clean.match(PT_WORDS) ?? []).length + (clean.match(/[ãõçáéíóúâêô]/gi) ?? []).length * 2;
+  const en = (clean.match(EN_WORDS) ?? []).length;
   if (pt === en) return null;
   return pt > en ? "pt" : "en";
 }
@@ -59,7 +60,7 @@ async function translate(text: string, from: Lang, to: Lang): Promise<string> {
 async function translateRow(row: Row) {
   const hint = LANGS.includes(row.lang as Lang) ? (row.lang as Lang) : null;
   // emoji-only comments (reactions) have nothing to translate
-  const src = /\p{L}/u.test(row.body) ? (detect(row.body) ?? detect(row.quote ?? "") ?? hint) : null;
+  const src = /\p{L}/u.test(row.body) ? (detect(row.body, hint) ?? detect(row.quote ?? "", hint) ?? hint) : null;
   const out: Record<string, Piece> = {};
   if (src) {
     out[src] = { body: row.body, quote: row.quote };   // the original stays as written
