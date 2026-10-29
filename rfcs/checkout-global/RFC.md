@@ -90,7 +90,7 @@ A Fase 1 entrega o módulo de pagamento isolado do carrinho: `CheckoutService.op
 ::: endpoints
 - POST /commerce/v1/prepays — Cria a cobrança (auth appId + appSecret; idempotente por `orderRef`)
 - GET /commerce/v1/prepays/{orderRef} — Consulta o status da cobrança
-- Webhook payment.status — Avisa o backend do vendedor quando o pagamento fecha (retry idempotente)
+- POST payment.status — Webhook que avisa o backend do vendedor quando o pagamento fecha (retry idempotente)
 :::
 
 ::: gallery phones
@@ -326,7 +326,7 @@ Phase 1 delivers the payment module decoupled from the cart: `CheckoutService.op
 ::: endpoints
 - POST /commerce/v1/prepays — Creates the charge (auth appId + appSecret; idempotent by `orderRef`)
 - GET /commerce/v1/prepays/{orderRef} — Queries the charge status
-- Webhook payment.status — Notifies the vendor's backend when the payment settles (idempotent retry)
+- POST payment.status — Webhook that notifies the vendor's backend when the payment settles (idempotent retry)
 :::
 
 ::: gallery phones
@@ -562,7 +562,7 @@ flowchart LR
 ::: endpoints
 - POST /commerce/v1/prepays — 创建收款单（鉴权 appId + appSecret；按 `orderRef` 幂等）
 - GET /commerce/v1/prepays/{orderRef} — 查询收款单状态
-- Webhook payment.status — 支付完成时通知商家后台（幂等重试）
+- POST payment.status — Webhook，在支付完成时通知商家后台（幂等重试）
 :::
 
 ::: gallery phones
