@@ -93,14 +93,6 @@ A Fase 1 entrega o módulo de pagamento isolado do carrinho: `CheckoutService.op
 - POST payment.status — Webhook que avisa o backend do vendedor quando o pagamento fecha (retry idempotente)
 :::
 
-::: gallery phones
-- ![Produto no miniapp hoje](asset:hoje-miniapp-produto.jpg) **A1.** Hoje: checkout dentro do miniapp
-- ![Produto no Moments](asset:futuro-moments-produto.png) **B1.** Futuro: produto no Moments
-- ![Carrinho global](asset:futuro-moments-carrinho.png) **B2.** Carrinho global
-- ![Pagar no checkout](asset:futuro-moments-pagar.png) **B3.** Pagar no checkout do PhizChat
-- ![Pedido confirmado](asset:futuro-moments-confirmado.png) **B4.** Pedido confirmado
-:::
-
 ::: decision Regra de ouro do contrato
 `items[]` é contexto de exibição — o valor cobrado é o que o PhizPay server devolve no `authorizePay`. Dinheiro exige ordem: na Fase 1 a ordem nasce no backend do vendedor; quando o carrinho global existir, o host passa a criar a ordem e o `prepayId` deixa de vir do vendedor — a sheet não muda.
 :::
@@ -119,6 +111,49 @@ Cada miniapp escolhe **um** modo na Open Platform — campo `commerceMode` no me
 | Uso típico | Lojas aderentes; compras vindas de feed/chat | E-commerce complexo do lojista |
 
 Enforcement: no modo `self` as JSAPIs globais não são registradas (`phiz.addToCart` responde `mode_not_allowed`); no modo `host` o gate é a review da Open Platform. Como `requestPayment` existe só no `self`, a fronteira é verificável nos dois sentidos. No `self`, o Phiz Commerce Kit (SDK headless + componentes do design system) é obrigatório: sem Kit, sem publicação.
+
+## Os dois casos em telas {#screens}
+
+Hoje, a compra só existe dentro do miniapp do lojista; no fluxo futuro, chat e Moments chegam ao mesmo checkout do PhizChat — e, olhando adiante, serviços com parcelamento.
+
+::: gallery phones
+- ![Produto no miniapp hoje](asset:hoje-1-produto.jpg) **A1.** Produto no miniapp do lojista
+- ![Adiciona ao carrinho](asset:hoje-2-carrinho.jpg) **A2.** Adiciona ao carrinho
+- ![Confirma e envia](asset:hoje-3-enviar.jpg) **A3.** Confirma e envia o pedido
+- ![Escolhe o pagamento](asset:hoje-4-pagamento.jpg) **A4.** Pagamento: telas do SDK, no app
+:::
+
+::: gallery phones
+- ![Produto no Moments](asset:futuro-moments-1-produto.png) **B1.** Clica no produto no Moments
+- ![Produto vai para o carrinho](asset:futuro-moments-2-carrinho.png) **B2.** Produto vai para o carrinho
+- ![Clica em comprar](asset:futuro-moments-3-comprar.png) **B3.** Clica em comprar
+- ![Clica em pagar](asset:futuro-moments-4-pagar.png) **B4.** Clica em pagar
+- ![Processa o pagamento](asset:futuro-moments-5-processa.png) **B5.** Processa o pagamento
+- ![Pedido confirmado](asset:futuro-moments-6-confirmado.png) **B6.** Pedido confirmado — volta ao feed
+:::
+
+::: gallery phones
+- ![Produto compartilhado no chat](asset:futuro-chat-1-produto.png) **C1.** Produto compartilhado no chat
+- ![Comprar no chat](asset:futuro-chat-2-comprar.png) **C2.** Clica em comprar → checkout do PhizChat
+:::
+
+::: gallery phones
+- ![Agendamento via chat](asset:futuro-agendamento-01-chat.png) **D1.** Agendamento via chat
+- ![Escolhe o serviço](asset:futuro-agendamento-02-escolhe-servico.png) **D2.** Escolhe o serviço
+- ![Visualiza os serviços](asset:futuro-agendamento-03-visualiza-servicos.png) **D3.** Visualiza os serviços
+- ![Escolhe o prestador](asset:futuro-agendamento-04-escolhe-prestador.png) **D4.** Escolhe o prestador
+- ![Escolhe o horário](asset:futuro-agendamento-05-escolhe-horario.png) **D5.** Escolhe o horário
+- ![Confirma o agendamento](asset:futuro-agendamento-06-confirma.png) **D6.** Confirma o agendamento
+- ![Inicia o pagamento](asset:futuro-agendamento-07-inicia-pagamento.png) **D7.** Inicia o pagamento
+- ![Forma de pagamento](asset:futuro-agendamento-08-forma-de-pagamento.png) **D8.** Forma de pagamento
+- ![Parcelamento](asset:futuro-agendamento-09-parcelamento.png) **D9.** Parcelamento (próx. fase)
+- ![Processa o pagamento](asset:futuro-agendamento-10-processa-pagamento.png) **D10.** Processa o pagamento
+- ![Pagamento confirmado](asset:futuro-agendamento-11-confirmado.png) **D11.** Pagamento confirmado
+:::
+
+::: note
+A4 e D9 marcam fronteiras de fase: na Fase 1 o pagamento é com saldo, cartão e Pix; parcelamento e serviços (agendamento) chegam nas fases seguintes.
+:::
 
 ## Fluxos {#flows}
 
@@ -329,14 +364,6 @@ Phase 1 delivers the payment module decoupled from the cart: `CheckoutService.op
 - POST payment.status — Webhook that notifies the vendor's backend when the payment settles (idempotent retry)
 :::
 
-::: gallery phones
-- ![Product in the miniapp today](asset:hoje-miniapp-produto.jpg) **A1.** Today: checkout inside the miniapp
-- ![Product in Moments](asset:futuro-moments-produto.png) **B1.** Future: product in Moments
-- ![Global cart](asset:futuro-moments-carrinho.png) **B2.** Global cart
-- ![Pay on the checkout](asset:futuro-moments-pagar.png) **B3.** Pay on the PhizChat checkout
-- ![Order confirmed](asset:futuro-moments-confirmado.png) **B4.** Order confirmed
-:::
-
 ::: decision Contract golden rule
 `items[]` is display context — the charged amount is what the PhizPay server returns on `authorizePay`. Money requires an order: in Phase 1 the order is born on the vendor's backend; once the global cart exists, the host creates the order and the `prepayId` no longer comes from the vendor — the sheet does not change.
 :::
@@ -355,6 +382,49 @@ Each miniapp picks **one** mode on the Open Platform — a `commerceMode` field 
 | Typical use | Adopting stores; purchases from feed/chat | Complex vendor e-commerce |
 
 Enforcement: in `self` mode the global JSAPIs are not registered (`phiz.addToCart` answers `mode_not_allowed`); in `host` mode the gate is Open Platform review. Since `requestPayment` exists only in `self`, the boundary is verifiable both ways. In `self`, the Phiz Commerce Kit (headless SDK + design-system components) is mandatory: no Kit, no publishing.
+
+## The two flows on screen {#screens}
+
+Today the purchase only exists inside the vendor's miniapp; in the future flow, chat and Moments reach the same PhizChat checkout — and, looking further ahead, services with installments.
+
+::: gallery phones
+- ![Product in the miniapp today](asset:hoje-1-produto.jpg) **A1.** Product in the vendor's miniapp
+- ![Add to cart](asset:hoje-2-carrinho.jpg) **A2.** Add to cart
+- ![Confirm and send](asset:hoje-3-enviar.jpg) **A3.** Confirm and send the order
+- ![Choose the payment](asset:hoje-4-pagamento.jpg) **A4.** Payment: SDK screens, in the app
+:::
+
+::: gallery phones
+- ![Product in Moments](asset:futuro-moments-1-produto.png) **B1.** Tap the product in Moments
+- ![Product goes to the cart](asset:futuro-moments-2-carrinho.png) **B2.** Product goes to the cart
+- ![Tap buy](asset:futuro-moments-3-comprar.png) **B3.** Tap buy
+- ![Tap pay](asset:futuro-moments-4-pagar.png) **B4.** Tap pay
+- ![Payment processing](asset:futuro-moments-5-processa.png) **B5.** Payment processing
+- ![Order confirmed](asset:futuro-moments-6-confirmado.png) **B6.** Order confirmed — back to the feed
+:::
+
+::: gallery phones
+- ![Product shared in chat](asset:futuro-chat-1-produto.png) **C1.** Product shared in chat
+- ![Buy in chat](asset:futuro-chat-2-comprar.png) **C2.** Tap buy → PhizChat checkout
+:::
+
+::: gallery phones
+- ![Booking via chat](asset:futuro-agendamento-01-chat.png) **D1.** Booking via chat
+- ![Pick the service](asset:futuro-agendamento-02-escolhe-servico.png) **D2.** Pick the service
+- ![Browse services](asset:futuro-agendamento-03-visualiza-servicos.png) **D3.** Browse the services
+- ![Pick the provider](asset:futuro-agendamento-04-escolhe-prestador.png) **D4.** Pick the provider
+- ![Pick the time](asset:futuro-agendamento-05-escolhe-horario.png) **D5.** Pick the time
+- ![Confirm the booking](asset:futuro-agendamento-06-confirma.png) **D6.** Confirm the booking
+- ![Start the payment](asset:futuro-agendamento-07-inicia-pagamento.png) **D7.** Start the payment
+- ![Payment method](asset:futuro-agendamento-08-forma-de-pagamento.png) **D8.** Payment method
+- ![Installments](asset:futuro-agendamento-09-parcelamento.png) **D9.** Installments (later phase)
+- ![Payment processing](asset:futuro-agendamento-10-processa-pagamento.png) **D10.** Payment processing
+- ![Payment confirmed](asset:futuro-agendamento-11-confirmado.png) **D11.** Payment confirmed
+:::
+
+::: note
+A4 and D9 mark phase boundaries: in Phase 1 payment runs with balance, card and Pix; installments and services (booking) arrive in later phases.
+:::
 
 ## Flows {#flows}
 
@@ -565,14 +635,6 @@ flowchart LR
 - POST payment.status — Webhook，在支付完成时通知商家后台（幂等重试）
 :::
 
-::: gallery phones
-- ![今日小程序内的商品](asset:hoje-miniapp-produto.jpg) **A1.** 今日：结账在小程序内
-- ![Moments 中的商品](asset:futuro-moments-produto.png) **B1.** 未来：Moments 中的商品
-- ![全局购物车](asset:futuro-moments-carrinho.png) **B2.** 全局购物车
-- ![在结账台支付](asset:futuro-moments-pagar.png) **B3.** 在 PhizChat 结账台支付
-- ![订单已确认](asset:futuro-moments-confirmado.png) **B4.** 订单已确认
-:::
-
 ::: decision 契约黄金法则
 `items[]` 仅作展示上下文——扣款金额以 PhizPay 服务端 `authorizePay` 返回为准。资金必须有订单：第 1 阶段订单在商家后台产生；全局购物车就绪后，由宿主创建订单，`prepayId` 不再来自商家——支付面板不变。
 :::
@@ -591,6 +653,49 @@ flowchart LR
 | 典型场景 | 接入平台的店铺；来自信息流/聊天的购买 | 商家复杂电商 |
 
 约束：`self` 模式下不注册全局 JSAPI（`phiz.addToCart` 返回 `mode_not_allowed`）；`host` 模式的闸门是 Open Platform 审核。由于 `requestPayment` 仅存在于 `self`，边界在两个方向均可验证。`self` 模式强制使用 Phiz Commerce Kit（无头 SDK + 设计系统组件）：无 Kit 不予发布。
+
+## 两个流程的界面 {#screens}
+
+如今，购买只存在于商家小程序内；未来流程中，聊天与 Moments 直达同一个 PhizChat 结账台——更远的将来还有带分期的服务预约。
+
+::: gallery phones
+- ![今日小程序内的商品](asset:hoje-1-produto.jpg) **A1.** 商家小程序内的商品
+- ![加入购物车](asset:hoje-2-carrinho.jpg) **A2.** 加入购物车
+- ![确认并提交订单](asset:hoje-3-enviar.jpg) **A3.** 确认并提交订单
+- ![选择支付](asset:hoje-4-pagamento.jpg) **A4.** 支付：App 内的 SDK 界面
+:::
+
+::: gallery phones
+- ![Moments 中的商品](asset:futuro-moments-1-produto.png) **B1.** 在 Moments 点击商品
+- ![商品进入购物车](asset:futuro-moments-2-carrinho.png) **B2.** 商品进入购物车
+- ![点击购买](asset:futuro-moments-3-comprar.png) **B3.** 点击购买
+- ![点击支付](asset:futuro-moments-4-pagar.png) **B4.** 点击支付
+- ![支付处理中](asset:futuro-moments-5-processa.png) **B5.** 支付处理中
+- ![订单确认](asset:futuro-moments-6-confirmado.png) **B6.** 订单确认——回到信息流
+:::
+
+::: gallery phones
+- ![聊天中分享的商品](asset:futuro-chat-1-produto.png) **C1.** 聊天中分享的商品
+- ![聊天内购买](asset:futuro-chat-2-comprar.png) **C2.** 点击购买 → PhizChat 结账台
+:::
+
+::: gallery phones
+- ![聊天内预约](asset:futuro-agendamento-01-chat.png) **D1.** 聊天内预约
+- ![选择服务](asset:futuro-agendamento-02-escolhe-servico.png) **D2.** 选择服务
+- ![浏览服务列表](asset:futuro-agendamento-03-visualiza-servicos.png) **D3.** 浏览服务列表
+- ![选择服务人员](asset:futuro-agendamento-04-escolhe-prestador.png) **D4.** 选择服务人员
+- ![选择时间](asset:futuro-agendamento-05-escolhe-horario.png) **D5.** 选择时间
+- ![确认预约](asset:futuro-agendamento-06-confirma.png) **D6.** 确认预约
+- ![发起支付](asset:futuro-agendamento-07-inicia-pagamento.png) **D7.** 发起支付
+- ![支付方式](asset:futuro-agendamento-08-forma-de-pagamento.png) **D8.** 支付方式
+- ![分期](asset:futuro-agendamento-09-parcelamento.png) **D9.** 分期（后续阶段）
+- ![支付处理中](asset:futuro-agendamento-10-processa-pagamento.png) **D10.** 支付处理中
+- ![支付成功](asset:futuro-agendamento-11-confirmado.png) **D11.** 支付成功
+:::
+
+::: note
+A4 与 D9 标记阶段边界：第 1 阶段支持余额、银行卡与 Pix 支付；分期与服务（预约）在后续阶段到来。
+:::
 
 ## 流程 {#flows}
 
