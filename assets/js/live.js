@@ -34,11 +34,23 @@ function message(key) {
   window.phizApplyLang && window.phizApplyLang();
 }
 
+const LOCALES = { pt: "pt-BR", en: "en-US", zh: "zh-CN" };
+/* The moment a version was published, in the reader's time zone and language. Versions imported from the repository only know the
+   day (they were stored at 12:00 UTC as a placeholder), so they show the date alone. */
+function stamp(iso) {
+  const d = new Date(iso);
+  if (!iso || isNaN(d)) return "";
+  const dayOnly = /T12:00:00(\.0+)?(Z|\+00:00)$/.test(iso);
+  const out = {};
+  for (const l of LANGS) out[l] = d.toLocaleString(LOCALES[l], dayOnly ? { dateStyle: "medium", timeZone: "UTC" } : { dateStyle: "medium", timeStyle: "short" });
+  return spans(out);
+}
+
 function versionsHtml(revs, shown, rfcId, archived = []) {
   const latest = revs[0].version;
   const items = revs.map(r => {
     const cur = r.version === latest;
-    const head = `<a href="?id=${esc(rfcId)}&v=${esc(r.version)}"><b>v${esc(r.version)}</b>${cur ? spans(T.current, "vtag") : ""}<time>${esc((r.created_at || "").slice(0, 10))}</time></a>`;
+    const head = `<a href="?id=${esc(rfcId)}&v=${esc(r.version)}"><b>v${esc(r.version)}</b>${cur ? spans(T.current, "vtag") : ""}<time datetime="${esc(r.created_at || "")}">${stamp(r.created_at)}</time></a>`;
     const who = `<div class="vnote-wrap"><span class="vnote">${esc(r.edited_by)}${r.note ? " · " + esc(r.note) : ""}</span></div>`;
     return `<li${r.version === shown ? ' aria-current="true"' : ""}>${head}${who}</li>`;
   }).join("") + archived.map(a =>

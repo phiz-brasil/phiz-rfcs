@@ -82,6 +82,20 @@ class SiteTest(SiteCase):
         self.page.wait_for_url(f"{self.base}/rfc/?id={RFC}&c=abc#pt-summary")
         self.page.wait_for_selector(".lang.active h2")
 
+    def test_the_version_menu_shows_the_time_of_each_version(self):
+        from test_live import BUNDLE, META          # a site RFC with a real publication time
+        rid = self.db.seed_rfc(BUNDLE, META)
+        self.db.revisions[-1]["created_at"] = "2026-10-22T15:30:00+00:00"
+        page = self.open(f"/rfc/?id={rid}", wait_comments=False)
+        page.click(".vers summary")
+        text = page.locator(".vers-pop li time .active, .vers-pop li time span:visible").first.inner_text()
+        self.assertRegex(text, r"\d{1,2}:\d{2}")
+        page.goto(self.base + f"/rfc/?id={RFC}")
+        page.wait_for_selector(".lang.active h2")
+        page.click(".vers summary")
+        imported = page.locator(".vers-pop li time span:visible").first.inner_text()
+        self.assertNotRegex(imported, r"\d{1,2}:\d{2}")             # imported versions only know the day
+
     def test_the_new_version_button_is_in_the_header(self):
         page = self.open(wait_comments=False)
         btn = page.locator("header.bar a.newver")
