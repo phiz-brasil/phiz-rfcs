@@ -47,6 +47,7 @@ export function RoadmapPage() {
 
   return (
     <>
+      <p className="eyebrow">{T.eyebrowTrack[lang]}</p>
       <h1>{T.roadmap[lang]}</h1>
       <p className="lead">{T.roadmapLead[lang]}</p>
       <div className="bar">

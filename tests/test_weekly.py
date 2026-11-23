@@ -27,7 +27,9 @@ class WeeklyTest(SiteCase):
         db.seed_theme("PHZ-0010", "outros", kind="task", title={"pt": "Game Center"})
 
     def sign(self, name="Ana"):
+        self.prefs()
         self.page.get_by_label("Seu nome").fill(name)
+        self.page.keyboard.press("Escape")
 
     def theme(self, tid="PHZ-0001"):
         self.page.goto(self.base + f"/themes/{tid}/")
@@ -89,7 +91,9 @@ class WeeklyTest(SiteCase):
         self.db.seed_update("PHZ-0001", week="2026-W40", progress={"pt": "Começamos"}, by="Bo")
         self.theme()
         self.sign()
+        self.prefs()
         self.page.get_by_role("button", name="EN-US").click()
+        self.page.keyboard.press("Escape")
         box = self.page.get_by_role("region", name="Weekly update")
         box.get_by_label("Progress (one sentence)").fill("Contract signed")
         box.get_by_role("button", name="Post update").click()
@@ -239,7 +243,9 @@ class WeeklyTest(SiteCase):
         self.db.themes["PHZ-0001"]["progress"] = {"pt": "Contrato fechado"}
         self.db.machine_translate("PHZ-0001", "progress", "en", "Contract closed")
         self.executive()
+        self.prefs()
         self.page.get_by_role("button", name="EN-US").click()
+        self.page.keyboard.press("Escape")
         expect(self.page.locator("h1")).to_have_text("Executive view")
         expect(self.page.locator('[data-theme="PHZ-0001"] p.progress')).to_contain_text("Contract closed")
         expect(self.page.locator('[data-theme="PHZ-0001"] p.progress .from.auto')).to_have_text("auto")
@@ -250,12 +256,14 @@ class WeeklyTest(SiteCase):
         self.db.seed_blocker("PHZ-0001", {"pt": "Aprovação"}, leadership=True)
         self.page.goto(self.base + "/themes/")
         expect(self.page.get_by_role("button", name="＋ Novo tema")).to_be_visible()
+        self.prefs()
         self.page.get_by_role("button", name="Modo leitor").click()
         expect(self.page.get_by_role("button", name="Modo edição")).to_have_attribute("aria-pressed", "true")
         self.assertEqual(self.page.get_by_role("button", name="＋ Novo tema").count(), 0)
         self.assertEqual(self.page.get_by_role("button", name="Editar frentes").count(), 0)
         self.assertEqual(self.page.get_by_label("Seu nome").count(), 0)
         self.page.goto(self.base + "/themes/PHZ-0001/")                                          # remembered across pages and reloads
+        self.prefs()
         expect(self.page.get_by_role("button", name="Modo edição")).to_be_visible()
         expect(self.page.get_by_role("region", name="Bloqueios")).to_contain_text("Aprovação")
         self.assertEqual(self.page.locator("form").count(), 0)                                   # no forms at all
@@ -263,6 +271,7 @@ class WeeklyTest(SiteCase):
         self.assertEqual(self.page.get_by_role("button", name=re.compile("Salvar|Adicionar|Resolver|Publicar")).count(), 0)
         self.assertEqual(self.page.locator(".moves").count(), 0)
         self.page.goto(self.base + "/executive/")
+        self.prefs()
         expect(self.page.get_by_role("button", name="Modo edição")).to_be_visible()
         self.page.get_by_role("button", name="Modo edição").click()
         self.page.goto(self.base + "/themes/PHZ-0001/")
@@ -281,6 +290,7 @@ class WeeklyTest(SiteCase):
 
     def test_a_link_can_open_edit_mode_even_when_reader_mode_was_remembered(self):
         self.page.goto(self.base + "/themes/PHZ-0001/?mode=reader")
+        self.prefs()
         expect(self.page.get_by_role("button", name="Modo edição")).to_be_visible()
         self.page.goto(self.base + "/themes/PHZ-0001/?mode=edit")
         expect(self.page.get_by_role("button", name="Salvar")).to_be_visible()

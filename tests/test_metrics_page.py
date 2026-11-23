@@ -200,6 +200,7 @@ class MetricsPageTest(SiteCase):
 
     def test_the_header_links_to_the_metrics_and_reader_mode_shows_the_same_page(self):
         self.page.goto(self.base + "/themes/")
+        self.page.get_by_role("button", name="Acompanhamento").click()          # grouped in a menu of the top bar
         self.page.get_by_role("link", name="Métricas").click()
         expect(self.page).to_have_url(self.base + "/metrics/")
         self.metrics("?mode=reader")

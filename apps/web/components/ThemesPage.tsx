@@ -29,6 +29,7 @@ export function ThemesPage() {
 
   return (
     <>
+      <p className="eyebrow">{T.eyebrowPortfolio[lang]}</p>
       <h1>{T.themes[lang]}</h1>
       <p className="lead">{T.lead[lang]}</p>
       <div className="bar">

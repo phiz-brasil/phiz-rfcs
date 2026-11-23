@@ -50,9 +50,50 @@ export function ExecutivePage() {
 
   return (
     <>
+      <p className="eyebrow">{T.eyebrowTrack[lang]}</p>
       <h1>{T.executive[lang]}</h1>
       <p className="lead">{T.executiveLead[lang]}</p>
-      <section className="alert" aria-label={T.leadership[lang]}>
+      <section className="kpis" aria-label={T.kpis[lang]}>
+        {[
+          { k: "active", n: data.themes.filter(x => x.status !== "done" && x.status !== "cancelled").length, on: () => { setStatus("all"); setAttention(false); } },
+          { k: "on_track", n: data.themes.filter(x => x.status === "on_track").length, on: () => setStatus("on_track") },
+          { k: "at_risk", n: data.themes.filter(x => x.status === "at_risk" || x.status === "blocked").length, tone: "warn", on: () => setStatus("at_risk") },
+          { k: "stale", n: data.themes.filter(stale).length, tone: "warn", on: () => { setStatus("all"); setAttention(true); } },
+          { k: "leadership", n: leadership.length, tone: "alert", on: () => document.getElementById("leadership")?.scrollIntoView({ behavior: "smooth" }) },
+        ].map(c => (
+          <button type="button" key={c.k} className="kpi" data-kpi={c.k} data-tone={c.n ? c.tone : undefined} onClick={c.on}>
+            <span className="kpi-label">{T[`kpi_${c.k}`][lang]}</span>
+            <span className="kpi-n">{c.n}</span>
+          </button>
+        ))}
+      </section>
+      <section className="fronts-sum" aria-label={T.frontSummary[lang]}>
+        <table className="stats">
+          <thead><tr><th>{T.frontSummary[lang]}</th>{["active", "on_track", "at_risk", "stale", "leadership"].map(k => <th key={k}>{T[`kpi_${k}`][lang]}</th>)}</tr></thead>
+          <tbody>
+            {data.fronts.map(f => {
+              const mine = data.themes.filter(x => x.front === f.key);
+              if (!mine.length) return null;
+              const ids = new Set(mine.map(x => x.id));
+              const row = {
+                active: mine.filter(x => x.status !== "done" && x.status !== "cancelled").length,
+                on_track: mine.filter(x => x.status === "on_track").length,
+                at_risk: mine.filter(x => x.status === "at_risk" || x.status === "blocked").length,
+                stale: mine.filter(stale).length,
+                leadership: leadership.filter(l => ids.has(l.row.theme_id)).length,
+              };
+              const tone = (k: keyof typeof row) => (row[k] && (k === "at_risk" || k === "stale") ? "warn" : row[k] && k === "leadership" ? "alert" : undefined);
+              return (
+                <tr key={f.key} data-front={f.key} onClick={() => document.getElementById(`front-${f.key}`)?.scrollIntoView({ behavior: "smooth" })}>
+                  <th><a href={`#front-${f.key}`}>{text(f.name, lang)}</a></th>
+                  {(Object.keys(row) as (keyof typeof row)[]).map(k => <td key={k} className="num" data-k={k} data-tone={tone(k)}>{row[k]}</td>)}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+      <section className="alert" id="leadership" aria-label={T.leadership[lang]}>
         <h2>{T.leadership[lang]}</h2>
         {leadership.length ? (
           <ul>

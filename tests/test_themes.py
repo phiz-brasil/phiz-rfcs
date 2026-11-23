@@ -28,7 +28,9 @@ class ThemesTest(SiteCase):
         return self.page
 
     def sign(self, name="Ana"):
+        self.prefs()
         self.page.get_by_label("Seu nome").fill(name)
+        self.page.keyboard.press("Escape")
 
     # -- the list ----------------------------------------------------------------
     def test_themes_are_listed_by_front_in_order_with_outros_last(self):
@@ -43,7 +45,9 @@ class ThemesTest(SiteCase):
     def test_the_language_changes_labels_and_names(self):
         page = self.themes()
         expect(page.locator("h1")).to_have_text("Temas")
+        self.prefs()
         page.get_by_role("button", name="EN-US").click()
+        page.keyboard.press("Escape")
         expect(page.locator("h1")).to_have_text("Themes")
         expect(page.locator("#front-outros > h2")).to_have_text("Outros")           # the front's English name is in the data
         expect(page.locator('[data-theme="PHZ-0001"] .badge')).to_have_text("On track")
@@ -114,7 +118,9 @@ class ThemesTest(SiteCase):
         self.page.get_by_role("button", name="Salvar").click()
         expect(self.page.locator(".note[role=status]").first).to_have_text("Salvo.")
         self.assertEqual(self.db.themes["PHZ-0001"]["progress"], {"pt": "Contrato fechado com o parceiro"})
+        self.prefs()
         self.page.get_by_role("button", name="EN-US").click()
+        self.page.keyboard.press("Escape")
         expect(self.tform().get_by_label("Progress (one sentence)")).to_have_attribute("placeholder", "Contrato fechado com o parceiro")
         self.tform().get_by_label("Progress (one sentence)").fill("Contract closed with the partner")
         self.page.get_by_role("button", name="Save").click()
@@ -126,7 +132,9 @@ class ThemesTest(SiteCase):
         self.db.machine_translate("PHZ-0001", "progress", "en", "Contract closed")
         self.page.goto(self.base + "/themes/PHZ-0001/")
         self.sign()
+        self.prefs()
         self.page.get_by_role("button", name="EN-US").click()
+        self.page.keyboard.press("Escape")
         field = self.tform().get_by_label("Progress (one sentence)")
         expect(field).to_have_value("Contract closed")
         expect(self.page.locator(".field .from.auto")).to_have_text("machine translation")
@@ -141,7 +149,9 @@ class ThemesTest(SiteCase):
         self.db.themes["PHZ-0001"]["progress"] = {"pt": "Contrato fechado"}
         self.db.machine_translate("PHZ-0001", "progress", "en", "Contract closed")
         self.themes()
+        self.prefs()
         self.page.get_by_role("button", name="EN-US").click()
+        self.page.keyboard.press("Escape")
         expect(self.page.locator('[data-theme="PHZ-0001"] p .from.auto')).to_have_text("auto")
 
     def test_status_stage_dates_owner_and_tags_are_saved(self):
