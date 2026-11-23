@@ -56,7 +56,7 @@ docs/spec/                specs
 legacy/                   what only the old site needs while it lives (removed at the end of phase 1)
 ```
 
-- Package manager: pnpm workspaces. Node 22 LTS. Tests: Vitest (units), Playwright (pages). Lint and types run in CI.
+- Package manager: npm workspaces (no extra tool to install). Node 24 or newer. Tests: Vitest (units), Playwright (pages). Types run in CI.
 - The Python tools leave with the static site. `tools/import_rfcs.py` and `tools/publish_rfc.py` are replaced by `pnpm` scripts in phase 1
   (publishing from the terminal stays possible, see compatibility).
 - The archived HTML pages of PHZ-0001 and PHZ-0002 and the OpenAPI page are copied as static files (`apps/web/public/rfcs/…`), so their
@@ -100,6 +100,20 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
 - Rendered RFC text keeps the current rules: no raw HTML, DOMPurify, https-only images.
 - AI calls are server-side only, with the key in Vercel's encrypted environment; the prompt says to answer "not found" instead of guessing.
 - Secrets live in Vercel and Supabase settings, never in the repository. The service-role key is used only by migrations and admin scripts.
+
+### How phase 1 is built
+
+- The four pages of today (index, RFC, new RFC, comments) are route handlers that answer with the same HTML the old build wrote
+  (`apps/web/server/site/pages.ts`, a port of `tools/build.py`); `npm run check:pages` proves they are byte for byte the same while the old
+  build exists. The page scripts keep running unchanged from `public/assets`. React pages start with the new features (phase 3 on).
+- `apps/web/scripts/prepare.ts` fills `public/` before every build: the repository's `assets/`, the template, the skill zip, the files of
+  `rfcs/` the archived pages use, and the archived pages themselves, frozen in `apps/web/legacy/` (rendered once by the old build).
+- `/rfcs/PHZ-NNNN/` is a route that redirects to `/rfc/?id=…` with the rest of the query; `/rfcs/PHZ-0001/openapi/` is rewritten to its file.
+- The compatibility suite stays the Python one for now: `tests/support.py` builds the Next.js app and runs `next start`, and the same 85 tests
+  run against it (`SITE=static` runs them against the old build; `SITE_URL=` against any deployment). Porting the suite to TypeScript is
+  left for when the Python tools retire (phase 2), so phase 1 changes one thing at a time.
+- Until the cutover, GitHub Pages keeps deploying the old build from `main`; the cutover is a separate pull request (redirects from the old
+  address, Pages workflow removed, repository private).
 
 ## Acceptance (phase 1 and 2)
 

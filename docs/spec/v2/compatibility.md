@@ -5,10 +5,10 @@ said); the suite in `packages/spec-tests` proves it against any deployment. A ph
 
 ## How it is tested
 
-- Today's 85 tests (`tests/*.py`, Python, Playwright against the static build and an in-memory fake of Supabase) are the reference for the
-  behaviors. Phase 1 ports them to TypeScript in `packages/spec-tests`, keeping one test per behavior with the same names, and runs them:
-  - against the **current site** once, to show the port is faithful (both green);
-  - against each **preview deployment** of the new app, as a required check on every pull request.
+- Today's 85 tests (`tests/*.py`, Python, Playwright with an in-memory fake of Supabase) are the reference for the behaviors. From phase 1
+  they run against the Next.js app by default, against the old static build with `SITE=static`, and against any deployment with
+  `SITE_URL=<address>` (a Vercel preview). Both sites pass the same 85 tests. They move to TypeScript (`packages/spec-tests`, same names,
+  one test per behavior) when the Python tools retire.
 - Data: a seeded test database (a Supabase branch, or a local Supabase in CI) with the same rows the fake holds today: PHZ-0001 and PHZ-0002 as
   imported, a site RFC with two versions and pictures, comments with replies, reactions and paragraph numbers, a status history.
 - From phase 2 the suite signs in first (a test account in the test tenant, or a session created by the service key in CI only).
