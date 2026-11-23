@@ -1,5 +1,6 @@
 {
   "title": "PHIZ RFCs",
+  "siteUrl": "https://phiz-rfcs.vercel.app/",
   "repo": "phiz-brasil/phiz-rfcs",
   "giscus": {
     "repoId": "",

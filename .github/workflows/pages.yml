@@ -1,7 +1,10 @@
-name: Deploy RFC site
+name: Redirect the old address
+# The site moved to Vercel (apps/web). GitHub Pages now only publishes pages-redirect/: every address of the old site
+# (https://phiz-brasil.github.io/phiz-rfcs/…) goes to the same path on https://phiz-rfcs.vercel.app.
 on:
   push:
     branches: [main]
+    paths: [pages-redirect/**, .github/workflows/pages.yml]
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,12 +21,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - run: pip install -r requirements.txt
-      - run: python tools/build.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
-        with: { path: dist }
+        with: { path: pages-redirect }
       - id: deployment
         uses: actions/deploy-pages@v4

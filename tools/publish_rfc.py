@@ -27,7 +27,7 @@ from rfc_md import LANGS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CFG = json.loads((ROOT / "site.config.json").read_text(encoding="utf-8"))
-SITE_URL = "https://{}.github.io/{}/".format(*CFG["repo"].split("/"))
+SITE_URL = CFG["siteUrl"]
 MAX_BUNDLE = 600000
 MAX_IMAGE = 1048576
 MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}

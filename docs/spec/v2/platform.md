@@ -104,16 +104,23 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
 ### How phase 1 is built
 
 - The four pages of today (index, RFC, new RFC, comments) are route handlers that answer with the same HTML the old build wrote
-  (`apps/web/server/site/pages.ts`, a port of `tools/build.py`); `npm run check:pages` proves they are byte for byte the same while the old
-  build exists. The page scripts keep running unchanged from `public/assets`. React pages start with the new features (phase 3 on).
+  (`apps/web/server/site/pages.ts`, a port of the old `tools/build.py`); until the cutover a check proved them byte for byte the same. The page scripts keep running unchanged from `public/assets`. React pages start with the new features (phase 3 on).
 - `apps/web/scripts/prepare.ts` fills `public/` before every build: the repository's `assets/`, the template, the skill zip, the files of
   `rfcs/` the archived pages use, and the archived pages themselves, frozen in `apps/web/legacy/` (rendered once by the old build).
 - `/rfcs/PHZ-NNNN/` is a route that redirects to `/rfc/?id=…` with the rest of the query; `/rfcs/PHZ-0001/openapi/` is rewritten to its file.
 - The compatibility suite stays the Python one for now: `tests/support.py` builds the Next.js app and runs `next start`, and the same 85 tests
-  run against it (`SITE=static` runs them against the old build; `SITE_URL=` against any deployment). Porting the suite to TypeScript is
+  run against it (`SITE_URL=` against any deployment). Porting the suite to TypeScript is
   left for when the Python tools retire (phase 2), so phase 1 changes one thing at a time.
-- Until the cutover, GitHub Pages keeps deploying the old build from `main`; the cutover is a separate pull request (redirects from the old
-  address, Pages workflow removed, repository private).
+- The cutover (done): production on `https://phiz-rfcs.vercel.app` (Vercel team PhizChat, Root Directory `apps/web`); GitHub Pages only
+  serves `pages-redirect/`, which sends every old address to the same path there; the old build is removed. Making the repository private is
+  the step left (see below).
+
+### Making the repository private
+
+GitHub Pages works on private repositories only on paid GitHub plans. If the organization is on the free plan, keep the redirect alive by
+moving it to a public repository of its own: rename this repository (for example `phiz-portal`; GitHub and Vercel follow the rename), make it
+private, create a new public repository named `phiz-rfcs` with only `pages-redirect/` and `pages.yml`, and turn Pages on there. The old
+address `https://phiz-brasil.github.io/phiz-rfcs/…` is then served by the new repository.
 
 ## Acceptance (phase 1 and 2)
 

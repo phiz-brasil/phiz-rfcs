@@ -9,15 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12", cache: pip }
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: npm }
-      - run: pip install -r requirements.txt
       - run: npm ci
-      - run: python tools/build.py
-      # the Next.js app (apps/web) must generate the pages the old build generates, byte for byte, while both exist
-      - run: npm run check:pages
       - run: npm run build
       - run: npm run typecheck -w apps/web
   smoke-tests:

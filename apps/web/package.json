@@ -7,8 +7,7 @@
     "dev": "npm run prepare-site && next dev",
     "build": "npm run prepare-site && next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "check:pages": "node scripts/compare-with-python.ts"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "fflate": "0.8.3",

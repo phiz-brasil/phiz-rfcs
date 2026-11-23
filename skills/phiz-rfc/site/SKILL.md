@@ -5,7 +5,7 @@ description: Fills in the PHIZ RFC template (RFC.md, one file with Portuguese, E
 
 # PHIZ RFC: filling in RFC.md
 
-An RFC is a technical proposal that reviewers in Brazil and China read and comment on, in their own language. You turn the user's documents into **one file, `RFC.md`**, that they upload on the **＋ Nova RFC** page of the RFC site (https://phiz-brasil.github.io/phiz-rfcs/nova/). The site checks it, shows a preview and publishes it. You do not publish anything yourself.
+An RFC is a technical proposal that reviewers in Brazil and China read and comment on, in their own language. You turn the user's documents into **one file, `RFC.md`**, that they upload on the **＋ Nova RFC** page of the RFC site (https://phiz-rfcs.vercel.app/nova/). The site checks it, shows a preview and publishes it. You do not publish anything yourself.
 
 ## Steps
 

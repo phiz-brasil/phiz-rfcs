@@ -5,7 +5,7 @@ description: Writes, updates and publishes PHIZ RFCs (technical proposals, migra
 
 # PHIZ RFCs
 
-RFCs live in the **database** (Supabase) of the `phiz-rfcs` site (`~/Projetos/phiz-rfcs`, remote `phiz-brasil/phiz-rfcs`, Pages at `https://phiz-brasil.github.io/phiz-rfcs/`). Each one is **one file**: a metadata block and the same content in Portuguese, English and Chinese, separated by `<!-- lang:pt|en|zh -->`. The site turns it into a page (`/rfc/?id=PHZ-NNNN`) with contents rail, numbered sections, Mermaid diagrams, tables, phases, risks, open questions and on-page comments. The format and its checked rules are in `docs/spec/rfc-bundle.md` of the repository (read it when unsure); the template is `templates/bundle/RFC.md`.
+RFCs live in the **database** (Supabase) of the `phiz-rfcs` site (`~/Projetos/phiz-rfcs`, remote `phiz-brasil/phiz-rfcs`, site at `https://phiz-rfcs.vercel.app/` on Vercel). Each one is **one file**: a metadata block and the same content in Portuguese, English and Chinese, separated by `<!-- lang:pt|en|zh -->`. The site turns it into a page (`/rfc/?id=PHZ-NNNN`) with contents rail, numbered sections, Mermaid diagrams, tables, phases, risks, open questions and on-page comments. The format and its checked rules are in `docs/spec/rfc-bundle.md` of the repository (read it when unsure); the template is `templates/bundle/RFC.md`.
 
 Writing an RFC does not touch git: you write the file, check it with `tools/publish_rfc.py` and publish it. Every publication is a new version (1.0, 1.1…); anyone can edit on the site (**＋ Nova RFC**, `/nova/?edit=PHZ-NNNN`). The repository holds no RFC: the first two were imported into the database, and what the database cannot hold yet (their versions archived as HTML pages, the pictures those pages use, PHZ-0001's OpenAPI reference) is frozen in `apps/web/legacy/`. Never add RFCs to the repository.
 
@@ -63,7 +63,7 @@ Publishing makes the RFC public. Confirm with the user first, and say plainly th
 
 ## RFCs from other people (single file)
 
-People outside the repository create RFCs on the site's **＋ Nova RFC** page: they download `templates/bundle/RFC.md`, get an AI to fill it in from their documents, and upload it (the page checks it, shows a preview and publishes). The site offers them a self-contained edition of this skill for that (`skills/phiz-rfc/site/SKILL.md`, built into `phiz-rfc.zip` by `tools/build.py`). When someone asks you to fill that template from their documents, follow `skills/phiz-rfc/site/SKILL.md`: same sections, ids, paragraphs, diagrams and code blocks in the three languages, no `TODO:` left, no raw HTML. Author and collaborators are not in the file: the person types them on the upload page. Do not publish it yourself unless they ask.
+People outside the repository create RFCs on the site's **＋ Nova RFC** page: they download `templates/bundle/RFC.md`, get an AI to fill it in from their documents, and upload it (the page checks it, shows a preview and publishes). The site offers them a self-contained edition of this skill for that (`skills/phiz-rfc/site/SKILL.md`, built into `phiz-rfc.zip` by `apps/web/scripts/prepare.ts`). When someone asks you to fill that template from their documents, follow `skills/phiz-rfc/site/SKILL.md`: same sections, ids, paragraphs, diagrams and code blocks in the three languages, no `TODO:` left, no raw HTML. Author and collaborators are not in the file: the person types them on the upload page. Do not publish it yourself unless they ask.
 
 ## Common follow-ups
 

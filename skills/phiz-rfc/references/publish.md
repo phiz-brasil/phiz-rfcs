@@ -17,7 +17,7 @@ The RFC is public: anyone with the link can read, comment and publish a new vers
 
 ## Verify in the browser
 
-Open `https://phiz-brasil.github.io/phiz-rfcs/rfc/?id=<ID>#pt` in the built-in browser and run:
+Open `https://phiz-rfcs.vercel.app/rfc/?id=<ID>#pt` in the built-in browser and run:
 
 ```js
 const check=()=>{const a=[...document.querySelectorAll('.lang.active pre.mermaid')];return {lang:document.documentElement.dataset.lang,total:a.length,svg:a.filter(p=>p.querySelector('svg')).length,bad:a.filter(p=>/syntax error|parse error/i.test(p.textContent)).length,h2:document.querySelectorAll('.lang.active h2').length,toc:document.querySelectorAll('.toc-list.active li').length,title:document.querySelector('.lang.active h1')?.textContent}};
