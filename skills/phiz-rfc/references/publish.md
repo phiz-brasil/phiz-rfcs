@@ -13,7 +13,7 @@ cd ~/Projetos/phiz-rfcs
 
 Images (`![…](asset:nome.png)`) are read from the folder of the file (or `--images DIR`) and sent first. Editing an existing RFC: download its current file from **＋ Nova RFC** (`/nova/?edit=PHZ-NNNN` loads it), change it, and publish with `--id`. Every publication is a new version (1.0, 1.1…); nothing is overwritten.
 
-The RFC is public: anyone with the link can read, comment and publish a new version. Before the first publication, confirm with the user and say plainly that internal service names and partner details will be readable by anyone with the link. Never put secrets in the file. The Supabase key in `site.config.json` is the *publishable* one and is public by design; the service-role key never goes in the repository (only `tools/import_rfcs.py` uses it, from an environment variable).
+The RFC is public: anyone with the link can read, comment and publish a new version. Before the first publication, confirm with the user and say plainly that internal service names and partner details will be readable by anyone with the link. Never put secrets in the file. The Supabase key in `site.config.json` is the *publishable* one and is public by design; the service-role key never goes in the repository.
 
 ## Verify in the browser
 

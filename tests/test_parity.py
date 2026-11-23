@@ -1,5 +1,5 @@
-"""The Python renderer (tools/rfc_md.py, used by the build) and the JavaScript one (assets/js/render/, used in the browser for RFCs
-created on the site) must produce the same page. Both render the repository's RFCs, the template and tests/fixtures/syntax.md;
+"""The Python renderer (tools/rfc_md.py, used by tools/publish_rfc.py) and the JavaScript one (assets/js/render/, used in the browser) must
+produce the same page. Both render the RFCs that came from the repository (tests/fixtures/imported/) and tests/fixtures/syntax.md;
 the HTML is compared after normalising whitespace, entities and attribute order."""
 import json
 import sys
@@ -92,14 +92,6 @@ class ParityTest(SiteCase):
         self.assertEqual(js_s["diagrams"], py_s["diagrams"], f"{name} [{lang}]: diagrams")
         self.assertEqual(["".join(c.split()) for c in js_s["code"]], ["".join(c.split()) for c in py_s["code"]], f"{name} [{lang}]: code figures")
 
-    def test_repository_rfcs_render_the_same(self):
-        files = sorted(ROOT.glob("rfcs/*/rfc.*.md"))
-        self.assertGreaterEqual(len(files), 6)
-        for f in files:
-            lang = f.name.split(".")[1]
-            with self.subTest(f=str(f.relative_to(ROOT))):
-                self.assertSameBody(f.parent.name, f.read_text(encoding="utf-8"), lang)
-
     def test_imported_rfcs_render_the_same_without_raw_html(self):
         """What the importer makes of the repository RFCs is rendered by the browser (no raw HTML) like the build renders it."""
         for rid in ("PHZ-0001", "PHZ-0002"):
@@ -135,17 +127,6 @@ class ParityTest(SiteCase):
                         js = self.js("([m, l, s]) => R.page.heroHtml(m, l, s)", [meta, lang, status])
                         self.assertEqual(canon(js), canon(rfc_md.hero_html(meta, lang, status)))
 
-    def test_contents_list_matches_the_built_page(self):
-        folder = ROOT / "rfcs" / "PHZ-0002"
-        meta = rfc_md.read_meta(folder)
-        built = rfc_md.render_page(folder, meta)
-        import re
-        for lang in rfc_md.LANGS:
-            text = (folder / f"rfc.{lang}.md").read_text(encoding="utf-8")
-            body = self.js("([t, l]) => R.markdown.renderBody(t, l, { html: true }).body", [text, lang])
-            toc = self.js("([b, l]) => R.page.pageBody(b, l).toc", [body, lang])
-            expected = re.search(rf'<ol class="toc-list" data-lang="{lang}"[^>]*>(.*?)</ol>', built, re.S).group(1)
-            self.assertEqual(canon(toc), canon(expected), lang)
 
 
 if __name__ == "__main__":

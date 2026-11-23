@@ -2,8 +2,8 @@
 """Render the WhatsApp reference screens (EN source) to PNG in en/pt/zh.
 
 usage: render_wa_mocks.py <whatsapp-design dir> <out mocks dir> [board ...]
-  e.g. python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design rfcs/PHZ-0001/mocks
-       python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design rfcs/PHZ-0001/mocks P02_Locked Q03_FirstMsg
+  e.g. python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design apps/web/legacy/rfcs/PHZ-0001/mocks
+       python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design apps/web/legacy/rfcs/PHZ-0001/mocks P02_Locked Q03_FirstMsg
 
 Writes <out>/<lang>/whatsapp/<name>.png for the WhatsApp reference screens and
 <out>/<lang>/phizchat/<name>.png for the PhizChat opt-in screens (P*, Q*), which also use phiz.css.
