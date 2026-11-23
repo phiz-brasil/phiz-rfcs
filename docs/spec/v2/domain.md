@@ -54,7 +54,7 @@ diagnóstico de Estopim, Ingoo e Café, revisão de acessos ao PhizAdmin, Game C
 
 The RFCs already published become themes of kind `project`, with their RFC as the theme's document. Proposed fronts (confirm in review):
 
-| RFC | proposed front | stage from its status |
+| RFC | front (confirmed 2026-11-23) | stage from its status |
 |---|---|---|
 | PHZ-0001 PhizChat Business Messaging API | API Platform | in-review → 03 |
 | PHZ-0002 Migração CredPay → GruPag | Payments | draft → 01 |
@@ -63,7 +63,10 @@ The RFCs already published become themes of kind `project`, with their RFC as th
 | PHZ-0005 Business Account: conversas e mensagens IM | API Platform | draft → 01 |
 | PHZ-0006 Checkout global | Payments | draft → 01 |
 | PHZ-0007 Relatório de análise de pagamentos | Payments | rejected → 03, closed as declined |
-| PHZ-0008 APIs pz.* do PhizClip | Outros | draft → 01 |
+| PHZ-0008 APIs pz.* do PhizClip | Mini-Apps | draft → 01 |
+
+The front of any theme can be changed later from its page, and the fronts themselves (names, scope text, order) can be edited from the
+themes list (decision of 2026-11-23); a change is an event of the theme.
 
 Status mapping for any RFC: `draft` → 01, `in-review` → 03, `approved` → 04, `implemented` → 10 (done), `rejected` → 03 (declined),
 `superseded` → closed. From then on the RFC page shows the theme's stage instead of the old status, and the status picker goes away

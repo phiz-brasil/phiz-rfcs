@@ -18,7 +18,10 @@ def now():
     return datetime.now(timezone.utc).isoformat()
 
 
-class FakeSupabase:
+from fake_themes import ThemesMixin  # noqa: E402
+
+
+class FakeSupabase(ThemesMixin):
     def __init__(self, has_para=True):
         self.has_para = has_para          # False behaves like a database without the `para` column (HTTP 400)
         self.comments = []                # every row, hidden ones included
@@ -31,6 +34,7 @@ class FakeSupabase:
         self.rate_limited = False         # make create_rfc / add_rfc_revision answer 429
         self.staging = {}                 # token -> {name: row}: images waiting for their RFC
         self.assets = []                  # rfc_assets rows
+        self._init_themes()               # fronts, themes, items, links, Jira links, events (fake_themes.py)
 
     # -- test helpers ---------------------------------------------------
     def add_comment(self, rfc_id, section, author, body, parent_id=None, para=None, **extra):
@@ -144,6 +148,8 @@ class FakeSupabase:
                 return route.fulfill(status=204, headers=CORS)
             route.fulfill(status=status, headers={**CORS, "Content-Type": "application/json"}, body=json.dumps(data))
 
+        if self.themes_handle(path, q, body, ok):
+            return
         if path.endswith("/rest/v1/rfc_comments") and req.method == "GET":
             if not self.has_para and "para" in q.get("select", ""):
                 return ok({"message": "column rfc_comments.para does not exist"}, 400)
