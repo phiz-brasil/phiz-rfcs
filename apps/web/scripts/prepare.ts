@@ -2,8 +2,6 @@
      assets/                        page scripts, styles and vendor files (the repository's assets/ folder)
      assets/templates/, page.css    the single-file template and the preview styles of the new-RFC page
      assets/skill/                  the phiz-rfc skill, zipped and as one text
-     rfcs/<ID>/…                    the archived pages, the pictures they use and the OpenAPI reference, frozen in legacy/
-     archive.json                   the archived versions the RFC page lists
    public/ is generated: never edit it, edit the sources. */
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,5 +21,4 @@ mkdirSync(join(PUBLIC, "assets", "skill"), { recursive: true });
 writeFileSync(join(PUBLIC, "assets", "skill", "phiz-rfc.zip"), skillZip(files));
 writeFileSync(join(PUBLIC, "assets", "skill", "phiz-rfc-skill.md"), skillText(files));
 
-cpSync(join(WEB, "legacy"), PUBLIC, { recursive: true });
 console.log(`public/ ready (${PUBLIC})`);

@@ -575,6 +575,8 @@ class ThemesMixin:
                 continue
             if val.startswith("eq."):
                 rows = [r for r in rows if str(r.get(col)).lower() == val[3:].lower()]
+            elif val == "not.is.null":
+                rows = [r for r in rows if r.get(col) is not None]
             elif val.startswith("in.("):
                 wanted = val[4:-1].split(",")
                 rows = [r for r in rows if str(r.get(col)) in wanted]

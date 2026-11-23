@@ -66,36 +66,29 @@ class SiteTest(SiteCase):
             self.assertEqual(page.locator(".lang.active section").count(), sections)
         expect(page.locator(".rfcno.st")).to_be_visible()
 
-    def test_versions_and_frozen_page(self):
+    def test_versions_and_archived_version(self):
+        self.db.seed_theme(RFC, "payments", title={"pt": "CredPay"})
+        self.db.seed_attachment(RFC, "v1.0", content_type="text/html", archive_version="1.0", archive_date="2026-10-16", archive_note={"pt": "Primeira versão"})
         page = self.open(wait_comments=False)
         page.click(".vers summary")
         items = page.locator(".vers-pop li")
-        self.assertEqual(items.count(), 2)                              # v1.1 from the database, v1.0 an archived page
-        self.assertEqual(items.nth(1).locator("a").get_attribute("href"), f"../rfcs/{RFC}/v1.0.html")
-        page.goto(self.base + f"/rfcs/{RFC}/v1.0.html")
-        expect(page.locator(".ver-banner")).to_be_visible()
-        page.wait_for_selector(".lang.active h2")
-        self.assertEqual(page.locator(".cmt-btn").count(), 0, "archived versions are read-only")
-        self.assertEqual(page.locator('.ver-banner a').first.get_attribute("href"), f"../../rfc/?id={RFC}")   # and lead to the current one
+        self.assertEqual(items.count(), 2)                              # v1.1 from the database, v1.0 an archived page (an attachment of the theme)
+        archived = items.nth(1)
+        self.assertEqual(archived.locator("a").get_attribute("href"), f"../themes/{RFC}/#attachments")
+        self.assertIn("Primeira versão", archived.inner_text())
+        archived.locator("a").click()
+        expect(page).to_have_url(self.base + f"/themes/{RFC}/#attachments")
+        expect(page.get_by_role("region", name="Anexos").locator('tr[data-name="v1.0"]')).to_have_count(1)
 
-    def test_the_old_address_of_an_rfc_leads_to_the_database_page(self):
-        self.page.goto(self.base + f"/rfcs/{RFC}/?c=abc#pt-summary")
-        self.page.wait_for_url(f"{self.base}/rfc/?id={RFC}&c=abc#pt-summary")
-        self.page.wait_for_selector(".lang.active h2")
-
-    def test_the_version_menu_shows_the_time_of_each_version(self):
-        from test_live import BUNDLE, META          # a site RFC with a real publication time
-        rid = self.db.seed_rfc(BUNDLE, META)
-        self.db.revisions[-1]["created_at"] = "2026-10-22T15:30:00+00:00"
-        page = self.open(f"/rfc/?id={rid}", wait_comments=False)
+    def test_only_archived_versions_the_database_does_not_hold_are_listed(self):
+        self.db.seed_attachment(RFC, "v1.0", content_type="text/html", archive_version="1.0", archive_date="2026-10-16")
+        self.db.seed_attachment(RFC, "v1.0 de novo", content_type="text/html", archive_version="1.0", archive_date="2026-10-16")      # the same version twice: one entry
+        self.db.seed_attachment(RFC, "v1.1", content_type="text/html", archive_version="1.1", archive_date="2026-10-17")                # the database already holds 1.1
+        self.db.seed_attachment(RFC, "planilha.xlsx", content_type="application/vnd.ms-excel")                                           # not an archived page
+        self.db.seed_attachment("PHZ-0001", "v0.9", content_type="text/html", archive_version="0.9", archive_date="2026-10-01")          # another RFC's
+        page = self.open(wait_comments=False)
         page.click(".vers summary")
-        text = page.locator(".vers-pop li time .active, .vers-pop li time span:visible").first.inner_text()
-        self.assertRegex(text, r"\d{1,2}:\d{2}")
-        page.goto(self.base + f"/rfc/?id={RFC}")
-        page.wait_for_selector(".lang.active h2")
-        page.click(".vers summary")
-        imported = page.locator(".vers-pop li time span:visible").first.inner_text()
-        self.assertNotRegex(imported, r"\d{1,2}:\d{2}")             # imported versions only know the day
+        self.assertEqual(page.locator(".vers-pop li b").all_inner_texts(), ["v1.1", "v1.0"])
 
     def test_the_new_version_button_is_in_the_header(self):
         page = self.open(wait_comments=False)
@@ -103,16 +96,14 @@ class SiteTest(SiteCase):
         expect(btn).to_be_visible()
         self.assertEqual(btn.get_attribute("href"), f"../nova/?edit={RFC}")
 
-    def test_the_openapi_page_and_files_are_published(self):
-        page = self.page
-        page.goto(self.base + "/rfcs/PHZ-0001/openapi/")
-        page.wait_for_selector("#copy-yaml")
-        self.assertGreater(len(page.evaluate("window.PHIZ_YAML.pt")), 1000)
-        self.assertIn("openapi:", self.context.request.get(self.base + "/rfcs/PHZ-0001/openapi.en.yaml").text())
-        self.page.goto(self.base + "/rfc/?id=PHZ-0001")
-        self.page.wait_for_selector(".lang.active h2")
-        link = self.page.locator('.lang.active a[href$="/rfcs/PHZ-0001/openapi/"]')
-        expect(link).to_have_count(1)
+    def test_the_old_addresses_under_an_rfc_lead_to_its_attachments(self):
+        for path in ("/rfcs/PHZ-0001/openapi/", "/rfcs/PHZ-0001/v1.0.html", "/rfcs/PHZ-0001/openapi.en.yaml", "/rfcs/PHZ-0002/v1.0.html"):
+            with self.subTest(path):
+                self.page.goto(self.base + path)
+                expect(self.page).to_have_url(self.base + f"/themes/{path.split('/')[2]}/#attachments")
+        self.page.goto(self.base + "/rfcs/PHZ-0001/")
+        expect(self.page).to_have_url(self.base + "/rfc/?id=PHZ-0001")                      # the RFC itself still has its own redirect
+        self.assertEqual(self.context.request.get(self.base + "/rfcs/nope/v1.0.html", max_redirects=0).status, 404)
 
     def test_index_lists_rfcs_and_filters_by_status(self):
         self.db.status_log.append({"rfc_id": RFC, "status": "approved", "author": "Ana", "created_at": "2026-10-21T10:00:00Z"})

@@ -2,7 +2,7 @@
    single-file RFC into the same page the build produces for repository RFCs (assets/js/render/, no raw HTML, sanitized) and then
    starts the usual page scripts: comments, reactions, status, versions. */
 import { base64ToBlob } from "./images.js";
-import { LiveError, enabled, getAsset, getLatestRevision, getRevision, getTheme, listRevisions } from "./live-api.js";
+import { LiveError, enabled, getAsset, getLatestRevision, getRevision, getTheme, listArchived, listRevisions } from "./live-api.js";
 import { parseBundle } from "./render/bundle.js";
 import { renderBody } from "./render/markdown.js";
 import { BCP, LANGS, STATUS, heroHtml, pageBody } from "./render/page.js";
@@ -92,13 +92,15 @@ async function hydrateAssets(root, rfcId, rev) {
   }));
 }
 
-/* Versions that exist only as pages built from the repository (dist/archive.json), older than what the database holds. */
+/* Versions that exist only as archived pages, older than what the database holds: attachments of the theme (phase 8). Each leads to the attachments of the theme. */
 async function archivedVersions(revs) {
   try {
-    const r = await fetch("../archive.json");
-    if (!r.ok) return [];
     const have = new Set(revs.map(x => x.version));
-    return ((await r.json())[id] || []).filter(a => !have.has(a.version)).sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
+    const seen = new Set();
+    return (await listArchived(id))
+      .filter(a => !have.has(a.archive_version) && !seen.has(a.archive_version) && seen.add(a.archive_version))
+      .map(a => ({ version: a.archive_version, date: a.archive_date, note: a.archive_note, href: `themes/${id}/#attachments` }))
+      .sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
   } catch (e) { return []; }
 }
 

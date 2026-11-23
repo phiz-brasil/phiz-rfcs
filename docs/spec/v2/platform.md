@@ -53,7 +53,7 @@ packages/render/          the RFC renderer, sanitizer and checks (today assets/j
 packages/spec-tests/      the compatibility suite (Playwright, TypeScript), runs against any base URL
 supabase/                 migrations (numbered, as today) and functions
 docs/spec/                specs
-legacy/                   what only the old site needs while it lives (removed at the end of phase 1)
+(legacy/ held the frozen archive until phase 8 moved it into attachments)
 ```
 
 - Package manager: npm workspaces (no extra tool to install). Node 24 or newer. Tests: Vitest (units), Playwright (pages). Types run in CI.
@@ -105,9 +105,9 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
 
 - The four pages of today (index, RFC, new RFC, comments) are route handlers that answer with the same HTML the old build wrote
   (`apps/web/server/site/pages.ts`, a port of the old `tools/build.py`); until the cutover a check proved them byte for byte the same. The page scripts keep running unchanged from `public/assets`. React pages start with the new features (phase 3 on).
-- `apps/web/scripts/prepare.ts` fills `public/` before every build: the repository's `assets/`, the template, the skill zip, the files of
-  `rfcs/` the archived pages use, and the archived pages themselves, frozen in `apps/web/legacy/` (rendered once by the old build).
-- `/rfcs/PHZ-NNNN/` is a route that redirects to `/rfc/?id=…` with the rest of the query; `/rfcs/PHZ-0001/openapi/` is rewritten to its file.
+- `apps/web/scripts/prepare.ts` fills `public/` before every build: the repository's `assets/`, the template, the skill zip, and the
+  skill (the frozen archive that used to be copied too is now in attachments, phase 8).
+- `/rfcs/PHZ-NNNN/` is a route that redirects to `/rfc/?id=…` with the rest of the query; every other address under `/rfcs/PHZ-NNNN/…` redirects to the attachments of the theme.
 - The compatibility suite stays the Python one for now: `tests/support.py` builds the Next.js app and runs `next start`, and the same 85 tests
   run against it (`SITE_URL=` against any deployment). Porting the suite to TypeScript is
   left for when the Python tools retire (phase 2), so phase 1 changes one thing at a time.
