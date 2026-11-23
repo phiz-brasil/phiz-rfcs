@@ -3,12 +3,15 @@
 export type Supabase = { url: string; key: string };
 export type I18n = Partial<Record<"pt" | "en" | "zh", string>>;
 
+export type AnswerState = { state: "suggested" | "confirmed" | "missing"; by?: string; at?: string; sources?: { label: string; quote: string }[]; missing?: string };
+export type Suggestion = { text: string | null; sources: { label: string; quote: string }[]; missing: string | null };
 export type Front = { key: string; name: I18n; scope: I18n; ord: number; is_other: boolean };
 export type Theme = {
   id: string; kind: "project" | "task"; front: string; title: I18n; owner: string | null; status: string; stage: number | null; route: string;
   what_it_is: I18n; progress: I18n; problem: I18n; solution: I18n; success: I18n; start_date: string | null; due_date: string | null;
   tags: string[]; resolution: string | null; board_column: string | null; created_at: string; created_by: string | null; updated_at: string;
   text_meta?: Record<string, string[]> | null;        // per text field, the languages that are machine translations
+  answers?: Record<string, AnswerState> | null;       // state of the three slide answers (problem, solution, success)
 };
 export type StageGate = { key: string; stage: number; position: number; title: I18n; owner_role: string | null; non_waivable: boolean };
 export type BoardColumn = { id: string; board: string; name: I18n; position: number; stage: number; wip_limit: number | null; created_at: string };
@@ -86,6 +89,22 @@ export function client({ url, key }: Supabase) {
     updates: (id: string) => request<Update[]>(`theme_updates?select=*&theme_id=eq.${q(id)}&order=created_at.desc&limit=30`),
     blockers: (id: string) => request<Blocker[]>(`theme_blockers?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
     decisions: (id: string) => request<Decision[]>(`theme_decisions?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
+    // slides: "Suggest with AI" is an Edge Function that only reads and answers; the page stores what the person keeps
+    suggest: async (theme: string, by: string) => {
+      let r: Response;
+      try { r = await fetch(`${url.replace(/\/+$/, "")}/functions/v1/suggest-summary`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ theme, by }) }); }
+      catch { throw new DbError("network", "network"); }
+      if (r.status === 429) throw new DbError("rate limit", "rate");
+      if (!r.ok) throw new DbError(`HTTP ${r.status}`, "http");
+      return (await r.json()) as { suggestions: Record<"problem" | "solution" | "success", Suggestion>; sources: { id: string; label: string }[] };
+    },
+    saveSuggestions: (theme: string, p: Record<string, Suggestion>, by: string) => rpc<{ applied: string[] }>("suggest_theme_answers", { p_theme: theme, p, p_by: by }),
+    confirmAnswers: (theme: string, fields: string[], by: string) => rpc("confirm_theme_answers", { p_theme: theme, p_fields: fields, p_by: by }),
+    themeSlideData: async (ids: string[]) => {
+      const list = ids.map(q).join(",");
+      const [themes, jira, fronts] = await Promise.all([request<Theme[]>(`themes?select=*&id=in.(${list})`), request<Jira[]>(`theme_jira?select=*&theme_id=in.(${list})&order=created_at`), request<Front[]>("fronts?select=*&order=ord")]);
+      return { themes, jira, fronts };
+    },
     // attachments: rows are tables; files go straight to Storage (private bucket) and are read through signed addresses that expire
     attachments: (id: string) => request<Attachment[]>(`attachments?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
     allAttachments: () => all<Attachment>("attachments?select=*&order=created_at.desc,id.asc"),

@@ -143,6 +143,9 @@ class FakeSupabase(ThemesMixin):
         path = url.path
         if "/storage/v1/object/" in path:
             return self.storage_handle(route, req, url)
+        if path.endswith("/functions/v1/suggest-summary"):
+            return self.suggest_function(route, json.loads(req.post_data) if req.post_data else {}, {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*",
+                                                                                                    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"})
         body = json.loads(req.post_data) if req.post_data else None
 
         def ok(data, status=200):

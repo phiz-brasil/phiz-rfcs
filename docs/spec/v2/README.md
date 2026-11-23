@@ -127,6 +127,12 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   ZIP with the pictures of PHZ-0001, the OpenAPI page and the three YAML files; SHA-256 checked after the upload). `apps/web/legacy/` is gone; the RFC page lists
   archived versions from the attachments; `/rfcs/<ID>/<anything>` redirects to the theme's attachments.
 
+- **Phase 9 (this branch)**: slides and AI suggestions. Migration `20261130000000_theme_answers.sql`; Edge Function `suggest-summary` (Cloudflare Workers AI; quotations verified
+  word for word against the documents, else the answer is *missing*); the Summary panel of a theme; `/slides/` exporting a .pptx in the browser (pptxgenjs, loaded on
+  demand). **Not done**: the visual model of the company's slide deck (the Google Slides link was not readable; the look is neutral and lives in `apps/web/lib/slides.ts`).
+  Decision taken without asking: the model is a Workers AI model because its secrets already exist for the translation; switching to another model is the
+  `CF_SUGGEST_MODEL` variable, or a different `ask()` in the function.
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)
