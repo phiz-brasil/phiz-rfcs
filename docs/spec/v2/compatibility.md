@@ -17,7 +17,7 @@ said); the suite in `packages/spec-tests` proves it against any deployment. A ph
 
 | address | today | from phase 1 |
 |---|---|---|
-| `/` | index of RFCs from the database, filters by status | same; from phase 3 the index of items (RFC filter keeps the old view) |
+| `/` | index of RFCs from the database, filters by status | same; from phase 4 the executive view is the home and the RFC list stays one click away |
 | `/rfc/?id=PHZ-NNNN` | the RFC page | same address, same page |
 | `/rfc/?id=…&v=1.1` | a version, read-only | same |
 | `/rfc/?id=…&c=<comment>#pt-<section>` | opens on a comment | same (after sign-in, phase 2, the user lands back here) |
@@ -34,7 +34,7 @@ said); the suite in `packages/spec-tests` proves it against any deployment. A ph
 - No existing table, column or row is dropped or rewritten by phases 1–7. New things are new tables or new nullable columns.
 - `rfc_revisions` stays append-only; versions keep their numbers; `rfc_assets` keep serving the newest picture of a name up to a version.
 - Comments keep `rfc_id`, `section`, `para`, `parent_id`, `quote`, `lang`, translations; hidden stays hidden; reactions stay replies with one emoji.
-- `rfc_status_log` stays readable; phase 3 maps it to stages once and keeps it as history.
+- `rfc_status_log` stays readable; phase 3 maps it to V4 stages once (`domain.md`) and keeps it as history.
 - The `translate-comment` function and its webhook keep working unchanged (inserts still come into `rfc_comments`).
 - The database functions the page calls (`create_rfc`, `add_rfc_revision`, `stage_rfc_asset`, `hide_rfc_comment`) keep their signatures until
   phase 2; from phase 2 they require a signed-in user and take the author from the session (the `p_by` argument is ignored, kept for old callers).
@@ -45,7 +45,7 @@ said); the suite in `packages/spec-tests` proves it against any deployment. A ph
 |---|---|---|
 | RFC page | `test_site.py`: languages, contents and diagrams; versions and archived page; old address; version time; new-version button; OpenAPI page | the three languages, numbered sections, contents rail, Mermaid diagrams, version menu with date and time, archived versions, the green new-version button |
 | Comments | `test_site.py`: comment and reply placement; delete hides with replies; reaction counts as an answer and can be taken back; paragraph comments numbered and listed; page works without the `para` column | per section and per paragraph, replies under the comment, emoji reactions, delete = hide, counters, drawer and "unanswered" filter |
-| Status | `test_site.py`: change from the page; live status on load | changes are logged with a name and shown everywhere (from phase 3, shown as the item's stage) |
+| Status | `test_site.py`: change from the page; live status on load | until phase 3 as today; from phase 3 the RFC shows its theme's V4 stage instead, and the old status log stays readable |
 | New RFC and versions | `test_live.py` (15 tests) | template and prompt offered; every mistake explained and blocks publishing; file or paste; preview; author and collaborators; edit adds a version and keeps the old; refused publication can be retried; hostile markup never runs; the index lists new RFCs; the comments page links to them |
 | Pictures | `test_images.py` (14 tests) | PNG, JPEG, WebP only; up to 160; shrunk in the browser; names and snippets; renaming updates the text; preview; sent before publishing; unused not sent; refused by the server stops publishing; old versions keep their pictures; missing shown as such; click opens full size |
 | Renderer and checks | `test_render_js.py` (14), `test_parity.py` (5) | the single-file format and all its checks; same output for the same text (snapshots from phase 1); no raw HTML for submitted text; sanitizer keeps only what the renderer makes |

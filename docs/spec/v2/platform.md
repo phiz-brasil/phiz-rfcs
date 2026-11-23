@@ -45,9 +45,9 @@ That model reaches its limit with what is coming:
 
 ```
 apps/web/                 Next.js app
-  app/                    routes: / , /rfc, /nova, /comments, (phase 3+) /items, /boards, /metrics
+  app/                    routes: / , /rfc, /nova, /comments, (phase 3+) /themes, /executive, /board, /roadmap, /metrics
   components/             React components
-  server/                 backend: db access, services (items, flow, metrics, export, ai), auth helpers; no React here
+  server/                 backend: db access, services (themes, updates, flow, metrics, export, ai, translation), auth helpers; no React here
   middleware.ts           session and redirects
 packages/render/          the RFC renderer, sanitizer and checks (today assets/js/render/, moved to TypeScript)
 packages/spec-tests/      the compatibility suite (Playwright, TypeScript), runs against any base URL
@@ -68,29 +68,28 @@ The renderer (`assets/js/render/`) is already ES modules with no build step; it 
 output. The parity tests against the Python renderer become snapshot tests of the TypeScript renderer on the same fixtures (the repository
 RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current output, so phase 1 proves nothing changed.
 
-## Authentication (phase 2)
+## Access (phase 2)
 
-- **Supabase Auth with the Azure provider**, single tenant (the company's Entra ID). The app registration in Entra ID is done by the tenant
-  administrator (open question 7): client id, secret, redirect URL `https://<project>.supabase.co/auth/v1/callback`.
-- **Only `@phiz.com`.** Three checks, so no single one is load-bearing: the Entra app is single-tenant; a database hook (`before user created`)
-  refuses any e-mail outside the domain; row security requires the signed-in role (`authenticated`) plus a row in `profiles`.
+- **Only `@phiz.com`.** First with **sign-in by e-mail link** (Supabase Auth magic link): it needs no company IT and nothing but the domain
+  check. **Microsoft sign-in** (Supabase Auth, Azure provider, single tenant) is added when the administrator of the company's Microsoft tenant
+  registers the app (client id, secret, redirect URL `https://<project>.supabase.co/auth/v1/callback`); both lead to the same account, keyed by
+  e-mail (decision of 2026-11-23: Microsoft is secondary for now).
+- **The domain is checked three times**, so no single check is load-bearing: the sign-in form; a database hook (`before user created`) that
+  refuses any e-mail outside the domain; row security that requires a signed-in user with a row in `profiles`.
 - **No anonymous access.** Phase 2 revokes every grant to `anon` and replaces the policies with `authenticated` ones. The publishable key stays
   in the app, but without a session it reads nothing.
 - **Sessions** are cookies set by `@supabase/ssr`; the middleware sends anyone without a session to `/login` and back to the address they
   asked for (deep links to a comment keep working after sign-in).
 - **Names.** Today people type a name to comment, change a status or publish. After sign-in the name comes from the account; the typed name
   field goes away. Old rows keep the names they have.
-- **Tools.** `publish` from the terminal uses a personal token (Supabase session from a device-code style sign-in, or a per-user API token
-  created in the app), never the service key.
+- **Tools.** Publishing from the terminal uses a personal token created in the app, never the service key.
 
-### Roles
+### Roles and reader mode
 
-| role | can |
-|---|---|
-| member (default for `@phiz.com`) | read everything, comment, react, create and edit items and RFCs, attach files, move cards, tick gates |
-| admin | everything a member can, plus configure boards and columns, change roles, hide or restore anything, edit Jira base settings |
-
-Stored in `profiles.role`; checked by row security in the database and by the route handlers. Open question 6: is a read-only role needed?
+- Everyone with `@phiz.com` is a **member** and can do everything: read, comment, create and edit themes, items, updates and RFCs, attach files,
+  move cards (decision of 2026-11-23). An **admin** flag (by e-mail list) adds board configuration, moderation and role changes.
+- **Reader mode** is a switch, not a role: it hides every create, edit and update control on the executive view, theme pages and roadmap, for
+  people who only read (`domain.md`, Views).
 
 ## Security
 
@@ -107,4 +106,4 @@ Stored in `profiles.role`; checked by row security in the database and by the ro
 - Phase 1: the compatibility suite passes against the preview deployment; every old address listed in `compatibility.md` answers as
   specified; the Pages workflow is removed and the repository is private.
 - Phase 2: a request without a session reads nothing from the API (tested with the publishable key directly); a non-`@phiz.com` account
-  cannot be created; a member cannot change roles or board columns; the compatibility suite passes when signed in.
+  cannot be created; a member who is not admin cannot change board columns; the compatibility suite passes when signed in.
