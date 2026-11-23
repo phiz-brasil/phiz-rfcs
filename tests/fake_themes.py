@@ -456,7 +456,7 @@ class ThemesMixin:
                 "theme_blockers": self.blockers, "theme_decisions": self.decisions, "stage_gates": self.gates, "board_columns": self.columns,
                 "theme_gate_checks": self.gate_checks}[table]
         for col, val in q.items():
-            if col in ("select", "order", "limit"):
+            if col in ("select", "order", "limit", "offset"):
                 continue
             if val.startswith("eq."):
                 rows = [r for r in rows if str(r.get(col)).lower() == val[3:].lower()]
@@ -465,8 +465,9 @@ class ThemesMixin:
                 rows = [r for r in rows if str(r.get(col)) in wanted]
         order = q.get("order")
         if order:
-            key, _, direction = order.partition(".")
+            key, _, direction = order.split(",")[0].partition(".")
             rows = sorted(rows, key=lambda r: r.get(key) if isinstance(r.get(key), (int, float)) else str(r.get(key)), reverse=direction == "desc")
+        rows = rows[int(q.get("offset", 0)):]
         if "limit" in q:
             rows = rows[:int(q["limit"])]
         sel = q.get("select", "*")

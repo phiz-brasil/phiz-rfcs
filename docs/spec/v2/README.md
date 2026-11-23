@@ -112,6 +112,12 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   (start to estimate), or a marker when it has one date; milestones are diamonds; open themes past their estimate are flagged *Overdue*; themes with
   no dates are listed under the timeline. Filters: status, front, tag, owner. Everything is read from `themes` and the milestone items.
 
+- **Phase 7 (this branch)**: the flow metrics at `/metrics/` (no new migration), computed in the browser by the pure module `apps/web/lib/metrics.ts` from the event
+  log, read page by page (Supabase returns 1000 rows a request). Definitions as in `flow-and-metrics.md`, made exact: median = middle value; 85th percentile =
+  nearest rank; a stage change is a `stage` or `move` event whose stages differ; the CFD counts each UTC day at its last millisecond; business days are Mon–Fri
+  in UTC (the requester's time zone is not known). A theme with part of its history never recorded is *estimated* and excluded from the time metrics by default.
+  Items: lead = creation → done, cycle = first `doing` → done.
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)

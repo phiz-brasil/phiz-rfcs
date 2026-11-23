@@ -57,6 +57,15 @@ export function client({ url, key }: Supabase) {
   const rpc = <T = unknown>(fn: string, body: unknown) =>
     request<T>(`rpc/${fn}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const q = encodeURIComponent;
+  /* Supabase returns at most 1000 rows a request: read a long list page by page (the order must be total, so pages do not overlap) */
+  const all = async <T>(path: string): Promise<T[]> => {
+    const out: T[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const page = await request<T[]>(`${path}&limit=1000&offset=${offset}`);
+      out.push(...page);
+      if (page.length < 1000) return out;
+    }
+  };
   return {
     fronts: () => request<Front[]>("fronts?select=*&order=ord"),
     themes: () => request<Theme[]>("themes?select=*&order=id.desc"),
@@ -71,6 +80,10 @@ export function client({ url, key }: Supabase) {
     updates: (id: string) => request<Update[]>(`theme_updates?select=*&theme_id=eq.${q(id)}&order=created_at.desc&limit=30`),
     blockers: (id: string) => request<Blocker[]>(`theme_blockers?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
     decisions: (id: string) => request<Decision[]>(`theme_decisions?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
+    // flow metrics: the whole event log of the stage changes, resolutions and item moves, the blockers and the items
+    metricEvents: () => all<EventRow>("theme_events?select=theme_id,item_id,at,field,old_value,new_value&field=in.(stage,move,resolution,item_col)&order=at.asc,id.asc"),
+    allBlockers: () => all<{ theme_id: string; created_at: string; resolved_at: string | null }>("theme_blockers?select=theme_id,created_at,resolved_at&order=created_at.asc,id.asc"),
+    allItems: () => all<{ id: string; theme_id: string; col: string; created_at: string }>("theme_items?select=id,theme_id,col,created_at&order=created_at.asc,id.asc"),
     // the B2B board
     gates: () => request<StageGate[]>("stage_gates?select=*&order=stage"),
     boardColumns: () => request<BoardColumn[]>("board_columns?select=*&order=position"),
