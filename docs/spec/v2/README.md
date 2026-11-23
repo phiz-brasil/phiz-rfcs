@@ -65,12 +65,22 @@ Each phase is one pull request (or a short series), reviewable and testable on i
 | 7 | Metrics: lead, delivery and cycle time, CFD, throughput, WIP, aging | metrics page |
 | 8 | Attachments hub (any kind of file, notes, links); the frozen archive of PHZ-0001 and PHZ-0002 moves in as attachments | attachments tab |
 | 9 | Slide export (one or many themes) and AI suggestions for the three answers | slides |
+| 10 | **Supabase quota** (see below): find what exceeded the free plan and fix it (cleanup, a paid plan, or moving what is heavy) | none |
 
 Phase 1 changes no behavior on purpose: it is the riskiest move (new runtime, new host) and the compatibility suite is what proves it.
 
 **Order of work (decision of 2026-11-23):** 1, 3, 4, 5, 6, 7, 8, 9, and **phase 2 last**, after every feature is in. Until then the site
 and its data stay readable by anyone with the address (as they are today), including the weekly status of the projects once phase 4 is
 in; nothing secret goes into the panel meanwhile.
+
+**Last item, phase 10: the Supabase quota** (decision of 2026-11-23). The dashboard of the Supabase project (free plan) shows: *"Organization
+exceeded its quota in the previous billing cycle. Projects will be restricted from 12 Dec, 2026 if your organization remains over quota."* It is
+put last by choice, but it has a date: if the project is restricted on 2026-12-12 the whole site stops reading the database, so the work has to
+start before then, whatever phase the plan is in. What to do: open **Review usage** in the Supabase dashboard, find the limit that was
+exceeded (the likely ones: database size, because of the pictures stored as base64 in `rfc_assets` (about 27 MB for PHZ-0001 alone) and
+`rfc_asset_staging`; egress, because every page of an RFC downloads its pictures from the API; Edge Function invocations; monthly active
+users do not apply yet), then choose: clean up (delete expired rows of `rfc_asset_staging`, old `rfc_live_actions`), move the pictures to
+Storage with signed URLs (phase 8 does it for attachments), or move the organization to a paid plan.
 
 ## Progress
 
