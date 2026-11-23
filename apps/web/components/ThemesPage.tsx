@@ -6,7 +6,7 @@ import { useApp } from "./Shell";
 import { Field, Said, StatusBadge, dateText, message } from "./ui";
 
 export function ThemesPage() {
-  const { lang, db, name } = useApp();
+  const { lang, db, reader } = useApp();
   const [fronts, setFronts] = useState<Front[] | null>(null);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [failed, setFailed] = useState(false);
@@ -42,16 +42,18 @@ export function ThemesPage() {
             <button key={s} type="button" aria-pressed={status === s} onClick={() => setStatus(s)}>{s === "all" ? T.all[lang] : t(`status.${s}`, lang)}</button>
           ))}
         </div>
-        <div className="actions">
-          <button type="button" className="btn primary" onClick={() => setCreating(true)}>＋ {T.newTheme[lang]}</button>
-          <button type="button" className="btn" onClick={() => setEditing(e => !e)}>{editing ? T.doneEditing[lang] : T.editFronts[lang]}</button>
-        </div>
+        {!reader ? (
+          <div className="actions">
+            <button type="button" className="btn primary" onClick={() => setCreating(true)}>＋ {T.newTheme[lang]}</button>
+            <button type="button" className="btn" onClick={() => setEditing(e => !e)}>{editing ? T.doneEditing[lang] : T.editFronts[lang]}</button>
+          </div>
+        ) : null}
       </div>
       {failed ? <p className="state err">{T.failed[lang]}</p> : fronts === null ? <p className="state">{T.loading[lang]}</p> : null}
-      {creating && fronts ? <NewTheme fronts={fronts} onClose={() => setCreating(false)} onCreated={id => { window.location.href = `/themes/${id}/`; }} /> : null}
+      {creating && fronts && !reader ? <NewTheme fronts={fronts} onClose={() => setCreating(false)} onCreated={id => { window.location.href = `/themes/${id}/`; }} /> : null}
       {fronts?.map(f => (
         <section className="front" key={f.key} id={`front-${f.key}`}>
-          {editing ? <EditFront front={f} onSaved={load} /> : (
+          {editing && !reader ? <EditFront front={f} onSaved={load} /> : (
             <>
               <h2>{text(f.name, lang)}</h2>
               <p className="scope">{text(f.scope, lang)}</p>

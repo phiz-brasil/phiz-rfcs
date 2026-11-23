@@ -1,14 +1,16 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { COLS, STAGES, STATUSES, T, t, text, type Lang } from "../lib/i18n";
-import type { EventRow, Front, I18n, Item, Jira, Link, Theme } from "../lib/db";
+import type { Blocker, Decision, EventRow, Front, I18n, Item, Jira, Link, Theme, Update } from "../lib/db";
 import { useApp } from "./Shell";
 import { Field, Said, StatusBadge, dateText, message } from "./ui";
+import { Records, WeeklyUpdate } from "./Updates";
 
-type Data = { theme: Theme; fronts: Front[]; items: Item[]; links: Link[]; linksTo: Link[]; jira: Jira[]; events: EventRow[]; rfc: { rfc_id: string; version: string } | null };
+type Data = { theme: Theme; fronts: Front[]; items: Item[]; links: Link[]; linksTo: Link[]; jira: Jira[]; events: EventRow[]; rfc: { rfc_id: string; version: string } | null;
+  updates: Update[]; blockers: Blocker[]; decisions: Decision[] };
 
 export function ThemeDetail({ id }: { id: string }) {
-  const { lang, db } = useApp();
+  const { lang, db, reader } = useApp();
   const [data, setData] = useState<Data | null>(null);
   const [state, setState] = useState<"loading" | "missing" | "failed" | "ok">("loading");
   const [saved, setSaved] = useState(false);           // the form is redrawn from the saved data, so the "Saved." note lives here
@@ -16,8 +18,9 @@ export function ThemeDetail({ id }: { id: string }) {
     try {
       const theme = await db.theme(id);
       if (!theme) return setState("missing");
-      const [fronts, items, links, linksTo, jira, events, rfc] = await Promise.all([db.fronts(), db.items(id), db.links(id), db.linksTo(id), db.jira(id), db.events(id), db.rfc(id)]);
-      setData({ theme, fronts, items, links, linksTo, jira, events, rfc });
+      const [fronts, items, links, linksTo, jira, events, rfc, updates, blockers, decisions] =
+        await Promise.all([db.fronts(), db.items(id), db.links(id), db.linksTo(id), db.jira(id), db.events(id), db.rfc(id), db.updates(id), db.blockers(id), db.decisions(id)]);
+      setData({ theme, fronts, items, links, linksTo, jira, events, rfc, updates, blockers, decisions });
       setState("ok");
     } catch { setState("failed"); }
   }, [db, id]);
@@ -41,12 +44,39 @@ export function ThemeDetail({ id }: { id: string }) {
         <h2>{T.rfc[lang]}</h2>
         {data.rfc ? <p><a className="btn" href={`/rfc/?id=${theme.id}`}>{T.openRfc[lang]} (v{data.rfc.version})</a></p> : <p className="empty">{T.noRfc[lang]}</p>}
       </section>
-      <ThemeForm key={theme.updated_at + lang} data={data} saved={saved} onSaved={() => { setSaved(true); void load(); }} onEdit={() => setSaved(false)} />
+      {reader
+        ? <ThemeReadOnly data={data} />
+        : <ThemeForm key={theme.updated_at + lang} data={data} saved={saved} onSaved={() => { setSaved(true); void load(); }} onEdit={() => setSaved(false)} />}
+      <WeeklyUpdate key={`u${data.updates.length}${lang}`} theme={theme} updates={data.updates} onChanged={load} />
+      <Records kind="blocker" theme={theme} rows={data.blockers} items={data.items} onChanged={load} />
+      <Records kind="decision" theme={theme} rows={data.decisions} items={data.items} onChanged={load} />
       {theme.kind === "project" ? <Items data={data} onChanged={load} /> : null}
       <JiraLinks data={data} onChanged={load} />
       <Dependencies data={data} onChanged={load} />
       <History events={data.events} lang={lang} />
     </>
+  );
+}
+
+function ThemeReadOnly({ data }: { data: Data }) {
+  const { lang } = useApp();
+  const { theme, fronts } = data;
+  const rows: [string, React.ReactNode][] = [
+    [T.front[lang], text(fronts.find(f => f.key === theme.front)?.name, lang)],
+    [T.owner[lang], theme.owner ?? "—"],
+    [T.start[lang], dateText(theme.start_date)],
+    [T.due[lang], dateText(theme.due_date)],
+    [T.tags[lang], theme.tags.length ? theme.tags.map(x => `#${x}`).join(" ") : "—"],
+    [T.whatItIs[lang], <Said key="w" value={theme.what_it_is} lang={lang} machine={theme.text_meta?.what_it_is} />],
+    [T.progress[lang], <Said key="p" value={theme.progress} lang={lang} machine={theme.text_meta?.progress} />],
+    [T.problem[lang], <Said key="pr" value={theme.problem} lang={lang} machine={theme.text_meta?.problem} />],
+    [T.solution[lang], <Said key="s" value={theme.solution} lang={lang} machine={theme.text_meta?.solution} />],
+    [T.success[lang], <Said key="su" value={theme.success} lang={lang} machine={theme.text_meta?.success} />]
+  ];
+  return (
+    <section className="panel" aria-label="theme">
+      <dl className="pairs">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v || "—"}</dd></div>)}</dl>
+    </section>
   );
 }
 
@@ -120,8 +150,10 @@ function ThemeForm({ data, saved, onSaved, onEdit }: { data: Data; saved: boolea
 }
 
 function Items({ data, onChanged }: { data: Data; onChanged: () => void }) {
-  const { lang, db, name } = useApp();
+  const { lang, db, name, reader } = useApp();
   const [title, setTitle] = useState("");
+  const [itemDue, setItemDue] = useState("");
+  const [milestone, setMilestone] = useState(false);
   const [note, setNote] = useState("");
   const run = async (fn: () => Promise<unknown>) => {
     if (!name.trim()) return setNote(T.needName[lang]);
@@ -137,29 +169,33 @@ function Items({ data, onChanged }: { data: Data; onChanged: () => void }) {
             <ul>
               {data.items.filter(i => i.col === c).map(i => (
                 <li key={i.id} className="item">
-                  <span>{i.title}</span>
-                  <span className="moves">
+                  <span>{i.milestone ? "◆ " : ""}{i.title}{i.due_date ? <span className="note"> · {dateText(i.due_date)}</span> : null}</span>
+                  {!reader ? <span className="moves">
                     {COLS.filter(x => x !== c).map(x => (
                       <button key={x} type="button" className="mini" title={t(`col.${x}`, lang)} aria-label={`${i.title} → ${t(`col.${x}`, lang)}`}
                         onClick={() => run(() => db.saveItem(data.theme.id, i.id, { col: x }, name.trim()))}>{t(`col.${x}`, lang)}</button>
                     ))}
-                  </span>
+                  </span> : null}
                 </li>
               ))}
             </ul>
           </div>
         ))}
       </div>
-      <form className="inline" onSubmit={e => { e.preventDefault(); if (title.trim()) void run(async () => { await db.saveItem(data.theme.id, null, { title: title.trim() }, name.trim()); setTitle(""); }); }}>
-        <input aria-label={T.itemTitle[lang]} placeholder={T.itemTitle[lang]} value={title} maxLength={200} onChange={e => setTitle(e.target.value)} />
-        <button type="submit" className="btn">{T.addItem[lang]}</button> <span className="note" role="status">{note}</span>
-      </form>
+      {!reader ? (
+        <form className="inline" onSubmit={e => { e.preventDefault(); if (title.trim()) void run(async () => { await db.saveItem(data.theme.id, null, { title: title.trim(), due_date: itemDue || null, milestone }, name.trim()); setTitle(""); setItemDue(""); setMilestone(false); }); }}>
+          <input aria-label={T.itemTitle[lang]} placeholder={T.itemTitle[lang]} value={title} maxLength={200} onChange={e => setTitle(e.target.value)} />
+          <input type="date" aria-label={T.byWhen[lang]} value={itemDue} onChange={e => setItemDue(e.target.value)} />
+          <label className="checks"><input type="checkbox" checked={milestone} onChange={e => setMilestone(e.target.checked)} /> {T.milestones[lang]}</label>
+          <button type="submit" className="btn">{T.addItem[lang]}</button> <span className="note" role="status">{note}</span>
+        </form>
+      ) : null}
     </section>
   );
 }
 
 function JiraLinks({ data, onChanged }: { data: Data; onChanged: () => void }) {
-  const { lang, db, name } = useApp();
+  const { lang, db, name, reader } = useApp();
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
   const [note, setNote] = useState("");
@@ -176,22 +212,22 @@ function JiraLinks({ data, onChanged }: { data: Data; onChanged: () => void }) {
             <li key={j.id}>
               <a href={j.url} target="_blank" rel="noopener noreferrer" className="jira">{j.issue_key ?? j.label ?? j.url}</a>
               {j.label && j.issue_key ? <span className="note"> {j.label}</span> : null}{" "}
-              <button type="button" className="mini" onClick={() => run(() => db.removeJira(j.id, name.trim()))}>{T.remove[lang]}</button>
+              {!reader ? <button type="button" className="mini" onClick={() => run(() => db.removeJira(j.id, name.trim()))}>{T.remove[lang]}</button> : null}
             </li>
           ))}
         </ul>
       ) : <p className="empty">{T.none[lang]}</p>}
-      <form className="inline" onSubmit={e => { e.preventDefault(); if (url.trim()) void run(async () => { await db.addJira(data.theme.id, null, url.trim(), label.trim(), name.trim()); setUrl(""); setLabel(""); }); }}>
+      {!reader ? <form className="inline" onSubmit={e => { e.preventDefault(); if (url.trim()) void run(async () => { await db.addJira(data.theme.id, null, url.trim(), label.trim(), name.trim()); setUrl(""); setLabel(""); }); }}>
         <input aria-label={T.jiraUrl[lang]} placeholder={T.jiraUrl[lang]} value={url} onChange={e => setUrl(e.target.value)} />
         <input aria-label={T.jiraLabel[lang]} placeholder={T.jiraLabel[lang]} value={label} maxLength={80} onChange={e => setLabel(e.target.value)} />
         <button type="submit" className="btn">{T.add[lang]}</button> <span className="note" role="status">{note}</span>
-      </form>
+      </form> : null}
     </section>
   );
 }
 
 function Dependencies({ data, onChanged }: { data: Data; onChanged: () => void }) {
-  const { lang, db, name } = useApp();
+  const { lang, db, name, reader } = useApp();
   const [to, setTo] = useState("");
   const [kind, setKind] = useState("depends_on");
   const [note, setNote] = useState("");
@@ -215,23 +251,23 @@ function Dependencies({ data, onChanged }: { data: Data; onChanged: () => void }
         <ul className="plain">
           {data.links.map(l => (
             <li key={`${l.to_theme}${l.kind}`}>{t(l.kind, lang)} {label(l.to_theme)}{" "}
-              <button type="button" className="mini" onClick={() => run(() => db.setLink(data.theme.id, l.to_theme, l.kind, false, name.trim()))}>{T.remove[lang]}</button></li>
+              {!reader ? <button type="button" className="mini" onClick={() => run(() => db.setLink(data.theme.id, l.to_theme, l.kind, false, name.trim()))}>{T.remove[lang]}</button> : null}</li>
           ))}
           {data.linksTo.map(l => <li key={`in${l.theme_id}${l.kind}`}>← {label(l.theme_id)} {t(l.kind, lang)}</li>)}
         </ul>
       ) : <p className="empty">{T.none[lang]}</p>}
-      <form className="inline" onSubmit={e => { e.preventDefault(); if (to.trim()) void run(async () => { await db.setLink(data.theme.id, to.trim().toUpperCase(), kind, true, name.trim()); setTo(""); }); }}>
+      {!reader ? <form className="inline" onSubmit={e => { e.preventDefault(); if (to.trim()) void run(async () => { await db.setLink(data.theme.id, to.trim().toUpperCase(), kind, true, name.trim()); setTo(""); }); }}>
         <select value={kind} aria-label={T.deps[lang]} onChange={e => setKind(e.target.value)}>{["depends_on", "blocks", "related"].map(k => <option key={k} value={k}>{t(k, lang)}</option>)}</select>
         <input aria-label={T.otherTheme[lang]} placeholder={T.otherTheme[lang]} value={to} maxLength={8} onChange={e => setTo(e.target.value)} />
         <button type="submit" className="btn">{T.add[lang]}</button> <span className="note" role="status">{note}</span>
-      </form>
+      </form> : null}
     </section>
   );
 }
 
 function History({ events, lang }: { events: EventRow[]; lang: Lang }) {
   const show = (e: EventRow) => {
-    if (e.field.startsWith("jira") || e.field.startsWith("link") || e.field.startsWith("item") || e.field === "created") return t(`ev.${e.field}`, lang);
+    if (/^(jira|link|item|blocker|decision)/.test(e.field) || e.field === "created" || e.field === "update_posted") return t(`ev.${e.field}`, lang);
     const v = (x: unknown) => (typeof x === "object" && x ? JSON.stringify(x).slice(0, 60) : String(x ?? "—"));
     return `${e.field}: ${v(e.old_value)} → ${v(e.new_value)}`;
   };

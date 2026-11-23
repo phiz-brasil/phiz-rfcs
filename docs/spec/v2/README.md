@@ -93,6 +93,13 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   Left: the repository draft `rfcs/checkout-global` is the source of PHZ-0006 (already a theme in Payments) and is newer than the published
   version: publishing it as version 1.2 and removing the folder is waiting for a go-ahead.
 
+- **Phase 4 (this branch)**: weekly updates (the progress sentence, what moved forward, next step, status and estimate with the reason for a changed estimate;
+  every update kept; a theme without an update in the current ISO week is flagged), blockers and decisions (owner or decider, deadline, *needs
+  leadership*, resolved or decided with text), the executive view at `/executive/` with the leadership list on top and filters, execution items
+  that can be milestones with a date, and reader mode (a switch, remembered; `?mode=reader|edit`). Translation of the new texts extends the
+  same webhook to three more tables. Reader mode only hides controls: it is not a permission (there are no profiles until the sign-in phase,
+  decision of 2026-11-23).
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)

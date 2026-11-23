@@ -78,6 +78,10 @@ typed is never overwritten, and a machine translation that someone edits becomes
 
 What is translated is decided by [`themes.ts`](supabase/functions/translate-comment/themes.ts), tested by `tests/test_translate_plan.py`.
 
+The same webhook also translates the weekly updates, blockers and decisions: create one webhook per table, **`theme_updates`** (Insert),
+**`theme_blockers`** and **`theme_decisions`** (Insert and Update), all calling `translate-comment` with the same header (and redeploy the function:
+`index.ts` and `themes.ts` changed).
+
 ### Changing the status from the page
 
 The status badge in the header of each RFC is a button (`EM REVISÃO ▾`): pick a status, type your name once (remembered in the browser) and it changes for everyone, with no rebuild. The index, the header badge and the status pill and eyebrow in the three languages all follow the live status. There is no login: anyone with the link can change it, so every change is kept in `rfc_status_log` with the name typed, an origin rate limit (10 a minute) applies, and archived versions (`v1.0.html`) keep the status they had.
@@ -126,6 +130,7 @@ The database is described by numbered files in [`supabase/migrations`](supabase/
 | `20261024000000_more_images` | up to 160 pictures per RFC and a larger upload limit |
 | `20261124000000_themes` | fronts, themes, execution items, dependencies, Jira links and the event log; the RFCs become themes (`/themes/`) |
 | `20261125000000_theme_translations` | `themes.text_meta` (which languages of a text are machine translations) and `update_theme` keeping it |
+| `20261126000000_weekly_updates` | weekly updates, blockers and decisions of the themes (`theme_updates`, `theme_blockers`, `theme_decisions`) and the functions that write them |
 
 Every file is idempotent (`if not exists` / `or replace`), so applying all of them again is safe. To change the database, add a **new** file with a later timestamp; never edit one that has been applied. Apply a new file in the Supabase **SQL Editor** (paste and run) or with `supabase db push`.
 
@@ -137,6 +142,12 @@ written in the reader's language and kept per language), execution items on a fo
 issue key and opens Jira in another tab), dependencies on themes of other fronts, the link to the theme's RFC and the history of every change.
 The front of a theme and the fronts themselves (name, scope, order) are editable. An RFC that is a theme shows the theme's status and stage in its header (the old status picker is only for RFCs without a theme), and a new RFC created on **＋ Nova RFC** is also created as a theme, in the front chosen there (Outros by default). Plan and decisions: [`docs/spec/v2`](docs/spec/v2/README.md).
 Apply [`20261124000000_themes.sql`](supabase/migrations/20261124000000_themes.sql) first: it also turns the published RFCs into themes.
+
+Each theme page also has the **weekly update** (the progress sentence, what moved forward, the next step, and the status and estimate, which change the
+theme; every update is kept), **blockers** and **decisions** (who, by when, and a flag that sends them to the top of the executive view). `/executive/`
+is the **executive view**: what needs the leadership on top, then every theme by front with its progress sentence, owner, status, estimate, next
+milestones (execution items marked as milestones) and flags (*no update this week*, open blockers and decisions), with filters. **Reader mode**
+(button in the header, remembered; `?mode=reader` or `?mode=edit` in a link) hides every control to create or edit.
 
 ## The app (Next.js)
 
