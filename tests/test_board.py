@@ -52,6 +52,12 @@ class BoardTest(SiteCase):
         # swimlanes follow the fixed order of the fronts and skip the fronts without projects
         self.assertEqual(self.page.locator(".lane h2").all_inner_texts(), ["POP", "API Platform", "Payments"])
 
+    def test_the_board_is_as_wide_as_its_columns_even_with_very_long_titles(self):
+        self.db.seed_theme("PHZ-0030", "pop", title={"pt": "Um título " + "muito comprido " * 30}, stage=3)
+        self.board()
+        width = self.page.locator(".boardwrap").evaluate("e => e.scrollWidth")
+        self.assertLess(width, 10 * 250 + 9 * 8 + 80)                                   # ten fixed columns plus gaps and padding
+
     def test_a_card_shows_what_the_standard_asks_for(self):
         self.db.seed_blocker("PHZ-0001", {"pt": "Aguardando contrato"})
         self.db.seed_decision("PHZ-0001", {"pt": "Escolher fornecedor"})

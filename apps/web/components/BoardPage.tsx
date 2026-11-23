@@ -107,7 +107,7 @@ export function BoardPage() {
       ) : null}
       <p className="note" role="status">{note}</p>
       <div className="boardwrap">
-        <div className="board" role="table" aria-label={T.board[lang]} style={{ gridTemplateColumns: `repeat(${cols.length}, minmax(220px, 1fr))` }}>
+        <div className="board" role="table" aria-label={T.board[lang]} style={{ gridTemplateColumns: `repeat(${cols.length}, 250px)` }}>
           {cols.map(c => {
             const n = count(c);
             return (
