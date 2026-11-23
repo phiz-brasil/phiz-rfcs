@@ -42,6 +42,7 @@ class ThemesMixin:
         self.columns = [{"id": str(uuid.uuid4()), "board": "b2b", "name": {"pt": STAGE_NAMES[n], "en": STAGE_NAMES[n], "zh": ""}, "position": n, "stage": n,
                          "wip_limit": None, "created_at": now()} for n in range(1, 11)]
         self.gate_checks = []
+        self.suggest_calls, self.suggest_response, self.suggest_status = [], None, 200          # the Edge Function suggest-summary
         self.attachments = []
         self.storage_calls, self.downloads = [], []
         self.storage = {}                                 # path -> {"size", "mimetype", "data"}: the private bucket 'attachments'
@@ -50,7 +51,7 @@ class ThemesMixin:
     def seed_theme(self, tid, front="payments", kind="project", title=None, **extra):
         self.ids.setdefault(tid, "site" if kind == "project" else "theme")
         row = {"id": tid, "kind": kind, "front": front, "title": title or {"pt": f"Tema {tid}"}, "owner": None, "status": "not_started",
-               "stage": 1 if kind == "project" else None, "board_column": None, "route": "full", "what_it_is": {}, "progress": {}, "problem": {}, "solution": {},
+               "stage": 1 if kind == "project" else None, "board_column": None, "answers": {}, "route": "full", "what_it_is": {}, "progress": {}, "problem": {}, "solution": {},
                "success": {}, "text_meta": {}, "start_date": None, "due_date": None, "tags": [], "resolution": None, "hidden": False, "created_at": now(),
                "created_by": "importação", "updated_at": now()}
         row.update(extra)
@@ -149,6 +150,12 @@ class ThemesMixin:
                 for lg in ("pt", "en", "zh"):
                     if (old[k] or {}).get(lg) != (t[k] or {}).get(lg):
                         t["text_meta"][k] = [x for x in t["text_meta"].get(k, []) if x != lg]
+        for k in ("problem", "solution", "success"):                        # a person's text is a confirmed answer (the sources of a suggestion stay)
+            if k in p and old[k] != t[k]:
+                if any((v or "").strip() for v in (t[k] or {}).values()):
+                    t["answers"][k] = {"state": "confirmed", "by": by.strip(), "at": now(), "sources": (t["answers"].get(k) or {}).get("sources", [])}
+                else:
+                    t["answers"].pop(k, None)
         for k in ("front", "title", "owner", "status", "stage", "route", "what_it_is", "progress", "problem", "solution", "success",
                   "start_date", "due_date", "tags", "resolution"):
             if old[k] != t[k]:
@@ -525,13 +532,73 @@ class ThemesMixin:
             return route.fulfill(status=200, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"Key": "attachments/" + obj_path}))
         return route.fulfill(status=404, headers=H, body="")
 
+    # -- slide answers (supabase/migrations/20261130000000_theme_answers.sql) -----------------------------------------
+    @staticmethod
+    def _has_text(v):
+        return any((x or "").strip() for x in (v or {}).values())
+
+    def suggest_theme_answers(self, theme, p, by):
+        self._name(by)
+        t = self.themes.get(theme)
+        if not t or t["hidden"]:
+            raise Invalid("unknown theme")
+        applied = []
+        for f in ("problem", "solution", "success"):
+            if f not in p:
+                continue
+            s = p[f]
+            if not isinstance(s, dict):
+                raise Invalid("invalid answer")
+            cur = t["answers"].get(f)
+            if (cur or {}).get("state") == "confirmed" or (self._has_text(t[f]) and cur is None):
+                continue                                                      # a person's text is never replaced
+            srcs = s.get("sources") or []
+            if not isinstance(srcs, list) or len(srcs) > 6 or any(not 1 <= len(x.get("label", "")) <= 200 or not 1 <= len(x.get("quote", "")) <= 400 for x in srcs):
+                raise Invalid("invalid sources")
+            if len(s.get("missing") or "") > 300:
+                raise Invalid("invalid missing")
+            txt = (s.get("text") or "").strip()
+            t["text_meta"].pop(f, None)
+            if txt:
+                if len(txt) > 1200 or not srcs:
+                    raise Invalid("invalid answer")
+                t[f] = {"pt": txt}
+                t["answers"][f] = {"state": "suggested", "by": by.strip(), "at": now(), "sources": srcs}
+            else:
+                t[f] = {}
+                t["answers"][f] = {"state": "missing", "by": by.strip(), "at": now(), "missing": s.get("missing") or ""}
+            applied.append(f)
+        if applied:
+            self.event(theme, by.strip(), "answers_suggested", None, applied)
+        return {"applied": applied}
+
+    def confirm_theme_answers(self, theme, fields, by):
+        self._name(by)
+        t = self.themes.get(theme)
+        if not t or t["hidden"]:
+            raise Invalid("unknown theme")
+        for f in fields:
+            if f not in ("problem", "solution", "success"):
+                raise Invalid("invalid field")
+            if not self._has_text(t[f]):
+                raise Invalid("nothing to confirm")
+            t["answers"][f] = {"state": "confirmed", "by": by.strip(), "at": now(), "sources": (t["answers"].get(f) or {}).get("sources", [])}
+            self.event(theme, by.strip(), "answer_confirmed", None, f)
+
+    def suggest_function(self, route, body, H):
+        """The Edge Function suggest-summary: answers with `suggest_response` (set by the test) or an error status."""
+        self.suggest_calls.append(body)
+        if self.suggest_status != 200:
+            return route.fulfill(status=self.suggest_status, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"error": "failed"}))
+        return route.fulfill(status=200, headers={**H, "Content-Type": "application/json"}, body=json.dumps(self.suggest_response or {"suggestions": {}, "sources": []}))
+
     # -- the HTTP side ----------------------------------------------------------
     def themes_handle(self, path, q, body, ok):
         """True when the request was about themes (and has been answered)."""
         fn = path.rsplit("/", 1)[1]
         if "/rpc/" in path and fn in ("create_theme", "update_theme", "update_front", "save_theme_item", "add_theme_jira", "remove_theme_jira", "set_theme_link",
                                       "post_theme_update", "save_theme_blocker", "resolve_theme_blocker", "save_theme_decision", "decide_theme_decision",
-                                      "move_theme_card", "set_theme_gate", "save_board_column", "delete_board_column", "add_attachment", "hide_attachment"):
+                                      "move_theme_card", "set_theme_gate", "save_board_column", "delete_board_column", "add_attachment", "hide_attachment", "suggest_theme_answers", "confirm_theme_answers"):
             self.calls.append((fn, body))
             if self.rate_limited:
                 ok({"message": "rate limit"}, 429)
@@ -556,6 +623,8 @@ class ThemesMixin:
                     "delete_board_column": lambda: self.delete_board_column(body["p_id"], body["p_by"]),
                     "add_attachment": lambda: self.add_attachment(body["p_theme"], body["p"], body["p_by"]),
                     "hide_attachment": lambda: self.hide_attachment(body["p_id"], body["p_by"]),
+                    "suggest_theme_answers": lambda: self.suggest_theme_answers(body["p_theme"], body["p"], body["p_by"]),
+                    "confirm_theme_answers": lambda: self.confirm_theme_answers(body["p_theme"], body["p_fields"], body["p_by"]),
                 }[fn]()
             except Invalid as e:
                 ok({"message": str(e)}, 400)

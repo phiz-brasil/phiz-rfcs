@@ -41,8 +41,9 @@ export function Shell({ supabase, children }: { supabase: Supabase; children: Re
               <NavLink href="/roadmap/">{T.roadmap[lang]}</NavLink>
               <NavLink href="/metrics/">{T.metrics[lang]}</NavLink>
             </Menu>
-            <Menu label={T.eyebrowPortfolio[lang]} paths={["/themes/"]}>
+            <Menu label={T.eyebrowPortfolio[lang]} paths={["/themes/", "/slides/"]}>
               <NavLink href="/themes/">{T.themes[lang]}</NavLink>
+              <NavLink href="/slides/">{T.slides[lang]}</NavLink>
             </Menu>
             <Menu label={T.navDocs[lang]} paths={["/attachments/", "/comments/", "/rfc/", "/nova/"]}>
               <NavLink href="/">{T.rfcs[lang]}</NavLink>

@@ -133,6 +133,8 @@ The database is described by numbered files in [`supabase/migrations`](supabase/
 | `20261126000000_weekly_updates` | weekly updates, blockers and decisions of the themes (`theme_updates`, `theme_blockers`, `theme_decisions`) and the functions that write them |
 | `20261127000000_board_columns` | the B2B board: `stage_gates` (the V4 gates, seeded), `board_columns` (the ten default columns), `theme_gate_checks`, and the functions to move a card, tick a gate and configure columns |
 | `20261128000000_attachments` | the attachments hub: a private Storage bucket `attachments` (50 MB a file, policies for the public key), the table `attachments` and `add_attachment` / `hide_attachment` |
+| `20261129000000_attachments_archive` | `add_attachment` accepts `archive_version`, `archive_date`, `archive_note` (the archived pages of old RFC versions) |
+| `20261130000000_theme_answers` | `themes.answers` (state of the three slide answers), `suggest_theme_answers`, `confirm_theme_answers`, and `update_theme` confirming a text a person wrote |
 
 Every file is idempotent (`if not exists` / `or replace`), so applying all of them again is safe. To change the database, add a **new** file with a later timestamp; never edit one that has been applied. Apply a new file in the Supabase **SQL Editor** (paste and run) or with `supabase db push`.
 
@@ -164,6 +166,19 @@ it), can be tied to a **stage** (it then shows in that stage's gate checklist) a
 signed address that expires after five minutes; everything else, and HTML always, is only offered as a download (`?download=` makes Storage answer with
 `Content-Disposition: attachment`), so no attachment is ever rendered on the app's origin. Removing hides the row; the file stays in Storage. Notes are shown
 as plain text for now. The pictures of the theme's RFC are listed in a group of their own.
+
+**Slides and AI suggestions.** The three answers of a theme (problem, solution, success) have a state: *missing*, *suggested by the AI, not confirmed* or *confirmed*
+(by a person, with who and when). The **Summary for the slides** panel of a theme runs **Suggest with AI**: the Edge Function
+[`suggest-summary`](supabase/functions/suggest-summary/index.ts) reads the theme's RFC, notes, text attachments and the last weekly updates, asks a Cloudflare
+Workers AI model (the account the translation already uses) for the three answers, and keeps an answer **only if a quotation it gives is found word for word in the
+document it names**; anything else becomes *missing*, with a sentence saying what is missing. The page stores the suggestions with their sources; a suggestion
+never replaces a confirmed answer or a text a person wrote, and writing or correcting the text in the theme form confirms it. `/slides/` exports a **.pptx** with one slide
+per chosen theme (projects and standalone tasks): title, front, owner, status, estimate, Jira links and the three answers in the language chosen at export;
+a missing answer reads "Not explained yet: …", an unconfirmed suggestion is marked. The slide look is neutral until the company's template file is received.
+To turn the suggestion on: apply `20261130000000_theme_answers.sql`, then deploy the function with **both files** (`index.ts`, `suggest.ts`), JWT verification **off**
+(the page calls it with the public key; it limits itself to 3 runs an hour per theme and 40 in all). It uses the secrets `CF_ACCOUNT_ID` and `CF_API_TOKEN` of
+the translation (optional `CF_SUGGEST_MODEL`, default `@cf/meta/llama-3.3-70b-instruct-fp8-fast`). What is read and how the answer is checked is
+[`suggest.ts`](supabase/functions/suggest-summary/suggest.ts), tested by `tests/test_suggest.py`.
 
 `/roadmap/` is the **roadmap**: every theme over time, grouped by front, drawn from the theme's own dates (a bar from its start to its estimated
 completion, a marker when only one of them is set) and from the execution items marked as milestones (diamonds, filled when done), with a line for today,
