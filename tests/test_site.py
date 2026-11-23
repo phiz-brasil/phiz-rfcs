@@ -203,7 +203,7 @@ class SiteTest(SiteCase):
     # -- status -------------------------------------------------------------
     def test_status_can_be_changed_from_the_page(self):
         page = self.open(wait_comments=False)
-        badge = page.locator(".rfcno.st")
+        badge = page.locator(".rfcno.st.st-btn")                        # status.js has made the badge a button (it loads last)
         badge.click()
         pop = page.locator(".st-pop")
         expect(pop).to_be_visible()
