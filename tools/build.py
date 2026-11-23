@@ -34,6 +34,9 @@ def load():
     for d in sorted((ROOT / "rfcs").iterdir()):
         if not d.is_dir() or d.name.startswith("_"):
             continue
+        if not (d / "rfc.json").exists():      # a draft written in the repository (RFC.md + anexos/): published from the site, not built
+            print(f"skipping rfcs/{d.name}: no rfc.json (a draft; publish it on the site or with tools/publish_rfc.py)")
+            continue
         meta = json.loads((d / "rfc.json").read_text(encoding="utf-8"))
         if meta["status"] not in STATUS:
             sys.exit(f"{d.name}: invalid status {meta['status']!r}; use one of {', '.join(STATUS)}")
