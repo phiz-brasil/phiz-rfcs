@@ -4,14 +4,12 @@ import atexit
 import base64
 import functools
 import json
-import http.server
 import os
 import re
 import signal
 import socket
 import subprocess
 import sys
-import threading
 import time
 import urllib.request
 import struct
@@ -28,11 +26,6 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # a loaded machine (or a shared CI runner) can take several seconds to load a page full of Mermaid diagrams
 expect.set_options(timeout=15000)
-
-
-class Quiet(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, *args):
-        pass
 
 
 def png_bytes(width=2, height=2, color=(200, 30, 30)):
@@ -63,12 +56,10 @@ def import_rfc(db, rfc_id):
 class _Site:
     """The site under test, started once per run and shared by every test class:
     - default: the Next.js app (apps/web), built with `npm run build` and served by `next start`;
-    - SITE=static: the old static build (tools/build.py), served from dist/ (to compare the two while both exist);
-    - SITE_URL=<address>: a site that is already running (a preview deployment, `npm run dev`…).
+    - SITE_URL=<address>: a site that is already running (https://phiz-rfcs.vercel.app, a preview deployment, `npm run dev`…).
     SKIP_BUILD=1 reuses the last Next.js build."""
     url = None
     proc = None
-    server = None
 
     @classmethod
     def start(cls):
@@ -76,11 +67,6 @@ class _Site:
             return cls.url
         if os.environ.get("SITE_URL"):
             cls.url = os.environ["SITE_URL"].rstrip("/")
-        elif os.environ.get("SITE") == "static":
-            subprocess.run([sys.executable, str(ROOT / "tools" / "build.py")], cwd=ROOT, check=True, capture_output=True)
-            cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=str(ROOT / "dist")))
-            threading.Thread(target=cls.server.serve_forever, daemon=True).start()
-            cls.url = f"http://127.0.0.1:{cls.server.server_address[1]}"
         else:
             if not os.environ.get("SKIP_BUILD"):
                 subprocess.run(["npm", "run", "build"], cwd=ROOT, check=True, capture_output=True)

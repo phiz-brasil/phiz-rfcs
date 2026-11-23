@@ -6,8 +6,8 @@ said); the suite in `packages/spec-tests` proves it against any deployment. A ph
 ## How it is tested
 
 - Today's 85 tests (`tests/*.py`, Python, Playwright with an in-memory fake of Supabase) are the reference for the behaviors. From phase 1
-  they run against the Next.js app by default, against the old static build with `SITE=static`, and against any deployment with
-  `SITE_URL=<address>` (a Vercel preview). Both sites pass the same 85 tests. They move to TypeScript (`packages/spec-tests`, same names,
+  they run against the Next.js app by default and against any deployment with `SITE_URL=<address>` (production, a Vercel preview).
+  Until the cutover the old static build passed the same tests (`SITE=static`, removed with that build). They move to TypeScript (`packages/spec-tests`, same names,
   one test per behavior) when the Python tools retire.
 - Data: a seeded test database (a Supabase branch, or a local Supabase in CI) with the same rows the fake holds today: PHZ-0001 and PHZ-0002 as
   imported, a site RFC with two versions and pictures, comments with replies, reactions and paragraph numbers, a status history.
@@ -27,7 +27,7 @@ said); the suite in `packages/spec-tests` proves it against any deployment. A ph
 | `/nova/`, `/nova/?edit=PHZ-NNNN` | new RFC, new version | same |
 | `/comments/` | every comment, filters | same |
 | `/assets/skill/phiz-rfc.zip`, `/assets/skill/phiz-rfc-skill.md` | skill download | same files, same bytes for the same sources |
-| `https://phiz-brasil.github.io/phiz-rfcs/…` | the site | every path redirects to the same path on the new host (a last Pages deploy of redirect pages), kept at least 3 months |
+| `https://phiz-brasil.github.io/phiz-rfcs/…` | the site | every path, query and hash redirects to the same address on `https://phiz-rfcs.vercel.app` (`pages-redirect/`: the same page as `index.html` and `404.html`), kept at least 3 months |
 
 ## Data
 
