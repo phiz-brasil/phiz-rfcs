@@ -118,6 +118,10 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   in UTC (the requester's time zone is not known). A theme with part of its history never recorded is *estimated* and excluded from the time metrics by default.
   Items: lead = creation → done, cycle = first `doing` → done.
 
+- **Phase 8, first part (this branch)**: the attachments hub (migration `20261128000000_attachments.sql`): files, notes and links, editions, stage and item ties, previews
+  by signed address, HTML only as a download, a panel on each theme and `/attachments/`. Until the sign-in phase the bucket policies let the public key upload and read
+  (the same openness as the rest of the data); they are tightened to authenticated users then. Moving the frozen archive (`apps/web/legacy`) in comes next.
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)

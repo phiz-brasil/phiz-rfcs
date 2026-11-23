@@ -3,7 +3,7 @@
    evidence; an open gate warns (a badge on the board card, a flag here) and never blocks a move. */
 import { useCallback, useEffect, useState } from "react";
 import { T, t, text } from "../lib/i18n";
-import type { GateCheck, StageGate, Theme } from "../lib/db";
+import type { Attachment, GateCheck, StageGate, Theme } from "../lib/db";
 import { routeStages } from "../lib/board";
 import { useApp } from "./Shell";
 import { dateText, message } from "./ui";
@@ -13,8 +13,9 @@ export function Gates({ theme }: { theme: Theme }) {
   const [gates, setGates] = useState<StageGate[] | null>(null);
   const [checks, setChecks] = useState<GateCheck[]>([]);
   const [note, setNote] = useState("");
+  const [files, setFiles] = useState<Attachment[]>([]);
   const load = useCallback(async () => {
-    try { const [g, c] = await Promise.all([db.gates(), db.themeGateChecks(theme.id)]); setGates(g); setChecks(c); } catch { setNote(T.failed[lang]); }
+    try { const [g, c, a] = await Promise.all([db.gates(), db.themeGateChecks(theme.id), db.attachments(theme.id).catch(() => [])]); setGates(g); setChecks(c); setFiles(a); } catch { setNote(T.failed[lang]); }
   }, [db, theme.id, lang]);
   useEffect(() => { void load(); }, [load]);
 
@@ -37,6 +38,7 @@ export function Gates({ theme }: { theme: Theme }) {
         return (
           <div key={s} data-stage={s}>
             <h3>{t(`stage.${s}`, lang)}</h3>
+            {files.some(a => a.stage === s) ? <p className="note" data-stage-files={s}>{T.attForStage[lang]}: {files.filter(a => a.stage === s).map(a => a.name).join(", ")}</p> : null}
             {!list.length ? <p className="empty-line">{T.noStageGates[lang]}</p> : (
               <ul className="plain gates">
                 {list.map(g => <GateRow key={g.key} gate={g} check={done.get(g.key)} passed={s < theme.stage!} readOnly={reader} onChange={change} />)}

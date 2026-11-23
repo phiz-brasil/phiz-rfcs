@@ -14,6 +14,11 @@ export type StageGate = { key: string; stage: number; position: number; title: I
 export type BoardColumn = { id: string; board: string; name: I18n; position: number; stage: number; wip_limit: number | null; created_at: string };
 export type GateCheck = { theme_id: string; gate_key: string; evidence: string; checked_by: string; checked_at: string };
 export type StageEvent = { theme_id: string; at: string; field: string; new_value: unknown };
+export type Attachment = {
+  id: string; theme_id: string; item_id: string | null; kind: "file" | "note" | "link"; name: string; description: string; storage_path: string | null;
+  content_type: string | null; size: number | null; checksum: string | null; body: string | null; url: string | null; stage: number | null; replaces: string | null;
+  archive_version: string | null; archive_date: string | null; archive_note: I18n | null; created_at: string; created_by: string;
+};
 export type Item = { id: string; theme_id: string; title: string; owner: string | null; col: string; due_date: string | null; milestone: boolean; created_at: string };
 export type Update = {
   id: string; theme_id: string; week: string; edited_by: string; created_at: string; progress: I18n; advanced: I18n; next_step: I18n;
@@ -41,6 +46,7 @@ export class DbError extends Error {
 
 export function client({ url, key }: Supabase) {
   const base = url.replace(/\/+$/, "") + "/rest/v1/";
+  const storage = url.replace(/\/+$/, "") + "/storage/v1/";
   const headers: Record<string, string> = { apikey: key, ...(/^eyJ/.test(key) ? { Authorization: "Bearer " + key } : {}) };
   async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     let r: Response;
@@ -80,6 +86,25 @@ export function client({ url, key }: Supabase) {
     updates: (id: string) => request<Update[]>(`theme_updates?select=*&theme_id=eq.${q(id)}&order=created_at.desc&limit=30`),
     blockers: (id: string) => request<Blocker[]>(`theme_blockers?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
     decisions: (id: string) => request<Decision[]>(`theme_decisions?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
+    // attachments: rows are tables; files go straight to Storage (private bucket) and are read through signed addresses that expire
+    attachments: (id: string) => request<Attachment[]>(`attachments?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
+    allAttachments: () => all<Attachment>("attachments?select=*&order=created_at.desc,id.asc"),
+    rfcPictures: (id: string) => request<{ name: string; rev: number; mime: string; size: number }[]>(`rfc_assets?select=name,rev,mime,size&rfc_id=eq.${q(id)}&order=rev.desc`),
+    addAttachment: (theme: string, p: Record<string, unknown>, by: string) => rpc<{ id: string }>("add_attachment", { p_theme: theme, p, p_by: by }),
+    hideAttachment: (id: string, by: string) => rpc("hide_attachment", { p_id: id, p_by: by }),
+    upload: async (path: string, file: Blob, type: string) => {
+      let r: Response;
+      try { r = await fetch(`${storage}object/attachments/${path.split("/").map(encodeURIComponent).join("/")}`, { method: "POST", headers: { ...headers, "Content-Type": type, "x-upsert": "false" }, body: file }); }
+      catch { throw new DbError("network", "network"); }
+      if (!r.ok) throw new DbError(`HTTP ${r.status}`, r.status === 413 ? "invalid" : "http");
+    },
+    /* a time-limited address; `download` makes the browser save the file instead of showing it (always used for HTML) */
+    signedUrl: async (path: string, download?: string) => {
+      const r = await request<{ signedURL: string }>(`../../storage/v1/object/sign/attachments/${path.split("/").map(encodeURIComponent).join("/")}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expiresIn: 300 }) });
+      const u = storage.replace(/\/$/, "") + (r.signedURL.startsWith("/") ? "" : "/") + r.signedURL;
+      return download ? u + (u.includes("?") ? "&" : "?") + "download=" + encodeURIComponent(download) : u;
+    },
     // flow metrics: the whole event log of the stage changes, resolutions and item moves, the blockers and the items
     metricEvents: () => all<EventRow>("theme_events?select=theme_id,item_id,at,field,old_value,new_value&field=in.(stage,move,resolution,item_col)&order=at.asc,id.asc"),
     allBlockers: () => all<{ theme_id: string; created_at: string; resolved_at: string | null }>("theme_blockers?select=theme_id,created_at,resolved_at&order=created_at.asc,id.asc"),

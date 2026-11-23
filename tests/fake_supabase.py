@@ -141,6 +141,8 @@ class FakeSupabase(ThemesMixin):
             return route.fulfill(status=204, headers=CORS)
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
         path = url.path
+        if "/storage/v1/object/" in path:
+            return self.storage_handle(route, req, url)
         body = json.loads(req.post_data) if req.post_data else None
 
         def ok(data, status=200):
