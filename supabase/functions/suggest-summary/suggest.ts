@@ -23,7 +23,10 @@ export const MISSING: Record<Field, string> = {
   solution: "Os documentos não descrevem a solução proposta.",
   success: "Os documentos não dizem como o sucesso será medido.",
 };
-const PER_SOURCE = 12_000, MAX_SOURCES = 30, MAX_TEXT = 500, MAX_QUOTES = 3, MIN_QUOTE = 12;
+// The model reads at most 24 000 tokens (prompt + answer): about 36 000 characters of documents leave room for the instructions and the answer.
+// Each kind of document has its own share, so a long RFC cannot push the notes and the weekly updates out.
+const BUDGET = { rfc: 18_000, notes: 7_000, files: 6_000, rest: 5_000 }, PER_SOURCE_MAX = 8_000, PER_SOURCE_MIN = 600;
+const MAX_PER_GROUP = { rfc: 20, notes: 8, files: 6, rest: 8 }, MAX_TEXT = 500, MAX_QUOTES = 3, MIN_QUOTE = 12;
 
 const pick = (t?: Texts | null) => (t?.pt ?? t?.en ?? t?.zh ?? "").trim();
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) : s);
@@ -46,24 +49,42 @@ export function rfcSections(bundle: string): { heading: string; text: string }[]
   const flush = () => { const t = buf.join("\n").trim(); if (t) out.push({ heading, text: t }); };
   for (const line of md.split("\n")) {
     const h = /^##\s+(.*)$/.exec(line);
-    if (h) { flush(); heading = h[1].replace(/[*_`#]/g, "").trim() || "Seção"; buf = []; } else buf.push(line);
+    if (h) {
+      flush();
+      heading = h[1].replace(/\s*\{[^}]*\}\s*$/, "").replace(/[*_`#]/g, "").trim() || "Seção";          // "Resumo {summary}": the {id} is an anchor, not a title
+      buf = [];
+    } else buf.push(line);
   }
   flush();
   return out;
 }
 
 export function buildSources(raw: Raw): Source[] {
-  const list: { label: string; text: string }[] = [];
-  for (const s of rfcSections(raw.rfcBundle ?? "")) list.push({ label: `RFC — ${s.heading}`, text: s.text });
-  for (const n of raw.notes) list.push({ label: `Nota — ${n.name}`, text: n.body });
-  for (const f of raw.files) list.push({ label: `Anexo — ${f.name}`, text: f.text });
+  const groups: { budget: number; max: number; items: { label: string; text: string }[] }[] = [
+    { budget: BUDGET.rfc, max: MAX_PER_GROUP.rfc, items: rfcSections(raw.rfcBundle ?? "").map(s => ({ label: `RFC — ${s.heading}`, text: s.text })) },
+    { budget: BUDGET.notes, max: MAX_PER_GROUP.notes, items: raw.notes.map(n => ({ label: `Nota — ${n.name}`, text: n.body })) },
+    { budget: BUDGET.files, max: MAX_PER_GROUP.files, items: raw.files.map(f => ({ label: `Anexo — ${f.name}`, text: f.text })) },
+    { budget: BUDGET.rest, max: MAX_PER_GROUP.rest, items: [] },
+  ];
   const th = [pick(raw.theme.what_it_is), pick(raw.theme.progress)].filter(Boolean).join("\n");
-  if (th) list.push({ label: "Tema — o que é e andamento", text: th });
+  if (th) groups[3].items.push({ label: "Tema — o que é e andamento", text: th });
   for (const u of raw.updates) {
     const t = [pick(u.progress), pick(u.advanced), pick(u.next_step)].filter(Boolean).join("\n");
-    if (t) list.push({ label: `Atualização semanal ${u.week}`, text: t });
+    if (t) groups[3].items.push({ label: `Atualização semanal ${u.week}`, text: t });
   }
-  return list.filter(s => s.text.trim()).slice(0, MAX_SOURCES).map((s, i) => ({ id: `S${i + 1}`, label: s.label, text: clip(s.text.trim(), PER_SOURCE) }));
+  const list: { label: string; text: string }[] = [];
+  for (const g of groups) {
+    const items = g.items.filter(s => s.text.trim()).slice(0, g.max);
+    const cap = Math.max(PER_SOURCE_MIN, Math.min(PER_SOURCE_MAX, Math.floor(g.budget / Math.max(1, items.length))));
+    let left = g.budget;
+    for (const s of items) {
+      if (left <= 0) break;
+      const text = clip(s.text.trim(), Math.min(cap, left));
+      list.push({ label: s.label, text });
+      left -= text.length;
+    }
+  }
+  return list.map((s, i) => ({ id: `S${i + 1}`, label: s.label, text: s.text }));
 }
 
 export function buildPrompt(title: string, sources: Source[]): { system: string; user: string } {

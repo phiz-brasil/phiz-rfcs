@@ -10,9 +10,9 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def run(expr, data=None):
-    code = ("import * as S from './supabase/functions/suggest-summary/suggest.ts';"
-            f"const D = JSON.parse(process.argv[1]); console.log(JSON.stringify({expr}));")
-    out = subprocess.run(["node", "--input-type=module", "-e", code, json.dumps(data or {})], cwd=ROOT, capture_output=True, text=True)
+    code = ("import * as S from './supabase/functions/suggest-summary/suggest.ts'; import { readFileSync } from 'node:fs';"
+            f"const D = JSON.parse(readFileSync(0, 'utf8')); console.log(JSON.stringify({expr}));")
+    out = subprocess.run(["node", "--input-type=module", "-e", code], input=json.dumps(data or {}), cwd=ROOT, capture_output=True, text=True)
     if out.returncode:
         raise AssertionError(out.stderr)
     return json.loads(out.stdout)
@@ -47,6 +47,10 @@ class SuggestTest(unittest.TestCase):
         self.assertEqual([x["heading"] for x in s], ["Introdução", "1. Contexto", "2. Solução", "3. Métricas"])
         self.assertNotIn("English", json.dumps(s))
 
+    def test_the_anchor_id_of_a_heading_is_not_part_of_its_label(self):
+        s = run("S.rfcSections(D.b)", {"b": "<!-- lang:pt -->\n## Resumo {summary}\nTexto.\n\n## **Plano** de entrega {plan}\nMais."})
+        self.assertEqual([x["heading"] for x in s], ["Resumo", "Plano de entrega"])
+
     def test_the_english_text_is_used_when_there_is_no_portuguese(self):
         s = run("S.rfcSections(D.b)", {"b": "<!-- lang:en -->\n## Goal\nBuild the thing."})
         self.assertEqual(s, [{"heading": "Goal", "text": "Build the thing."}])
@@ -64,10 +68,28 @@ class SuggestTest(unittest.TestCase):
         self.assertIn("Atualização semanal 2026-W47", labels)
         self.assertIn("Tema — o que é e andamento", labels)
 
-    def test_empty_documents_are_left_out_and_long_ones_are_cut(self):
+    def test_empty_documents_are_left_out_and_long_ones_are_cut_to_their_share(self):
         s = run("S.buildSources(D)", {"notes": [{"name": "vazia", "body": "  "}, {"name": "longa", "body": "x" * 50000}], "files": [], "updates": [], "theme": {}})
         self.assertEqual([x["label"] for x in s], ["Nota — longa"])
-        self.assertEqual(len(s[0]["text"]), 12000)
+        self.assertEqual(len(s[0]["text"]), 7000)                      # the notes' whole share, but no more than one source may take (8000)
+
+    def test_everything_the_model_reads_fits_its_context_window_whatever_the_documents(self):
+        big = "palavra " * 5000
+        raw = {"rfcBundle": "<!-- lang:pt -->\n" + "\n".join(f"## Seção {i}\n{big}" for i in range(25)),
+               "notes": [{"name": f"n{i}", "body": big} for i in range(10)], "files": [{"name": f"f{i}.md", "text": big} for i in range(10)],
+               "updates": [{"week": f"2026-W{i:02d}", "progress": {"pt": big}} for i in range(6)], "theme": {"what_it_is": {"pt": big}}}
+        s = run("S.buildSources(D)", raw)
+        self.assertLessEqual(sum(len(x["text"]) for x in s), 36000)
+        self.assertLessEqual(len(s), 42)
+        labels = [x["label"] for x in s]
+        self.assertTrue(any(l.startswith("RFC") for l in labels) and any(l.startswith("Nota") for l in labels) and any(l.startswith("Anexo") for l in labels)
+                        and any(l.startswith("Atualização") for l in labels))                  # a long RFC does not push the other documents out
+
+    def test_a_long_rfc_shares_its_budget_between_its_sections(self):
+        raw = {"rfcBundle": "<!-- lang:pt -->\n" + "\n".join(f"## Seção {i}\n{'a ' * 4000}" for i in range(10)), "notes": [], "files": [], "updates": [], "theme": {}}
+        s = run("S.buildSources(D)", raw)
+        self.assertEqual(len(s), 10)
+        self.assertTrue(all(len(x["text"]) == 1800 for x in s))        # 18 000 / 10
 
     def test_the_prompt_forbids_inventing_and_carries_every_source(self):
         p = run("S.buildPrompt('Business API', D.s)", {"s": SOURCES})
