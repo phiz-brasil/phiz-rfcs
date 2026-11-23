@@ -86,10 +86,11 @@ export function MetricsPage() {
   const Stats = ({ s }: { s: ReturnType<typeof M.summary> }) => (
     <><td data-k="n">{s.n}</td><td data-k="median">{fmt(s.median)}</td><td data-k="p85">{fmt(s.p85)}</td></>
   );
-  const Head = () => <thead><tr><th /><th>{T.statN[lang]}</th><th>{T.statMedian[lang]}</th><th>{T.statP85[lang]}</th></tr></thead>;
+  const Head = ({ wip }: { wip?: boolean }) => <thead><tr><th /><th>{T.statN[lang]}</th><th>{T.statMedian[lang]}</th><th>{T.statP85[lang]}</th>{wip ? <th>{T.wip[lang]}</th> : null}</tr></thead>;
 
   return (
     <>
+      <p className="eyebrow">{T.eyebrowTrack[lang]}</p>
       <h1>{T.metrics[lang]}</h1>
       <p className="lead">{T.metricsLead[lang]}</p>
       <div className="bar">
@@ -127,10 +128,10 @@ export function MetricsPage() {
 
           <section className="panel" aria-label={T.timeInStage[lang]} data-block="stages">
             <h2>{T.timeInStage[lang]}</h2>
-            <table className="stats"><Head />
+            <table className="stats"><Head wip />
               <tbody>{STAGES.map(s => (
                 <tr key={s} data-stage={s} data-over={limit(s) != null && (wip[s] ?? 0) > limit(s)! ? "1" : "0"}>
-                  <th>{t(`stage.${s}`, lang)}</th><Stats s={stats[s]} /> <td data-k="wip">{wip[s] ?? 0}{limit(s) != null ? ` / ${limit(s)}` : ""}</td>
+                  <th>{t(`stage.${s}`, lang)}</th><Stats s={stats[s]} /><td data-k="wip">{wip[s] ?? 0}{limit(s) != null ? ` / ${limit(s)}` : ""}</td>
                 </tr>))}</tbody>
             </table>
             <Note def="def_stage" />

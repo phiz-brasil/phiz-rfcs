@@ -50,9 +50,24 @@ export function ExecutivePage() {
 
   return (
     <>
+      <p className="eyebrow">{T.eyebrowTrack[lang]}</p>
       <h1>{T.executive[lang]}</h1>
       <p className="lead">{T.executiveLead[lang]}</p>
-      <section className="alert" aria-label={T.leadership[lang]}>
+      <section className="kpis" aria-label={T.kpis[lang]}>
+        {[
+          { k: "active", n: data.themes.filter(x => x.status !== "done" && x.status !== "cancelled").length, on: () => { setStatus("all"); setAttention(false); } },
+          { k: "on_track", n: data.themes.filter(x => x.status === "on_track").length, on: () => setStatus("on_track") },
+          { k: "at_risk", n: data.themes.filter(x => x.status === "at_risk" || x.status === "blocked").length, tone: "warn", on: () => setStatus("at_risk") },
+          { k: "stale", n: data.themes.filter(stale).length, tone: "warn", on: () => { setStatus("all"); setAttention(true); } },
+          { k: "leadership", n: leadership.length, tone: "alert", on: () => document.getElementById("leadership")?.scrollIntoView({ behavior: "smooth" }) },
+        ].map(c => (
+          <button type="button" key={c.k} className="kpi" data-kpi={c.k} data-tone={c.n ? c.tone : undefined} onClick={c.on}>
+            <span className="kpi-label">{T[`kpi_${c.k}`][lang]}</span>
+            <span className="kpi-n">{c.n}</span>
+          </button>
+        ))}
+      </section>
+      <section className="alert" id="leadership" aria-label={T.leadership[lang]}>
         <h2>{T.leadership[lang]}</h2>
         {leadership.length ? (
           <ul>

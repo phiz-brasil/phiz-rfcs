@@ -40,7 +40,7 @@ class RoadmapTest(SiteCase):
 
     def test_themes_with_dates_are_rows_grouped_by_front_and_themes_without_dates_are_listed_below(self):
         self.roadmap()
-        self.assertEqual(self.page.locator(".rm-front").all_inner_texts(), ["API Platform", "Payments", "Outros"])
+        self.assertEqual(self.page.locator(".rm-front").all_text_contents(), ["API Platform", "Payments", "Outros"])
         self.assertEqual(self.page.locator(".rm-row[data-theme]").evaluate_all("els => els.map(e => e.dataset.theme)"),
                          ["PHZ-0001", "PHZ-0003", "PHZ-0002", "PHZ-0010"])      # newest first inside a front, as on the themes page
         box = self.page.get_by_role("region", name="Sem datas")

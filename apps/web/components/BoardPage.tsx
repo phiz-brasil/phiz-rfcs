@@ -68,6 +68,7 @@ export function BoardPage() {
 
   return (
     <>
+      <p className="eyebrow">{T.eyebrowTrack[lang]}</p>
       <h1>{T.board[lang]}</h1>
       <p className="lead">{T.boardLead[lang]}</p>
       <div className="bar">
