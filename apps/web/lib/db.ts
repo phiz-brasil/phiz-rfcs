@@ -7,9 +7,13 @@ export type Front = { key: string; name: I18n; scope: I18n; ord: number; is_othe
 export type Theme = {
   id: string; kind: "project" | "task"; front: string; title: I18n; owner: string | null; status: string; stage: number | null; route: string;
   what_it_is: I18n; progress: I18n; problem: I18n; solution: I18n; success: I18n; start_date: string | null; due_date: string | null;
-  tags: string[]; resolution: string | null; created_at: string; created_by: string | null; updated_at: string;
+  tags: string[]; resolution: string | null; board_column: string | null; created_at: string; created_by: string | null; updated_at: string;
   text_meta?: Record<string, string[]> | null;        // per text field, the languages that are machine translations
 };
+export type StageGate = { key: string; stage: number; position: number; title: I18n; owner_role: string | null; non_waivable: boolean };
+export type BoardColumn = { id: string; board: string; name: I18n; position: number; stage: number; wip_limit: number | null; created_at: string };
+export type GateCheck = { theme_id: string; gate_key: string; evidence: string; checked_by: string; checked_at: string };
+export type StageEvent = { theme_id: string; at: string; field: string; new_value: unknown };
 export type Item = { id: string; theme_id: string; title: string; owner: string | null; col: string; due_date: string | null; milestone: boolean; created_at: string };
 export type Update = {
   id: string; theme_id: string; week: string; edited_by: string; created_at: string; progress: I18n; advanced: I18n; next_step: I18n;
@@ -67,6 +71,19 @@ export function client({ url, key }: Supabase) {
     updates: (id: string) => request<Update[]>(`theme_updates?select=*&theme_id=eq.${q(id)}&order=created_at.desc&limit=30`),
     blockers: (id: string) => request<Blocker[]>(`theme_blockers?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
     decisions: (id: string) => request<Decision[]>(`theme_decisions?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
+    // the B2B board
+    gates: () => request<StageGate[]>("stage_gates?select=*&order=stage"),
+    boardColumns: () => request<BoardColumn[]>("board_columns?select=*&order=position"),
+    gateChecks: () => request<GateCheck[]>("theme_gate_checks?select=*"),
+    themeGateChecks: (id: string) => request<GateCheck[]>(`theme_gate_checks?select=*&theme_id=eq.${q(id)}`),
+    stageEvents: () => request<StageEvent[]>("theme_events?select=theme_id,at,field,new_value&field=in.(move,stage)&order=at.desc&limit=5000"),
+    itemCols: () => request<{ theme_id: string; col: string }[]>("theme_items?select=theme_id,col&limit=5000"),
+    jiraKeys: () => request<{ theme_id: string; issue_key: string | null }[]>("theme_jira?select=theme_id,issue_key&limit=5000"),
+    moveCard: (theme: string, column: string, by: string, reason?: string) =>
+      rpc<{ moved: boolean; open_gates?: string[] }>("move_theme_card", { p_theme: theme, p_column: column, p_by: by, p_reason: reason || null }),
+    setGate: (theme: string, gate: string, evidence: string | null, by: string) => rpc("set_theme_gate", { p_theme: theme, p_gate: gate, p_evidence: evidence, p_by: by }),
+    saveColumn: (id: string | null, p: Record<string, unknown>, by: string) => rpc("save_board_column", { p_id: id, p, p_by: by }),
+    deleteColumn: (id: string, by: string) => rpc("delete_board_column", { p_id: id, p_by: by }),
     // for the executive view: what it needs across every theme
     updateWeeks: () => request<{ theme_id: string; week: string }[]>("theme_updates?select=theme_id,week&order=created_at.desc&limit=3000"),
     openBlockers: () => request<Blocker[]>("theme_blockers?select=*&state=eq.open&order=created_at"),

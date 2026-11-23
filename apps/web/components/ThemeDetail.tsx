@@ -5,6 +5,7 @@ import type { Blocker, Decision, EventRow, Front, I18n, Item, Jira, Link, Theme,
 import { useApp } from "./Shell";
 import { Field, Said, StatusBadge, dateText, message } from "./ui";
 import { Records, WeeklyUpdate } from "./Updates";
+import { Gates } from "./Gates";
 
 type Data = { theme: Theme; fronts: Front[]; items: Item[]; links: Link[]; linksTo: Link[]; jira: Jira[]; events: EventRow[]; rfc: { rfc_id: string; version: string } | null;
   updates: Update[]; blockers: Blocker[]; decisions: Decision[] };
@@ -50,6 +51,7 @@ export function ThemeDetail({ id }: { id: string }) {
       <WeeklyUpdate key={`u${data.updates.length}${lang}`} theme={theme} updates={data.updates} onChanged={load} />
       <Records kind="blocker" theme={theme} rows={data.blockers} items={data.items} onChanged={load} />
       <Records kind="decision" theme={theme} rows={data.decisions} items={data.items} onChanged={load} />
+      {theme.kind === "project" ? <Gates key={`g${theme.stage}${theme.route}${lang}`} theme={theme} /> : null}
       {theme.kind === "project" ? <Items data={data} onChanged={load} /> : null}
       <JiraLinks data={data} onChanged={load} />
       <Dependencies data={data} onChanged={load} />
@@ -267,6 +269,12 @@ function Dependencies({ data, onChanged }: { data: Data; onChanged: () => void }
 
 function History({ events, lang }: { events: EventRow[]; lang: Lang }) {
   const show = (e: EventRow) => {
+    if (e.field === "move") {
+      const v = (e.new_value ?? {}) as { from_stage?: number | null; to_stage?: number; reason?: string | null; open_gates?: string[] };
+      const st = (n?: number | null) => (n ? t(`stage.${n}`, lang) : "—");
+      return `${t("ev.move", lang)}: ${st(v.from_stage)} → ${st(v.to_stage)}${v.open_gates?.length ? ` (${v.open_gates.length} ${t("gatesOpen", lang)})` : ""}${v.reason ? ` — ${v.reason}` : ""}`;
+    }
+    if (e.field === "gate_checked" || e.field === "gate_unchecked") return `${t(`ev.${e.field}`, lang)}: ${String(e.new_value)}`;
     if (/^(jira|link|item|blocker|decision)/.test(e.field) || e.field === "created" || e.field === "update_posted") return t(`ev.${e.field}`, lang);
     const v = (x: unknown) => (typeof x === "object" && x ? JSON.stringify(x).slice(0, 60) : String(x ?? "—"));
     return `${e.field}: ${v(e.old_value)} → ${v(e.new_value)}`;

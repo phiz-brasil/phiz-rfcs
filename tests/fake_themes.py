@@ -8,7 +8,16 @@ STATUSES = ("not_started", "on_track", "at_risk", "blocked", "paused", "done", "
 COLS = ("todo", "doing", "blocked", "done")
 FRONTS = [("pop", "POP", 1, False), ("api-platform", "API Platform", 2, False), ("mini-apps", "Mini-Apps", 3, False),
           ("payments", "Payments", 4, False), ("product-center", "Product Center", 5, False), ("outros", "Outros", 99, True)]
-TABLES = ("fronts", "themes", "theme_items", "theme_links", "theme_jira", "theme_events", "theme_updates", "theme_blockers", "theme_decisions")
+TABLES = ("fronts", "themes", "theme_items", "theme_links", "theme_jira", "theme_events", "theme_updates", "theme_blockers", "theme_decisions",
+          "stage_gates", "board_columns", "theme_gate_checks")
+ROUTE_STAGES = {"bug": [6, 7, 8, 9, 10], "p0": [7, 8, 9, 10]}
+STAGE_NAMES = {1: "01 Solicitação", 2: "02 Pesquisa", 3: "03 Decisão", 4: "04 PRD e início", 5: "05 Revisão da solução", 6: "06 Planejamento",
+               7: "07 Desenvolvimento", 8: "08 Testes", 9: "09 Publicação", 10: "10 Lançamento"}
+# (key, stage, title, non_waivable): a short copy of the seed of supabase/migrations/20261127000000_board_columns.sql, enough to test with
+GATES = [("01-triage", 1, "Informações completas", False), ("01-owner", 1, "Responsável definido", False), ("02-evidence", 2, "Evidências do problema", False),
+         ("03-approved", 3, "Aprovado com escopo", False), ("04-prd", 4, "PRD no padrão", False), ("04-jira", 4, "Issue do Jira liga RFC e PRD", False),
+         ("05-conclusions", 5, "Quatro conclusões", False), ("06-milestones", 6, "Quatro marcos", False), ("07-pipeline", 7, "Pipeline no padrão", False),
+         ("08-acceptance", 8, "Aceite de negócio", True), ("09-rollback", 9, "Rollback ensaiado", True), ("10-reconcile", 10, "Conciliação fecha", True)]
 
 
 def now():
@@ -26,12 +35,17 @@ class ThemesMixin:
         self.themes, self.items, self.links, self.jira, self.events = {}, [], [], [], []
         self.updates, self.blockers, self.decisions = [], [], []
         self.week = "2026-W48"                            # the ISO week the "server" is in
+        self.gates = [{"key": k, "stage": st, "position": i + 1, "title": {"pt": ti, "en": ti, "zh": ""}, "owner_role": None, "non_waivable": nw}
+                      for i, (k, st, ti, nw) in enumerate(GATES)]
+        self.columns = [{"id": str(uuid.uuid4()), "board": "b2b", "name": {"pt": STAGE_NAMES[n], "en": STAGE_NAMES[n], "zh": ""}, "position": n, "stage": n,
+                         "wip_limit": None, "created_at": now()} for n in range(1, 11)]
+        self.gate_checks = []
 
     # -- test helpers -----------------------------------------------------------
     def seed_theme(self, tid, front="payments", kind="project", title=None, **extra):
         self.ids.setdefault(tid, "site" if kind == "project" else "theme")
         row = {"id": tid, "kind": kind, "front": front, "title": title or {"pt": f"Tema {tid}"}, "owner": None, "status": "not_started",
-               "stage": 1 if kind == "project" else None, "route": "full", "what_it_is": {}, "progress": {}, "problem": {}, "solution": {},
+               "stage": 1 if kind == "project" else None, "board_column": None, "route": "full", "what_it_is": {}, "progress": {}, "problem": {}, "solution": {},
                "success": {}, "text_meta": {}, "start_date": None, "due_date": None, "tags": [], "resolution": None, "hidden": False, "created_at": now(),
                "created_by": "importação", "updated_at": now()}
         row.update(extra)
@@ -302,12 +316,110 @@ class ThemesMixin:
         d.update(state=state, decision=decision or {}, decided_at=now(), decided_by=by.strip())
         self.event(d["theme_id"], by.strip(), f"decision_{state}", d["what"], decision, d["item_id"])
 
+    # -- the B2B board ------------------------------------------------------------
+    def column_of_stage(self, stage):
+        return next(c for c in sorted(self.columns, key=lambda c: (c["position"], c["created_at"])) if c["stage"] == stage)
+
+    def current_column(self, t):
+        cur = next((c for c in self.columns if c["id"] == t.get("board_column") and c["stage"] == t["stage"]), None)
+        return cur or (self.column_of_stage(t["stage"]) if t["stage"] else None)
+
+    def move_theme_card(self, theme, column, by, reason=None):
+        self._name(by)
+        t = self.themes.get(theme)
+        if not t or t["hidden"] or t["kind"] != "project":
+            raise Invalid("unknown theme")
+        dest = next((c for c in self.columns if c["id"] == column), None)
+        if not dest:
+            raise Invalid("unknown column")
+        if len(reason or "") > 300:
+            raise Invalid("invalid reason")
+        cur = self.current_column(t)
+        if cur and cur["id"] == dest["id"]:
+            return {"moved": False}
+        frm = t["stage"]
+        route = ROUTE_STAGES.get(t["route"], list(range(1, 11)))
+        skipped = dest["stage"] > (frm or 0) and any((frm or 0) < s < dest["stage"] for s in route)
+        if (skipped or dest["stage"] not in route) and not (reason or "").strip():
+            raise Invalid("reason required")
+        open_gates = []
+        if frm is not None and dest["stage"] > frm:
+            open_gates = [g["key"] for g in self.gates if g["stage"] == frm and not any(k["theme_id"] == theme and k["gate_key"] == g["key"] for k in self.gate_checks)]
+        t.update(stage=dest["stage"], board_column=dest["id"], updated_at=now())
+        self.event(theme, by.strip(), "move", None, {"from_column": cur["id"] if cur else None, "to_column": dest["id"], "from_stage": frm,
+                                                      "to_stage": dest["stage"], "open_gates": open_gates, "reason": (reason or "").strip() or None})
+        return {"moved": True, "open_gates": open_gates}
+
+    def set_theme_gate(self, theme, gate, evidence, by):
+        self._name(by)
+        t = self.themes.get(theme)
+        if not t or t["hidden"] or t["kind"] != "project":
+            raise Invalid("unknown theme")
+        if not any(g["key"] == gate for g in self.gates):
+            raise Invalid("unknown gate")
+        self.gate_checks = [k for k in self.gate_checks if not (k["theme_id"] == theme and k["gate_key"] == gate)]
+        if not (evidence or "").strip():
+            self.event(theme, by.strip(), "gate_unchecked", None, gate)
+            return
+        if len(evidence.strip()) > 500:
+            raise Invalid("invalid evidence")
+        self.gate_checks.append({"theme_id": theme, "gate_key": gate, "evidence": evidence.strip(), "checked_by": by.strip(), "checked_at": now()})
+        self.event(theme, by.strip(), "gate_checked", None, gate)
+
+    def _stage_in_use(self, col):
+        others = any(c["stage"] == col["stage"] and c["id"] != col["id"] for c in self.columns)
+        return not others and any(t["stage"] == col["stage"] and t["kind"] == "project" and not t["hidden"] and not t["resolution"] for t in self.themes.values())
+
+    def save_board_column(self, cid, p, by):
+        self._name(by)
+        if "name" in p:
+            self._i18n(p["name"], 60, True)
+        if "stage" in p and not 1 <= int(p["stage"]) <= 10:
+            raise Invalid("invalid stage")
+        if "position" in p and not 1 <= int(p["position"]) <= 100:
+            raise Invalid("invalid position")
+        wip = p.get("wip_limit")
+        if wip not in (None, "") and int(wip) < 1:
+            raise Invalid("invalid limit")
+        wip = int(wip) if wip not in (None, "") else None
+        if cid is None:
+            if "name" not in p or "stage" not in p:
+                raise Invalid("name and stage required")
+            row = {"id": str(uuid.uuid4()), "board": "b2b", "name": p["name"], "position": int(p.get("position") or max([c["position"] for c in self.columns] + [0]) + 1),
+                   "stage": int(p["stage"]), "wip_limit": wip, "created_at": now()}
+            self.columns.append(row)
+            return {"id": row["id"]}
+        c = next((x for x in self.columns if x["id"] == cid), None)
+        if not c:
+            raise Invalid("unknown column")
+        if "stage" in p and int(p["stage"]) != c["stage"] and self._stage_in_use(c):
+            raise Invalid("stage in use")
+        for k in ("name", "position", "stage"):
+            if k in p:
+                c[k] = int(p[k]) if k in ("position", "stage") else p[k]
+        if "wip_limit" in p:
+            c["wip_limit"] = wip
+        return {"id": cid}
+
+    def delete_board_column(self, cid, by):
+        self._name(by)
+        c = next((x for x in self.columns if x["id"] == cid), None)
+        if not c:
+            raise Invalid("unknown column")
+        if self._stage_in_use(c):
+            raise Invalid("stage in use")
+        self.columns.remove(c)
+        for t in self.themes.values():
+            if t.get("board_column") == cid:
+                t["board_column"] = None
+
     # -- the HTTP side ----------------------------------------------------------
     def themes_handle(self, path, q, body, ok):
         """True when the request was about themes (and has been answered)."""
         fn = path.rsplit("/", 1)[1]
         if "/rpc/" in path and fn in ("create_theme", "update_theme", "update_front", "save_theme_item", "add_theme_jira", "remove_theme_jira", "set_theme_link",
-                                      "post_theme_update", "save_theme_blocker", "resolve_theme_blocker", "save_theme_decision", "decide_theme_decision"):
+                                      "post_theme_update", "save_theme_blocker", "resolve_theme_blocker", "save_theme_decision", "decide_theme_decision",
+                                      "move_theme_card", "set_theme_gate", "save_board_column", "delete_board_column"):
             self.calls.append((fn, body))
             if self.rate_limited:
                 ok({"message": "rate limit"}, 429)
@@ -326,6 +438,10 @@ class ThemesMixin:
                     "resolve_theme_blocker": lambda: self.resolve_theme_blocker(body["p_id"], body["p_how"], body["p_by"]),
                     "save_theme_decision": lambda: self.save_theme_decision(body["p_theme"], body["p_id"], body["p"], body["p_by"]),
                     "decide_theme_decision": lambda: self.decide_theme_decision(body["p_id"], body["p_state"], body["p_decision"], body["p_by"]),
+                    "move_theme_card": lambda: self.move_theme_card(body["p_theme"], body["p_column"], body["p_by"], body.get("p_reason")),
+                    "set_theme_gate": lambda: self.set_theme_gate(body["p_theme"], body["p_gate"], body["p_evidence"], body["p_by"]),
+                    "save_board_column": lambda: self.save_board_column(body["p_id"], body["p"], body["p_by"]),
+                    "delete_board_column": lambda: self.delete_board_column(body["p_id"], body["p_by"]),
                 }[fn]()
             except Invalid as e:
                 ok({"message": str(e)}, 400)
@@ -337,7 +453,8 @@ class ThemesMixin:
             return False
         rows = {"fronts": self.fronts, "themes": [t for t in self.themes.values() if not t["hidden"]], "theme_items": self.items,
                 "theme_links": self.links, "theme_jira": self.jira, "theme_events": self.events, "theme_updates": self.updates,
-                "theme_blockers": self.blockers, "theme_decisions": self.decisions}[table]
+                "theme_blockers": self.blockers, "theme_decisions": self.decisions, "stage_gates": self.gates, "board_columns": self.columns,
+                "theme_gate_checks": self.gate_checks}[table]
         for col, val in q.items():
             if col in ("select", "order", "limit"):
                 continue
@@ -349,7 +466,7 @@ class ThemesMixin:
         order = q.get("order")
         if order:
             key, _, direction = order.partition(".")
-            rows = sorted(rows, key=lambda r: str(r.get(key)), reverse=direction == "desc")
+            rows = sorted(rows, key=lambda r: r.get(key) if isinstance(r.get(key), (int, float)) else str(r.get(key)), reverse=direction == "desc")
         if "limit" in q:
             rows = rows[:int(q["limit"])]
         sel = q.get("select", "*")
