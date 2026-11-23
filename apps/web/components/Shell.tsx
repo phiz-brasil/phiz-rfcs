@@ -40,6 +40,7 @@ export function Shell({ supabase, children }: { supabase: Supabase; children: Re
             <a className="navc" href="/board/">{T.board[lang]}</a>
             <a className="navc" href="/roadmap/">{T.roadmap[lang]}</a>
             <a className="navc" href="/metrics/">{T.metrics[lang]}</a>
+            <a className="navc" href="/attachments/">{T.attachments[lang]}</a>
             <a className="navc" href="/executive/">{T.executive[lang]}</a>
             <a className="navc" href="/comments/">💬 {T.comments[lang]}</a>
             {!reader ? <label className="who"><span>{T.yourName[lang]}</span><input value={name} maxLength={60} autoComplete="name" onChange={e => setName(e.target.value)} /></label> : null}

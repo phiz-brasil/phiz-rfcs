@@ -132,6 +132,7 @@ The database is described by numbered files in [`supabase/migrations`](supabase/
 | `20261125000000_theme_translations` | `themes.text_meta` (which languages of a text are machine translations) and `update_theme` keeping it |
 | `20261126000000_weekly_updates` | weekly updates, blockers and decisions of the themes (`theme_updates`, `theme_blockers`, `theme_decisions`) and the functions that write them |
 | `20261127000000_board_columns` | the B2B board: `stage_gates` (the V4 gates, seeded), `board_columns` (the ten default columns), `theme_gate_checks`, and the functions to move a card, tick a gate and configure columns |
+| `20261128000000_attachments` | the attachments hub: a private Storage bucket `attachments` (50 MB a file, policies for the public key), the table `attachments` and `add_attachment` / `hide_attachment` |
 
 Every file is idempotent (`if not exists` / `or replace`), so applying all of them again is safe. To change the database, add a **new** file with a later timestamp; never edit one that has been applied. Apply a new file in the Supabase **SQL Editor** (paste and run) or with `supabase db push`.
 
@@ -155,6 +156,14 @@ V4 stages. A card moves by drag or by its *Move to* menu; every move is one `mov
 when the move skips a stage of the theme's route or leaves it). **Gates** (the checklist of the standard, on each project theme) are ticked with an
 evidence; an open gate warns on the card and never blocks. **Columns** are configurable (name in three languages, stage, optional WIP limit, order);
 there are no admins until the sign-in phase, so for now anyone with a name can configure them.
+
+Each theme page has an **Attachments** panel and `/attachments/` lists the attachments of every theme (latest editions, with filters: type, front, stage, who, text). An
+attachment is a **file** (up to 50 MB, straight from the browser to the private Storage bucket; the row keeps the size and type Storage reports and a SHA-256
+checksum), a **note** (Markdown) or a **link** (https). A new one can be an **edition** of another (the list shows the latest and keeps the earlier ones under
+it), can be tied to a **stage** (it then shows in that stage's gate checklist) and to an execution item. Pictures, audio and video play in the page through a
+signed address that expires after five minutes; everything else, and HTML always, is only offered as a download (`?download=` makes Storage answer with
+`Content-Disposition: attachment`), so no attachment is ever rendered on the app's origin. Removing hides the row; the file stays in Storage. Notes are shown
+as plain text for now. The pictures of the theme's RFC are listed in a group of their own.
 
 `/roadmap/` is the **roadmap**: every theme over time, grouped by front, drawn from the theme's own dates (a bar from its start to its estimated
 completion, a marker when only one of them is set) and from the execution items marked as milestones (diamonds, filled when done), with a line for today,

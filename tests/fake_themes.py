@@ -1,15 +1,17 @@
 """The themes part of the fake Supabase: fronts, themes, execution items, dependencies, Jira links and the event log, with the same rules
 as supabase/migrations/20261124000000_themes.sql (the functions are the only way to write; every change of a theme is an event)."""
+import json
 import re
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import parse_qs
 
 STATUSES = ("not_started", "on_track", "at_risk", "blocked", "paused", "done", "cancelled")
 COLS = ("todo", "doing", "blocked", "done")
 FRONTS = [("pop", "POP", 1, False), ("api-platform", "API Platform", 2, False), ("mini-apps", "Mini-Apps", 3, False),
           ("payments", "Payments", 4, False), ("product-center", "Product Center", 5, False), ("outros", "Outros", 99, True)]
 TABLES = ("fronts", "themes", "theme_items", "theme_links", "theme_jira", "theme_events", "theme_updates", "theme_blockers", "theme_decisions",
-          "stage_gates", "board_columns", "theme_gate_checks")
+          "stage_gates", "board_columns", "theme_gate_checks", "attachments")
 ROUTE_STAGES = {"bug": [6, 7, 8, 9, 10], "p0": [7, 8, 9, 10]}
 STAGE_NAMES = {1: "01 Solicitação", 2: "02 Pesquisa", 3: "03 Decisão", 4: "04 PRD e início", 5: "05 Revisão da solução", 6: "06 Planejamento",
                7: "07 Desenvolvimento", 8: "08 Testes", 9: "09 Publicação", 10: "10 Lançamento"}
@@ -40,6 +42,9 @@ class ThemesMixin:
         self.columns = [{"id": str(uuid.uuid4()), "board": "b2b", "name": {"pt": STAGE_NAMES[n], "en": STAGE_NAMES[n], "zh": ""}, "position": n, "stage": n,
                          "wip_limit": None, "created_at": now()} for n in range(1, 11)]
         self.gate_checks = []
+        self.attachments = []
+        self.storage_calls, self.downloads = [], []
+        self.storage = {}                                 # path -> {"size", "mimetype", "data"}: the private bucket 'attachments'
 
     # -- test helpers -----------------------------------------------------------
     def seed_theme(self, tid, front="payments", kind="project", title=None, **extra):
@@ -413,13 +418,120 @@ class ThemesMixin:
             if t.get("board_column") == cid:
                 t["board_column"] = None
 
+    # -- attachments (supabase/migrations/20261128000000_attachments.sql) --------------------------------------------
+    PATH_RE = re.compile(r"^(PHZ-\d{4})/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[^/]{1,150}$")
+
+    def put_object(self, path, data=b"x", mimetype="application/octet-stream"):
+        self.storage[path] = {"size": len(data), "mimetype": mimetype, "data": data}
+
+    def seed_attachment(self, tid, name, kind="file", **extra):
+        row = {"id": str(uuid.uuid4()), "theme_id": tid, "item_id": None, "kind": kind, "name": name, "description": "", "storage_path": None, "content_type": None,
+               "size": None, "checksum": None, "body": None, "url": None, "stage": None, "replaces": None, "archive_version": None, "archive_date": None,
+               "archive_note": None, "hidden": False, "created_at": now(), "created_by": "Ana"}
+        if kind == "file":
+            path = f"{tid}/{uuid.uuid4()}/{name}"
+            self.put_object(path, extra.pop("data", b"conteudo"), extra.get("content_type") or "application/octet-stream")
+            row.update(storage_path=path, content_type=extra.pop("content_type", "application/octet-stream"), size=self.storage[path]["size"])
+        row.update(extra)
+        self.attachments.append(row)
+        return row
+
+    def add_attachment(self, theme, p, by):
+        self._name(by)
+        t = self.themes.get(theme)
+        if not t or t["hidden"]:
+            raise Invalid("unknown theme")
+        kind = p.get("kind")
+        nm = (p.get("name") or "").strip()
+        if kind not in ("file", "note", "link"):
+            raise Invalid("invalid kind")
+        if not 1 <= len(nm) <= 200:
+            raise Invalid("invalid name")
+        if len(p.get("description") or "") > 1000:
+            raise Invalid("invalid description")
+        st = p.get("stage")
+        if st is not None and not 1 <= int(st) <= 10:
+            raise Invalid("invalid stage")
+        if p.get("item_id") and not any(i["id"] == p["item_id"] and i["theme_id"] == theme for i in self.items):
+            raise Invalid("unknown item")
+        rep = p.get("replaces")
+        if rep and not any(a["id"] == rep and a["theme_id"] == theme and not a["hidden"] for a in self.attachments):
+            raise Invalid("unknown attachment")
+        if p.get("checksum") is not None and not re.fullmatch(r"[0-9a-f]{64}", p["checksum"]):
+            raise Invalid("invalid checksum")
+        row = {"id": str(uuid.uuid4()), "theme_id": theme, "item_id": p.get("item_id"), "kind": kind, "name": nm, "description": p.get("description") or "",
+               "storage_path": None, "content_type": None, "size": None, "checksum": p.get("checksum"), "body": None, "url": None, "stage": st, "replaces": rep,
+               "archive_version": None, "archive_date": None, "archive_note": None, "hidden": False, "created_at": now(), "created_by": by.strip()}
+        if kind == "file":
+            path = p.get("path") or ""
+            m = self.PATH_RE.match(path)
+            if not m or m.group(1) != theme:
+                raise Invalid("invalid path")
+            obj = self.storage.get(path)
+            if not obj:
+                raise Invalid("file not uploaded")
+            row.update(storage_path=path, content_type=obj["mimetype"], size=obj["size"])
+        elif kind == "note":
+            if not 1 <= len(p.get("body") or "") <= 50000:
+                raise Invalid("invalid note")
+            row["body"] = p["body"]
+        else:
+            if not re.fullmatch(r"https://[^ ]{4,500}", p.get("url") or ""):
+                raise Invalid("invalid url")
+            row["url"] = p["url"]
+        self.attachments.append(row)
+        self.event(theme, by.strip(), "attachment_added", None, nm, p.get("item_id"))
+        return {"id": row["id"]}
+
+    def hide_attachment(self, aid, by):
+        self._name(by)
+        a = next((x for x in self.attachments if x["id"] == aid and not x["hidden"]), None)
+        if not a:
+            raise Invalid("unknown attachment")
+        a["hidden"] = True
+        self.event(a["theme_id"], by.strip(), "attachment_removed", a["name"], None, a["item_id"])
+
+    def storage_handle(self, route, req, url):
+        """The private bucket: upload (the policy checks the path), signed addresses and the signed download."""
+        from urllib.parse import unquote
+        H = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS"}
+        path = unquote(url.path.split("/storage/v1/object/", 1)[1])
+        self.storage_calls.append((req.method, path))
+        if path.startswith("sign/attachments/"):
+            obj_path = path[len("sign/attachments/"):]
+            if req.method == "POST":
+                if obj_path not in self.storage:
+                    return route.fulfill(status=400, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"message": "Object not found"}))
+                from urllib.parse import quote
+                return route.fulfill(status=200, headers={**H, "Content-Type": "application/json"},
+                                     body=json.dumps({"signedURL": f"/object/sign/attachments/{quote(obj_path)}?token=t0k3n"}))
+            obj = self.storage.get(obj_path)
+            if not obj:
+                return route.fulfill(status=404, headers=H, body="")
+            query = dict(parse_qs(url.query))
+            self.downloads.append((obj_path, query))
+            extra = {"Content-Disposition": f'attachment; filename="{query["download"][0]}"'} if "download" in query else {}     # what Storage does for ?download=
+            return route.fulfill(status=200, headers={**H, **extra, "Content-Type": obj["mimetype"]}, body=obj["data"])
+        if path.startswith("attachments/") and req.method == "POST":
+            obj_path = path[len("attachments/"):]
+            data = req.post_data_buffer or b""
+            if not self.PATH_RE.match(obj_path):
+                return route.fulfill(status=403, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"message": "new row violates row-level security policy"}))
+            if len(data) > 50 * 1024 * 1024:
+                return route.fulfill(status=413, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"message": "The object exceeded the maximum allowed size"}))
+            if obj_path in self.storage:
+                return route.fulfill(status=409, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"message": "The resource already exists"}))
+            self.put_object(obj_path, data, (req.headers.get("content-type") or "application/octet-stream").split(";")[0])
+            return route.fulfill(status=200, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"Key": "attachments/" + obj_path}))
+        return route.fulfill(status=404, headers=H, body="")
+
     # -- the HTTP side ----------------------------------------------------------
     def themes_handle(self, path, q, body, ok):
         """True when the request was about themes (and has been answered)."""
         fn = path.rsplit("/", 1)[1]
         if "/rpc/" in path and fn in ("create_theme", "update_theme", "update_front", "save_theme_item", "add_theme_jira", "remove_theme_jira", "set_theme_link",
                                       "post_theme_update", "save_theme_blocker", "resolve_theme_blocker", "save_theme_decision", "decide_theme_decision",
-                                      "move_theme_card", "set_theme_gate", "save_board_column", "delete_board_column"):
+                                      "move_theme_card", "set_theme_gate", "save_board_column", "delete_board_column", "add_attachment", "hide_attachment"):
             self.calls.append((fn, body))
             if self.rate_limited:
                 ok({"message": "rate limit"}, 429)
@@ -442,6 +554,8 @@ class ThemesMixin:
                     "set_theme_gate": lambda: self.set_theme_gate(body["p_theme"], body["p_gate"], body["p_evidence"], body["p_by"]),
                     "save_board_column": lambda: self.save_board_column(body["p_id"], body["p"], body["p_by"]),
                     "delete_board_column": lambda: self.delete_board_column(body["p_id"], body["p_by"]),
+                    "add_attachment": lambda: self.add_attachment(body["p_theme"], body["p"], body["p_by"]),
+                    "hide_attachment": lambda: self.hide_attachment(body["p_id"], body["p_by"]),
                 }[fn]()
             except Invalid as e:
                 ok({"message": str(e)}, 400)
@@ -454,7 +568,8 @@ class ThemesMixin:
         rows = {"fronts": self.fronts, "themes": [t for t in self.themes.values() if not t["hidden"]], "theme_items": self.items,
                 "theme_links": self.links, "theme_jira": self.jira, "theme_events": self.events, "theme_updates": self.updates,
                 "theme_blockers": self.blockers, "theme_decisions": self.decisions, "stage_gates": self.gates, "board_columns": self.columns,
-                "theme_gate_checks": self.gate_checks}[table]
+                "theme_gate_checks": self.gate_checks,
+                "attachments": [a for a in self.attachments if not a["hidden"]]}[table]
         for col, val in q.items():
             if col in ("select", "order", "limit", "offset"):
                 continue
