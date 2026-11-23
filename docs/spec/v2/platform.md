@@ -111,20 +111,13 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
 - The compatibility suite stays the Python one for now: `tests/support.py` builds the Next.js app and runs `next start`, and the same 85 tests
   run against it (`SITE_URL=` against any deployment). Porting the suite to TypeScript is
   left for when the Python tools retire (phase 2), so phase 1 changes one thing at a time.
-- The cutover (done): production on `https://phiz-rfcs.vercel.app` (Vercel team PhizChat, Root Directory `apps/web`); GitHub Pages only
-  serves `pages-redirect/`, which sends every old address to the same path there; the old build is removed. Making the repository private is
-  the step left (see below).
-
-### Making the repository private
-
-GitHub Pages works on private repositories only on paid GitHub plans. If the organization is on the free plan, keep the redirect alive by
-moving it to a public repository of its own: rename this repository (for example `phiz-portal`; GitHub and Vercel follow the rename), make it
-private, create a new public repository named `phiz-rfcs` with only `pages-redirect/` and `pages.yml`, and turn Pages on there. The old
-address `https://phiz-brasil.github.io/phiz-rfcs/…` is then served by the new repository.
+- The cutover (done): production on `https://phiz-rfcs.vercel.app` (Vercel team PhizChat, Root Directory `apps/web`); the old build is
+  removed and GitHub Pages is turned off. The old address `https://phiz-brasil.github.io/phiz-rfcs/…` no longer answers; there is no redirect
+  (decision of 2026-11-23: people with old links get the new address).
 
 ## Acceptance (phase 1 and 2)
 
-- Phase 1: the compatibility suite passes against the preview deployment; every old address listed in `compatibility.md` answers as
-  specified; the Pages workflow is removed and the repository is private.
+- Phase 1: the compatibility suite passes against the production deployment; every address listed in `compatibility.md` answers as
+  specified on the new host; the Pages workflow is removed and Pages is turned off.
 - Phase 2: a request without a session reads nothing from the API (tested with the publishable key directly); a non-`@phiz.com` account
   cannot be created; a member who is not admin cannot change board columns; the compatibility suite passes when signed in.

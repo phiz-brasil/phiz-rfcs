@@ -1,6 +1,6 @@
 # PHIZ RFCs
 
-The PHIZ RFC site: a Next.js app on Vercel (<https://phiz-rfcs.vercel.app>), with the RFCs, comments and pictures in Supabase. The old address (`https://phiz-brasil.github.io/phiz-rfcs/…`) redirects there.
+The PHIZ RFC site: a Next.js app on Vercel (<https://phiz-rfcs.vercel.app>), with the RFCs, comments and pictures in Supabase.
 
 - **Index** (`/`): every RFC with status, authors and reviewers; filter by status; PT-BR / EN-US / 中文.
 - **RFC page** (`/rfc/?id=PHZ-0001`): the document, with Mermaid diagrams and a **Comment** button on every section.
@@ -13,7 +13,6 @@ The PHIZ RFC site: a Next.js app on Vercel (<https://phiz-rfcs.vercel.app>), wit
 
 1. **Vercel**: in the company team, import the GitHub repository with **Root Directory** `apps/web` (`apps/web/vercel.json` installs from the
    repository root). Every push to `main` deploys <https://phiz-rfcs.vercel.app>; every pull request gets a preview address.
-2. **GitHub Pages** only serves `pages-redirect/` (workflow `pages.yml`), so links to the old address keep working.
 3. Enable comments on the page (Supabase):
    1. Create a free project at <https://supabase.com> (any region; `sa-east-1` is closest to Brazil).
    2. Apply the migrations in [`supabase/migrations`](supabase/migrations), in file order: **SQL Editor → New query**, paste each file and run it (or `supabase link` then `supabase db push`). They create `rfc_comments`, the access rules and the rate limits, and are safe to run again (see *Database migrations* below).

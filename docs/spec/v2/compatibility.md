@@ -27,7 +27,7 @@ said); the suite in `packages/spec-tests` proves it against any deployment. A ph
 | `/nova/`, `/nova/?edit=PHZ-NNNN` | new RFC, new version | same |
 | `/comments/` | every comment, filters | same |
 | `/assets/skill/phiz-rfc.zip`, `/assets/skill/phiz-rfc-skill.md` | skill download | same files, same bytes for the same sources |
-| `https://phiz-brasil.github.io/phiz-rfcs/…` | the site | every path, query and hash redirects to the same address on `https://phiz-rfcs.vercel.app` (`pages-redirect/`: the same page as `index.html` and `404.html`), kept at least 3 months |
+| `https://phiz-brasil.github.io/phiz-rfcs/…` | the site | turned off, no redirect (decision of 2026-11-23); every path above answers on `https://phiz-rfcs.vercel.app` |
 
 ## Data
 
