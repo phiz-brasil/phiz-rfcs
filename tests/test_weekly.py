@@ -279,7 +279,7 @@ class WeeklyTest(SiteCase):
         expect(self.page.get_by_role("button", name="Modo edição")).to_be_visible()
         self.page.get_by_role("button", name="Modo edição").click()
         self.page.goto(self.base + "/themes/PHZ-0001/")
-        expect(self.page.get_by_role("button", name="Salvar")).to_be_visible()
+        expect(self.page.get_by_role("button", name="Editar dados do tema")).to_be_visible()
 
     def test_reader_mode_shows_the_texts_of_the_theme_as_read_only(self):
         self.db.themes["PHZ-0001"].update(problem={"pt": "Integração lenta"}, solution={"pt": "API pública"}, success={"pt": "10 clientes"})
@@ -297,7 +297,7 @@ class WeeklyTest(SiteCase):
         self.prefs()
         expect(self.page.get_by_role("button", name="Modo edição")).to_be_visible()
         self.page.goto(self.base + "/themes/PHZ-0001/?mode=edit")
-        expect(self.page.get_by_role("button", name="Salvar")).to_be_visible()
+        expect(self.page.get_by_role("button", name="Editar dados do tema")).to_be_visible()
 
     def test_the_index_links_to_the_executive_view(self):
         self.page.goto(self.base + "/")

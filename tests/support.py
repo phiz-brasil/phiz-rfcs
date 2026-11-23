@@ -118,6 +118,13 @@ class SiteCase(unittest.TestCase):
         if button.get_attribute("aria-expanded") != "true":
             button.click()
 
+    def edit_theme(self):
+        """The theme's own form, opened with "Edit theme data" if it is folded (the page shows the data read-only until then)."""
+        form = self.page.get_by_role("form", name="theme")
+        if not form.count():
+            self.page.locator(".theme-hero .actions button[aria-expanded]").click()      # whatever the language of the page
+        return form
+
     def serve_page(self, path, html):
         """A page that exists only for the test, answered by the browser itself (the site is not touched)."""
         self.context.route(self.base + path, lambda route: route.fulfill(status=200, content_type="text/html; charset=utf-8", body=html))

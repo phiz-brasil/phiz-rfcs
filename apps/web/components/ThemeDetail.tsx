@@ -17,6 +17,7 @@ export function ThemeDetail({ id }: { id: string }) {
   const [data, setData] = useState<Data | null>(null);
   const [state, setState] = useState<"loading" | "missing" | "failed" | "ok">("loading");
   const [saved, setSaved] = useState(false);           // the form is redrawn from the saved data, so the "Saved." note lives here
+  const [editing, setEditing] = useState(false);       // the theme's own data is shown read-only until someone presses "Edit"
   const load = useCallback(async () => {
     try {
       const theme = await db.theme(id);
@@ -33,33 +34,75 @@ export function ThemeDetail({ id }: { id: string }) {
   if (state === "missing") return <><p><a href="/themes/">{T.back[lang]}</a></p><p className="state">{T.notFound[lang]}</p></>;
   if (state === "failed" || !data) return <p className="state err">{T.failed[lang]}</p>;
   const { theme } = data;
+  const front = text(data.fronts.find(f => f.key === theme.front)?.name, lang);
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = !!theme.due_date && theme.due_date.slice(0, 10) < today && theme.status !== "done" && theme.status !== "cancelled";
+  const sections: [string, string][] = [
+    ["sec-summary", T.secSummary[lang]], ["sec-updates", T.weekly[lang]], ["sec-records", T.secRecords[lang]],
+    ...(theme.kind === "project" ? [["sec-execution", T.secExecution[lang]] as [string, string]] : []),
+    ["sec-attachments", T.attachments[lang]], ["sec-links", T.secLinks[lang]], ["sec-history", T.history[lang]],
+  ];
   return (
     <>
-      <p><a href="/themes/">{T.back[lang]}</a></p>
-      <div className="top">
-        <span className="id">{theme.id}</span>
-        <span className="ver">{t(theme.kind, lang)}</span>
-        <StatusBadge status={theme.status} lang={lang} />
-        {theme.stage ? <span className="ver">{t(`stage.${theme.stage}`, lang)}</span> : null}
+      <p className="back"><a href="/themes/">{T.back[lang]}</a></p>
+      <header className="theme-hero">
+        <p className="eyebrow"><span className="id">{theme.id}</span> · {t(theme.kind, lang)} · {front}</p>
+        <h1><Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></h1>
+        <div className="facts" data-block="facts">
+          <div><span className="kpi-label">{T.status[lang]}</span><StatusBadge status={theme.status} lang={lang} /></div>
+          {theme.kind === "project" ? <div><span className="kpi-label">{T.stage[lang]}</span><strong>{theme.stage ? t(`stage.${theme.stage}`, lang) : "—"}</strong></div> : null}
+          <div><span className="kpi-label">{T.owner[lang]}</span><strong>{theme.owner ?? "—"}</strong></div>
+          <div><span className="kpi-label">{T.due[lang]}</span><strong className={overdue ? "overdue" : undefined}>{dateText(theme.due_date)}</strong></div>
+          <div className="wide"><span className="kpi-label">{T.progress[lang].replace(/ \(.*\)$/, "")}</span><span>{text(theme.progress, lang) ? <Said value={theme.progress} lang={lang} machine={theme.text_meta?.progress} /> : "—"}</span></div>
+        </div>
+        <div className="actions">
+          {data.rfc ? <a className="btn" href={`/rfc/?id=${theme.id}`}>{T.openRfc[lang]} (v{data.rfc.version})</a> : <span className="note">{T.noRfc[lang]}</span>}
+          <a className="btn" href={`/slides/?theme=${theme.id}`}>{T.exportPptx[lang]}</a>
+          {!reader ? <button type="button" className={editing ? "btn" : "btn primary"} aria-expanded={editing} onClick={() => { setEditing(e => !e); setSaved(false); }}>{editing ? T.doneEditing[lang] : T.editTheme[lang]}</button> : null}
+        </div>
+      </header>
+      <nav className="secnav" aria-label={T.sections[lang]}>{sections.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</nav>
+
+      <div className="group" id="sec-summary">
+        <h2 className="group-title" id="h-summary">{T.secSummary[lang]}</h2>
+        {!reader && editing
+          ? <ThemeForm key={theme.updated_at + lang} data={data} saved={saved} onSaved={() => { setSaved(true); void load(); }} onEdit={() => setSaved(false)} />
+          : <ThemeReadOnly data={data} />}
+        <Summary key={`s${theme.updated_at}${lang}`} theme={theme} onChanged={load} />
       </div>
-      <h1><Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></h1>
-      <section className="panel rfcbox">
-        <h2>{T.rfc[lang]}</h2>
-        {data.rfc ? <p><a className="btn" href={`/rfc/?id=${theme.id}`}>{T.openRfc[lang]} (v{data.rfc.version})</a></p> : <p className="empty">{T.noRfc[lang]}</p>}
-      </section>
-      {reader
-        ? <ThemeReadOnly data={data} />
-        : <ThemeForm key={theme.updated_at + lang} data={data} saved={saved} onSaved={() => { setSaved(true); void load(); }} onEdit={() => setSaved(false)} />}
-      <Summary key={`s${theme.updated_at}${lang}`} theme={theme} onChanged={load} />
-      <WeeklyUpdate key={`u${data.updates.length}${lang}`} theme={theme} updates={data.updates} onChanged={load} />
-      <Records kind="blocker" theme={theme} rows={data.blockers} items={data.items} onChanged={load} />
-      <Records kind="decision" theme={theme} rows={data.decisions} items={data.items} onChanged={load} />
-      {theme.kind === "project" ? <Gates key={`g${theme.stage}${theme.route}${lang}`} theme={theme} /> : null}
-      {theme.kind === "project" ? <Items data={data} onChanged={load} /> : null}
-      <Attachments theme={theme} items={data.items} />
-      <JiraLinks data={data} onChanged={load} />
-      <Dependencies data={data} onChanged={load} />
-      <History events={data.events} lang={lang} />
+      <div className="group" id="sec-updates">
+        <h2 className="group-title" id="h-updates">{T.weekly[lang]}</h2>
+        <WeeklyUpdate key={`u${data.updates.length}${lang}`} theme={theme} updates={data.updates} onChanged={load} />
+      </div>
+      <div className="group" id="sec-records">
+        <h2 className="group-title" id="h-records">{T.secRecords[lang]}</h2>
+        <div className="two">
+          <Records kind="blocker" theme={theme} rows={data.blockers} items={data.items} onChanged={load} />
+          <Records kind="decision" theme={theme} rows={data.decisions} items={data.items} onChanged={load} />
+        </div>
+      </div>
+      {theme.kind === "project" ? (
+        <div className="group" id="sec-execution">
+          <h2 className="group-title" id="h-execution">{T.secExecution[lang]}</h2>
+          <Items data={data} onChanged={load} />
+          <Gates key={`g${theme.stage}${theme.route}${lang}`} theme={theme} />
+        </div>
+      ) : null}
+      <div className="group" id="sec-attachments">
+        <h2 className="group-title" id="h-attachments">{T.attachments[lang]}</h2>
+        <Attachments theme={theme} items={data.items} />
+      </div>
+      <div className="group" id="sec-links">
+        <h2 className="group-title" id="h-links">{T.secLinks[lang]}</h2>
+        <div className="two">
+          <JiraLinks data={data} onChanged={load} />
+          <Dependencies data={data} onChanged={load} />
+        </div>
+      </div>
+      <div className="group" id="sec-history">
+        <h2 className="group-title" id="h-history">{T.history[lang]}</h2>
+        <History events={data.events} lang={lang} />
+      </div>
     </>
   );
 }
@@ -67,21 +110,21 @@ export function ThemeDetail({ id }: { id: string }) {
 function ThemeReadOnly({ data }: { data: Data }) {
   const { lang } = useApp();
   const { theme, fronts } = data;
-  const rows: [string, React.ReactNode][] = [
-    [T.front[lang], text(fronts.find(f => f.key === theme.front)?.name, lang)],
-    [T.owner[lang], theme.owner ?? "—"],
-    [T.start[lang], dateText(theme.start_date)],
-    [T.due[lang], dateText(theme.due_date)],
-    [T.tags[lang], theme.tags.length ? theme.tags.map(x => `#${x}`).join(" ") : "—"],
-    [T.whatItIs[lang], <Said key="w" value={theme.what_it_is} lang={lang} machine={theme.text_meta?.what_it_is} />],
-    [T.progress[lang], <Said key="p" value={theme.progress} lang={lang} machine={theme.text_meta?.progress} />],
-    [T.problem[lang], <Said key="pr" value={theme.problem} lang={lang} machine={theme.text_meta?.problem} />],
-    [T.solution[lang], <Said key="s" value={theme.solution} lang={lang} machine={theme.text_meta?.solution} />],
-    [T.success[lang], <Said key="su" value={theme.success} lang={lang} machine={theme.text_meta?.success} />]
-  ];
+  const said = (k: "what_it_is" | "problem" | "solution" | "success") =>
+    text(theme[k], lang) ? <Said value={theme[k]} lang={lang} machine={theme.text_meta?.[k]} /> : null;
+  // what the header above does not already show; fields nobody filled are left out
+  const rows: [string, React.ReactNode][] = ([
+    [T.front[lang], text(fronts.find(f => f.key === theme.front)?.name, lang) || "—"],
+    [T.start[lang], theme.start_date ? dateText(theme.start_date) : null],
+    [T.colTags[lang], theme.tags.length ? theme.tags.map(x => `#${x}`).join(" ") : null],
+    [T.whatItIs[lang], said("what_it_is")],
+    [T.problem[lang], said("problem")],
+    [T.solution[lang], said("solution")],
+    [T.success[lang], said("success")],
+  ] as [string, React.ReactNode][]).filter(([, v]) => v);
   return (
     <section className="panel" aria-label="theme">
-      <dl className="pairs">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v || "—"}</dd></div>)}</dl>
+      <dl className="pairs grid">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
     </section>
   );
 }
