@@ -77,8 +77,8 @@ function ThemeCard({ theme, lang }: { theme: Theme; lang: Lang }) {
           <StatusBadge status={theme.status} lang={lang} />
           {theme.stage ? <span className="ver">{t(`stage.${theme.stage}`, lang)}</span> : null}
         </div>
-        <h3><Said value={theme.title} lang={lang} /></h3>
-        {theme.progress && text(theme.progress, lang) ? <p><Said value={theme.progress} lang={lang} /></p> : null}
+        <h3><Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></h3>
+        {theme.progress && text(theme.progress, lang) ? <p><Said value={theme.progress} lang={lang} machine={theme.text_meta?.progress} /></p> : null}
         <div className="meta">
           <span>{theme.owner ?? "—"}</span>
           <span>{T.due[lang]}: {dateText(theme.due_date)}</span>

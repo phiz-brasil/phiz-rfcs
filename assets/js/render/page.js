@@ -42,10 +42,10 @@ function dateText(iso, lang) {
 
 export function heroHtml(meta, lang, status) {
   const h = HERO[lang], st = status || meta.status;
-  const label = esc(STATUS[st][lang]);
+  const label = esc(meta.statusLabel ? meta.statusLabel[lang] : STATUS[st][lang]);      // an RFC that is a theme shows the theme's status and stage
   const list = a => (a || []);
   const rows = [
-    `<div><dt>${h.status}</dt><dd><span class="pill" data-st="${st}">${label}</span></dd></div>`,
+    `<div><dt>${h.status}</dt><dd><span class="pill" data-st="${meta.statusKey || st}">${label}</span></dd></div>`,
     `<div><dt>${h.author}</dt><dd>${esc(list(meta.authors).map(a => loc(a, lang)).join(", ") || "—")}</dd></div>`,
     ...(list(meta.collaborators).length ? [`<div><dt>${h.collaborators}</dt><dd>${esc(meta.collaborators.map(c => loc(c, lang)).join(", "))}</dd></div>`] : []),
     `<div><dt>${h.date}</dt><dd>${esc(dateText(meta.created, lang))}</dd></div>`,

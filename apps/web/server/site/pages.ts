@@ -127,6 +127,7 @@ export function newRfcPage(): string {
 <li><h2>4. ${S("Quem escreveu", "Who wrote it", "作者")}</h2>
 <div class="fields">
 <label><span>${S("Seu nome", "Your name", "你的名字")} <span class="req">*</span></span><input id="by" maxlength="60" autocomplete="name"></label>
+<label class="only-new">${S("Frente (o tema da RFC)", "Front (the RFC's theme)", "业务线（RFC 的主题）")}<select id="front"></select></label>
 <label class="only-edit" hidden>${S("Autores (um por linha)", "Authors (one per line)", "作者（每行一位）")}<textarea id="authors" rows="2"></textarea></label>
 <label>${S("Colaboradores (um por linha ou separados por vírgula)", "Collaborators (one per line or comma separated)", "协作者（每行一位或用逗号分隔）")}<textarea id="collabs" rows="2"></textarea></label>
 <label class="only-edit" hidden>${S("O que mudou (opcional)", "What changed (optional)", "改动说明（可选）")}<input id="note" maxlength="300"></label>

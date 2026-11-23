@@ -8,6 +8,7 @@ export type Theme = {
   id: string; kind: "project" | "task"; front: string; title: I18n; owner: string | null; status: string; stage: number | null; route: string;
   what_it_is: I18n; progress: I18n; problem: I18n; solution: I18n; success: I18n; start_date: string | null; due_date: string | null;
   tags: string[]; resolution: string | null; created_at: string; created_by: string | null; updated_at: string;
+  text_meta?: Record<string, string[]> | null;        // per text field, the languages that are machine translations
 };
 export type Item = { id: string; theme_id: string; title: string; owner: string | null; col: string; due_date: string | null; milestone: boolean; created_at: string };
 export type Link = { theme_id: string; to_theme: string; kind: string };

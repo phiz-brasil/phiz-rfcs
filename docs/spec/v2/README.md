@@ -77,9 +77,11 @@ in; nothing secret goes into the panel meanwhile.
 - **Phase 0, 1**: done (specs; Next.js app on Vercel, old site off).
 - **Phase 3, first slice (this branch)**: fronts, themes (project or task), execution items on a four-column kanban, dependencies between themes,
   tags, Jira links, the event log, the front of a theme and the fronts themselves editable, the published RFCs and the seven themes of Outros
-  seeded, `/themes/` and `/themes/PHZ-NNNN/` in three languages. Left of phase 3: automatic translation of the texts people write (today a text is
-  stored in the language it was typed and shown with a language tag in the others), importing the repository draft `rfcs/checkout-global`,
-  and showing the theme's stage instead of the old status on the RFC page (the status picker goes away then).
+  seeded, `/themes/` and `/themes/PHZ-NNNN/` in three languages. - **Phase 3, second part (this branch)**: automatic translation of theme texts (Edge Function + webhook on `themes`; person-typed text is never
+  overwritten; machine translations are marked), the RFC page shows its theme's status and stage instead of the old status picker (RFCs
+  without a theme keep it), and a new RFC created on `/nova/` is also created as a theme in the front chosen there (Outros by default).
+  Left: the repository draft `rfcs/checkout-global` is the source of PHZ-0006 (already a theme in Payments) and is newer than the published
+  version: publishing it as version 1.2 and removing the folder is waiting for a go-ahead.
 
 ## Pending
 

@@ -64,6 +64,20 @@ Comments are shown in the language selected on the page (PT-BR, EN-US or 中文)
 
 The model (`m2m100`) does not detect the source language, so the function guesses it (Chinese characters, or Portuguese vs English by accents and common words) and falls back to the page language the author was using; a very short comment such as “ok” stays untranslated. A new comment shows in its original language for a second or two, then in translation on the next load. Check the function's **Logs** in Supabase if translations do not appear (wrong token or account id, missing secret, or the daily Workers AI allowance).
 
+### Automatic translation of theme texts
+
+The texts people write in a theme (title, what it is, progress, the three slide answers) are translated by the same function, with the same
+Cloudflare account. A language a person typed is the source for the languages that are empty or already machine translations; what a person
+typed is never overwritten, and a machine translation that someone edits becomes a person's text (the page marks machine translations with
+**auto**). To turn it on, after applying [`20261125000000_theme_translations.sql`](supabase/migrations/20261125000000_theme_translations.sql):
+
+1. Redeploy the function with **both files** of [`supabase/functions/translate-comment`](supabase/functions/translate-comment): `index.ts` and `themes.ts`
+   (in the dashboard editor, add `themes.ts` as a second file next to `index.ts`).
+2. **Database → Webhooks → Create a new hook**: table `themes`, events **Insert** and **Update**, type **Supabase Edge Functions** → `translate-comment`,
+   method `POST`, HTTP header `x-webhook-secret: <same secret>`.
+
+What is translated is decided by [`themes.ts`](supabase/functions/translate-comment/themes.ts), tested by `tests/test_translate_plan.py`.
+
 ### Changing the status from the page
 
 The status badge in the header of each RFC is a button (`EM REVISÃO ▾`): pick a status, type your name once (remembered in the browser) and it changes for everyone, with no rebuild. The index, the header badge and the status pill and eyebrow in the three languages all follow the live status. There is no login: anyone with the link can change it, so every change is kept in `rfc_status_log` with the name typed, an origin rate limit (10 a minute) applies, and archived versions (`v1.0.html`) keep the status they had.
@@ -111,6 +125,7 @@ The database is described by numbered files in [`supabase/migrations`](supabase/
 | `20261023000000_rfc_assets` | pictures of the RFCs (`rfc_assets`, `stage_rfc_asset`) |
 | `20261024000000_more_images` | up to 160 pictures per RFC and a larger upload limit |
 | `20261124000000_themes` | fronts, themes, execution items, dependencies, Jira links and the event log; the RFCs become themes (`/themes/`) |
+| `20261125000000_theme_translations` | `themes.text_meta` (which languages of a text are machine translations) and `update_theme` keeping it |
 
 Every file is idempotent (`if not exists` / `or replace`), so applying all of them again is safe. To change the database, add a **new** file with a later timestamp; never edit one that has been applied. Apply a new file in the Supabase **SQL Editor** (paste and run) or with `supabase db push`.
 
@@ -120,7 +135,7 @@ Every file is idempotent (`if not exists` / `or replace`), so applying all of th
 of one theme: type (project or standalone task), front, status, V4 stage, owner, dates, tags, the sentences and the three slide answers (each
 written in the reader's language and kept per language), execution items on a four-column kanban, Jira links (paste the address; the page shows the
 issue key and opens Jira in another tab), dependencies on themes of other fronts, the link to the theme's RFC and the history of every change.
-The front of a theme and the fronts themselves (name, scope, order) are editable. Plan and decisions: [`docs/spec/v2`](docs/spec/v2/README.md).
+The front of a theme and the fronts themselves (name, scope, order) are editable. An RFC that is a theme shows the theme's status and stage in its header (the old status picker is only for RFCs without a theme), and a new RFC created on **＋ Nova RFC** is also created as a theme, in the front chosen there (Outros by default). Plan and decisions: [`docs/spec/v2`](docs/spec/v2/README.md).
 Apply [`20261124000000_themes.sql`](supabase/migrations/20261124000000_themes.sql) first: it also turns the published RFCs into themes.
 
 ## The app (Next.js)

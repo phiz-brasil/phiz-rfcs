@@ -2,7 +2,7 @@
    single-file RFC into the same page the build produces for repository RFCs (assets/js/render/, no raw HTML, sanitized) and then
    starts the usual page scripts: comments, reactions, status, versions. */
 import { base64ToBlob } from "./images.js";
-import { LiveError, enabled, getAsset, getLatestRevision, getRevision, listRevisions } from "./live-api.js";
+import { LiveError, enabled, getAsset, getLatestRevision, getRevision, getTheme, listRevisions } from "./live-api.js";
 import { parseBundle } from "./render/bundle.js";
 import { renderBody } from "./render/markdown.js";
 import { BCP, LANGS, STATUS, heroHtml, pageBody } from "./render/page.js";
@@ -26,6 +26,21 @@ const T = {
               zh: (v, c) => `你正在阅读已存档的只读版本 ${v}。当前版本为 ${c}。` },
   goCurrent: { pt: "Ver versão atual", en: "View current version", zh: "查看当前版本" }
 };
+const THEME_STATUS = {
+  not_started: { pt: "Não iniciado", en: "Not started", zh: "未开始" }, on_track: { pt: "No prazo", en: "On track", zh: "按计划" },
+  at_risk: { pt: "Em risco", en: "At risk", zh: "有风险" }, blocked: { pt: "Bloqueado", en: "Blocked", zh: "受阻" },
+  paused: { pt: "Pausado", en: "Paused", zh: "已暂停" }, done: { pt: "Concluído", en: "Done", zh: "已完成" },
+  cancelled: { pt: "Cancelado", en: "Cancelled", zh: "已取消" }
+};
+const STAGE = {
+  1: { pt: "01 Solicitação", en: "01 Request", zh: "01 需求提出" }, 2: { pt: "02 Pesquisa", en: "02 Research", zh: "02 需求调研" },
+  3: { pt: "03 Decisão", en: "03 Decision", zh: "03 立项决策" }, 4: { pt: "04 PRD e início", en: "04 PRD and kickoff", zh: "04 PRD 与启动" },
+  5: { pt: "05 Revisão da solução", en: "05 Solution review", zh: "05 方案评审" }, 6: { pt: "06 Planejamento", en: "06 Planning", zh: "06 项目排期" },
+  7: { pt: "07 Desenvolvimento", en: "07 Build", zh: "07 开发" }, 8: { pt: "08 Testes", en: "08 QA", zh: "08 测试验收" },
+  9: { pt: "09 Publicação", en: "09 Release", zh: "09 发布准备" }, 10: { pt: "10 Lançamento", en: "10 Launch", zh: "10 上线收口" }
+};
+/* The status of an RFC that is a theme: the theme's status and, for projects, its stage (the old status picker goes away). */
+const themeLabel = theme => Object.fromEntries(LANGS.map(l => [l, THEME_STATUS[theme.status][l] + (theme.stage ? ` · ${STAGE[theme.stage][l]}` : "")]));
 const spans = (o, cls) => LANGS.map(l => `<span data-l="${l}"${cls ? ` class="${cls}"` : ""}>${esc(o[l])}</span>`).join("");
 const main = () => document.querySelector("main");
 
@@ -101,9 +116,12 @@ async function start() {
 
   const parsed = parseBundle(row.bundle);
   if (parsed.errors.length) return message("broken");
+  const theme = await getTheme(id).catch(() => null);
+  if (theme && !THEME_STATUS[theme.status]) theme.status = "not_started";
   const meta = { id, title: row.meta.title, summary: row.meta.summary, systems: row.meta.systems || [], status: "draft",
                  authors: row.authors, collaborators: row.collaborators || [], reviewers: row.meta.reviewers || [],
                  created: row.meta.created || (revs[revs.length - 1].created_at || "").slice(0, 10) };
+  if (theme) { meta.statusLabel = themeLabel(theme); meta.statusKey = theme.status; }
   const blocks = [], tocs = [];
   try {
     for (const l of LANGS) {
@@ -117,7 +135,9 @@ async function start() {
   document.title = `RFC ${id} · ${meta.title.en}${frozen ? ` · v${row.version}` : ""}`;
   const no = document.querySelector(".rfcno");
   no.textContent = `RFC ${id}`;
-  const badge = `<span class="rfcno st" data-st="draft">${LANGS.map(l => `<span class="lang-st" data-l="${l}">${esc(STATUS.draft[l])}</span>`).join("")}</span>`;
+  const badge = theme
+    ? `<a class="rfcno st theme-st" href="../themes/${esc(id)}/" data-st="${esc(theme.status)}">${LANGS.map(l => `<span class="lang-st" data-l="${l}">${esc(themeLabel(theme)[l])}</span>`).join("")}</a>`
+    : `<span class="rfcno st" data-st="draft">${LANGS.map(l => `<span class="lang-st" data-l="${l}">${esc(STATUS.draft[l])}</span>`).join("")}</span>`;
   const edit = `<a class="rfcno newver" href="../nova/?edit=${esc(id)}">✎ ${spans(T.newVersion)}</a>`;      // always in sight, not only inside the history
   no.insertAdjacentHTML("afterend", badge + versionsHtml(revs, row.version, id, await archivedVersions(revs)) + edit);
   if (frozen) {
@@ -132,6 +152,7 @@ async function start() {
 
   window.PHIZ_RFC_ID = id;
   window.PHIZ_FROZEN = frozen;
+  window.PHIZ_THEME_STATUS = !!theme;                           // status.js leaves the badge alone: the theme owns the status
   await import("./main.js");                                   // comments, reactions, paragraphs, Mermaid, drawer
   const s = document.createElement("script");                  // status badge and picker
   s.src = "../assets/status.js";

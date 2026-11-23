@@ -12,7 +12,11 @@
 // m2m100 does not detect the source language, so detect() guesses it (CJK characters → zh;
 // otherwise Portuguese vs English by accents and common words) and falls back to the language
 // the page was in when the comment was written (rfc_comments.lang).
+//
+// The same webhook, created on public.themes (INSERT and UPDATE), also translates the texts people write in a theme (title, what it is,
+// progress, the three slide answers): see themes.ts for what is translated and what is never overwritten.
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { type Lang as ThemeLang, translationPlan, type ThemeRow } from "./themes.ts";
 
 const ACCOUNT = Deno.env.get("CF_ACCOUNT_ID") ?? "";
 const TOKEN = Deno.env.get("CF_API_TOKEN") ?? "";
@@ -75,6 +79,30 @@ async function translateRow(row: Row) {
   if (error) throw error;
 }
 
+async function translateTheme(oldRec: ThemeRow | null, rec: ThemeRow & { id: string }) {
+  const jobs = translationPlan(oldRec, rec);
+  if (!jobs.length) return 0;
+  const { data: current, error } = await db.from("themes").select("*").eq("id", rec.id).single();
+  if (error) throw error;
+  const row = current as ThemeRow & { id: string };
+  const meta: Record<string, string[]> = { ...((row.text_meta as Record<string, string[]> | null) ?? {}) };
+  const patch: Record<string, unknown> = {};
+  for (const job of jobs) {
+    const texts = { ...((row[job.field] as Record<string, string> | undefined) ?? {}) };
+    for (const to of job.targets) {
+      const wasMachine = (meta[job.field] ?? []).includes(to);
+      // a person may have typed in this language since the webhook fired: leave it
+      if ((texts[to] ?? "").trim() && !wasMachine) continue;
+      texts[to] = await translate(job.text, job.src as ThemeLang, to);
+      meta[job.field] = [...new Set([...(meta[job.field] ?? []), to])];
+    }
+    patch[job.field] = texts;
+  }
+  const { error: upd } = await db.from("themes").update({ ...patch, text_meta: meta }).eq("id", rec.id);
+  if (upd) throw upd;
+  return jobs.length;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
   if (!SECRET || req.headers.get("x-webhook-secret") !== SECRET) return new Response("unauthorized", { status: 401 });
@@ -87,6 +115,9 @@ Deno.serve(async (req) => {
       if (error) throw error;
       for (const row of data ?? []) await translateRow(row as Row);
       return Response.json({ translated: data?.length ?? 0 });
+    }
+    if (payload.table === "themes" && (payload.type === "INSERT" || payload.type === "UPDATE") && payload.record?.id) {
+      return Response.json({ translated: await translateTheme(payload.old_record ?? null, payload.record) });
     }
     const row = payload.record as Row | undefined;
     if (payload.type !== "INSERT" || payload.table !== "rfc_comments" || !row?.id) return Response.json({ skipped: true });

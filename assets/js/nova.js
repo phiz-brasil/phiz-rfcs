@@ -1,7 +1,7 @@
 /* The page where anyone creates an RFC (/nova/) or adds a version to one (/nova/?edit=PHZ-1001): download the template, get an AI to
    fill it in, upload it, see the checks and a preview, say who wrote it, publish. */
 import { ACCEPT, ImageError, MAX_IMAGES, NAME_RE, blobToBase64, shrinkImage, slugName } from "./images.js";
-import { LATEST, LiveError, addRevision, createRfc, enabled, getAsset, getLatestRevision, listAssets, stageAsset } from "./live-api.js";
+import { LATEST, LiveError, addRevision, createRfc, createTheme, enabled, getAsset, getLatestRevision, listAssets, listFronts, stageAsset } from "./live-api.js";
 import { checkBundle } from "./render/check.js";
 import { BCP, heroHtml, pageBody } from "./render/page.js";
 import { sanitize } from "./render/sanitize.js";
@@ -296,6 +296,10 @@ $("publish").onclick = async () => {
     const res = editId
       ? await addRevision({ ...args, id: editId, authors: names($("authors").value).length ? names($("authors").value) : [by], note: $("note").value.trim() })
       : await createRfc({ ...args, authors: [by] });
+    if (!editId) {         // the new RFC is also a theme, in the front the person chose (Outros by default); the RFC is published either way
+      const title = Object.fromEntries(Object.entries(current.meta.title).map(([l, v]) => [l, v.slice(0, 200)]));
+      try { await createTheme({ id: res.rfc_id, front: $("front").value || "outros", title, by }); } catch (e) { console.warn("theme", e); }
+    }
     location.href = `../rfc/?id=${encodeURIComponent(res.rfc_id)}`;
   } catch (e) {
     $("publish").disabled = false;
@@ -324,4 +328,18 @@ async function loadForEdit() {
   validate();
 }
 if (/^PHZ-\d{4}$/.test(editId) && enabled) loadForEdit();
-else renderResult();
+else {
+  renderResult();
+  if (enabled) {           // the fronts a new RFC can go to (Outros last, and the default)
+    listFronts().then(rows => {
+      const sel = $("front");
+      sel.replaceChildren(...rows.map(f => {
+        const o = document.createElement("option");
+        o.value = f.key;
+        o.textContent = f.name[document.documentElement.dataset.lang] || f.name.pt || f.key;
+        return o;
+      }));
+      sel.value = "outros";
+    }).catch(() => { /* the RFC is published anyway; it just gets no theme */ });
+  }
+}

@@ -36,7 +36,7 @@ export function ThemeDetail({ id }: { id: string }) {
         <StatusBadge status={theme.status} lang={lang} />
         {theme.stage ? <span className="ver">{t(`stage.${theme.stage}`, lang)}</span> : null}
       </div>
-      <h1><Said value={theme.title} lang={lang} /></h1>
+      <h1><Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></h1>
       <section className="panel rfcbox">
         <h2>{T.rfc[lang]}</h2>
         {data.rfc ? <p><a className="btn" href={`/rfc/?id=${theme.id}`}>{T.openRfc[lang]} (v{data.rfc.version})</a></p> : <p className="empty">{T.noRfc[lang]}</p>}
@@ -84,6 +84,7 @@ function ThemeForm({ data, saved, onSaved, onEdit }: { data: Data; saved: boolea
   };
   const area = (k: "what_it_is" | "progress" | "problem" | "solution" | "success", label: string, rows = 2) => (
     <Field label={label}>
+      {theme.text_meta?.[k]?.includes(lang) && theme[k][lang] ? <span className="from auto" title={T.machineNote[lang]}>{T.machine[lang]}</span> : null}
       <textarea rows={rows} maxLength={1200} value={f[k]} placeholder={theme[k][lang] ? "" : text(theme[k], lang)} onChange={set(k)} />
     </Field>
   );
