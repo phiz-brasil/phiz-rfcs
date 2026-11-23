@@ -60,35 +60,32 @@ export function ThemesPage() {
               <p className="scope">{text(f.scope, lang)}</p>
             </>
           )}
-          <ul className="list">
-            {shown.filter(x => x.front === f.key).map(x => <ThemeCard key={x.id} theme={x} lang={lang} />)}
-          </ul>
-          {!shown.some(x => x.front === f.key) ? <p className="empty">{T.noThemes[lang]}</p> : null}
+          {shown.some(x => x.front === f.key) ? (
+            <div className="tablewrap">
+              <table className="stats themes-table compact">
+                <thead><tr><th>{T.colTheme[lang]}</th><th>{T.colKind[lang]}</th><th>{T.status[lang]}</th><th>{T.stage[lang]}</th><th>{T.owner[lang]}</th><th>{T.due[lang]}</th><th>{T.colTags[lang]}</th></tr></thead>
+                <tbody>{shown.filter(x => x.front === f.key).map(x => <ThemeRow key={x.id} theme={x} lang={lang} />)}</tbody>
+              </table>
+            </div>
+          ) : <p className="empty">{T.noThemes[lang]}</p>}
         </section>
       ))}
     </>
   );
 }
 
-function ThemeCard({ theme, lang }: { theme: Theme; lang: Lang }) {
+function ThemeRow({ theme, lang }: { theme: Theme; lang: Lang }) {
   return (
-    <li className="card-li" data-theme={theme.id}>
-      <a className="card" href={`/themes/${theme.id}/`}>
-        <div className="top">
-          <span className="id">{theme.id}</span>
-          <span className="ver">{t(theme.kind, lang)}</span>
-          <StatusBadge status={theme.status} lang={lang} />
-          {theme.stage ? <span className="ver">{t(`stage.${theme.stage}`, lang)}</span> : null}
-        </div>
-        <h3><Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></h3>
-        {theme.progress && text(theme.progress, lang) ? <p><Said value={theme.progress} lang={lang} machine={theme.text_meta?.progress} /></p> : null}
-        <div className="meta">
-          <span>{theme.owner ?? "—"}</span>
-          <span>{T.due[lang]}: {dateText(theme.due_date)}</span>
-          {theme.tags.map(tag => <span className="tag" key={tag}>#{tag}</span>)}
-        </div>
-      </a>
-    </li>
+    <tr className="theme-row" data-theme={theme.id} onClick={e => { if (!(e.target as Element).closest("a")) location.href = `/themes/${theme.id}/`; }}>
+      <th><a href={`/themes/${theme.id}/`}><span className="id">{theme.id}</span> <Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></a>
+        {text(theme.progress, lang) ? <div className="note"><Said value={theme.progress} lang={lang} machine={theme.text_meta?.progress} /></div> : null}</th>
+      <td>{t(theme.kind, lang)}</td>
+      <td><StatusBadge status={theme.status} lang={lang} /></td>
+      <td className="stage">{theme.stage ? t(`stage.${theme.stage}`, lang) : "—"}</td>
+      <td>{theme.owner ?? "—"}</td>
+      <td className="date">{dateText(theme.due_date)}</td>
+      <td>{theme.tags.map(tag => <span className="tag" key={tag}>#{tag} </span>)}</td>
+    </tr>
   );
 }
 

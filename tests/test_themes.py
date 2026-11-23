@@ -20,11 +20,11 @@ class ThemesTest(SiteCase):
         db.seed_theme("PHZ-0010", "outros", kind="task", title={"pt": "Game Center"})
 
     def tform(self):
-        return self.page.get_by_role("form", name="theme")             # the theme's own form (the weekly update has fields with the same labels)
+        return self.edit_theme()                                          # the theme's own form (the weekly update has fields with the same labels)
 
     def themes(self):
         self.page.goto(self.base + "/themes/")
-        expect(self.page.locator(".card-li").first).to_be_visible()
+        expect(self.page.locator("tr.theme-row").first).to_be_visible()
         return self.page
 
     def sign(self, name="Ana"):
@@ -37,8 +37,8 @@ class ThemesTest(SiteCase):
         page = self.themes()
         names = page.locator(".front > h2").all_inner_texts()
         self.assertEqual(names, ["POP", "API Platform", "Mini-Apps", "Payments", "Product Center", "Outros"])
-        self.assertEqual(page.locator("#front-payments .card-li").count(), 1)
-        self.assertEqual(page.locator("#front-api-platform .card-li").first.inner_text().split("\n")[0], "PHZ-0001")
+        self.assertEqual(page.locator("#front-payments tr.theme-row").count(), 1)
+        self.assertEqual(page.locator("#front-api-platform tr.theme-row .id").first.inner_text(), "PHZ-0001")
         expect(page.locator("#front-pop .empty")).to_be_visible()
         expect(page.locator('[data-theme="PHZ-0002"] .tag')).to_have_text("#china")
 
@@ -51,17 +51,17 @@ class ThemesTest(SiteCase):
         expect(page.locator("h1")).to_have_text("Themes")
         expect(page.locator("#front-outros > h2")).to_have_text("Outros")           # the front's English name is in the data
         expect(page.locator('[data-theme="PHZ-0001"] .badge')).to_have_text("On track")
-        expect(page.locator('[data-theme="PHZ-0002"] h3')).to_contain_text("Migração CredPay")      # only written in Portuguese: shown with its language tag
-        expect(page.locator('[data-theme="PHZ-0002"] h3 .from')).to_have_text("PT")
+        expect(page.locator('tr[data-theme="PHZ-0002"] th a')).to_contain_text("Migração CredPay")      # only written in Portuguese: shown with its language tag
+        expect(page.locator('tr[data-theme="PHZ-0002"] th a .from')).to_have_text("PT")
 
     def test_filters_by_type_and_status(self):
         page = self.themes()
         page.get_by_role("group", name="Tipo").get_by_role("button", name="Tarefa avulsa").click()
-        self.assertEqual(page.locator(".card-li").count(), 1)
+        self.assertEqual(page.locator("tr.theme-row").count(), 1)
         page.get_by_role("group", name="Tipo").get_by_role("button", name="Todos").click()
         page.get_by_role("group", name="Status").get_by_role("button", name="No prazo").click()
-        self.assertEqual(page.locator(".card-li").all_inner_texts()[0].split("\n")[0], "PHZ-0001")
-        self.assertEqual(page.locator(".card-li").count(), 1)
+        self.assertEqual(page.locator("tr.theme-row .id").first.inner_text(), "PHZ-0001")
+        self.assertEqual(page.locator("tr.theme-row").count(), 1)
 
     def test_a_new_theme_needs_a_name_and_opens_its_page(self):
         page = self.themes()
@@ -94,8 +94,8 @@ class ThemesTest(SiteCase):
         self.assertEqual(self.db.events[-1]["field"], "front")
         self.assertEqual((self.db.events[-1]["old_value"], self.db.events[-1]["new_value"], self.db.events[-1]["edited_by"]), ("payments", "pop", "Ana"))
         self.page.goto(self.base + "/themes/")
-        expect(self.page.locator("#front-pop .card-li")).to_have_count(1)
-        expect(self.page.locator("#front-payments .card-li")).to_have_count(0)
+        expect(self.page.locator("#front-pop tr.theme-row")).to_have_count(1)
+        expect(self.page.locator("#front-payments tr.theme-row")).to_have_count(0)
 
     def test_the_fronts_can_be_edited_but_outros_stays_last(self):
         page = self.themes()
@@ -152,7 +152,7 @@ class ThemesTest(SiteCase):
         self.prefs()
         self.page.get_by_role("button", name="EN-US").click()
         self.page.keyboard.press("Escape")
-        expect(self.page.locator('[data-theme="PHZ-0001"] p .from.auto')).to_have_text("auto")
+        expect(self.page.locator('tr[data-theme="PHZ-0001"] .note .from.auto')).to_have_text("auto")
 
     def test_status_stage_dates_owner_and_tags_are_saved(self):
         self.page.goto(self.base + "/themes/PHZ-0001/")

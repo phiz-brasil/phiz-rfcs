@@ -49,9 +49,11 @@ export function Summary({ theme, onChanged }: { theme: Theme; onChanged: () => v
         return (
           <div className="row" key={f} data-answer={f} data-state={st}>
             <strong>{T[QUESTION[f]][lang]}</strong>
-            <span className={st === "confirmed" ? "badge" : "flag"} data-s={st === "confirmed" ? "on_track" : undefined}>
-              {st === "confirmed" ? T.stateConfirmed[lang] : st === "suggested" ? T.stateSuggested[lang] : st === "missing" ? T.stateMissing[lang] : T.stateEmpty[lang]}
-            </span>
+            {st !== "empty" ? (
+              <span className={st === "confirmed" ? "badge" : "flag"} data-s={st === "confirmed" ? "on_track" : undefined}>
+                {st === "confirmed" ? T.stateConfirmed[lang] : st === "suggested" ? T.stateSuggested[lang] : T.stateMissing[lang]}
+              </span>
+            ) : null}
             {st === "empty" || st === "missing" ? (
               <p className="empty-line" data-k="missing">{T.notExplained[lang]}{a?.missing ? `: ${a.missing}` : ""}</p>
             ) : <p data-k="text"><Said value={theme[f]} lang={lang} machine={theme.text_meta?.[f]} /></p>}
@@ -65,7 +67,6 @@ export function Summary({ theme, onChanged }: { theme: Theme; onChanged: () => v
         );
       })}
       {!reader ? <p><button type="button" className="btn primary" disabled={busy} onClick={() => void suggest()}>{T.suggestAi[lang]}</button> <span className="note" role="status">{note}</span></p> : null}
-      <p><a href={`/slides/?theme=${theme.id}`}>{T.exportPptx[lang]}</a></p>
     </section>
   );
 }

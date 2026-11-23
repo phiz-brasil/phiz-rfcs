@@ -148,7 +148,7 @@ class SummaryTest(SiteCase):
         self.sign()
         self.suggest()
         expect(self.answer("problem")).to_have_attribute("data-state", "suggested")
-        self.page.get_by_role("form", name="theme").get_by_label("Que problema estamos tratando com este tema?").fill("Problema corrigido por Ana")
+        self.edit_theme().get_by_label("Que problema estamos tratando com este tema?").fill("Problema corrigido por Ana")
         self.page.get_by_role("form", name="theme").get_by_role("button", name="Salvar").click()
         expect(self.answer("problem")).to_have_attribute("data-state", "confirmed")
         self.assertEqual(self.db.themes["PHZ-0001"]["answers"]["problem"]["by"], "Ana")
@@ -158,7 +158,7 @@ class SummaryTest(SiteCase):
         self.db.themes["PHZ-0001"]["problem"] = {"pt": "x"}
         self.theme()
         self.sign()
-        self.page.get_by_role("form", name="theme").get_by_label("Que problema estamos tratando com este tema?").fill("")
+        self.edit_theme().get_by_label("Que problema estamos tratando com este tema?").fill("")
         self.page.get_by_role("form", name="theme").get_by_role("button", name="Salvar").click()
         expect(self.answer("problem")).to_have_attribute("data-state", "empty")
 
