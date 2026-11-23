@@ -172,7 +172,11 @@ class WeeklyTest(SiteCase):
     # -- executive view -----------------------------------------------------------
     def executive(self):
         self.page.goto(self.base + "/executive/")
-        expect(self.page.locator(".card-li").first).to_be_visible()
+        expect(self.page.locator("tr.theme-row").first).to_be_visible()
+
+    def overview(self):
+        self.page.goto(self.base + "/overview/")
+        expect(self.page.locator(".kpis")).to_be_visible()
 
     def test_the_executive_view_groups_by_front_and_shows_what_matters(self):
         self.db.seed_update("PHZ-0001", progress={"pt": "Contrato fechado"})
@@ -181,25 +185,25 @@ class WeeklyTest(SiteCase):
                               "created_at": "2026-11-01T00:00:00+00:00", "created_by": "Ana", "updated_at": "2026-11-01T00:00:00+00:00"})
         self.executive()
         page = self.page
-        self.assertEqual(page.locator(".front > h2").all_inner_texts(), ["POP", "API Platform", "Mini-Apps", "Payments", "Product Center", "Outros"])
-        card = page.locator('[data-theme="PHZ-0001"]')
+        self.assertEqual([t.rsplit(" ", 1)[0] for t in page.locator("tr.front-row th").all_text_contents()], ["POP", "API Platform", "Mini-Apps", "Payments", "Product Center", "Outros"])
+        card = page.locator('tr[data-theme="PHZ-0001"]')
         expect(card).to_contain_text("Business Messaging API")
-        expect(card.locator("p.progress")).to_have_text("Contrato fechado")
+        expect(card.locator("td.progress")).to_have_text("Contrato fechado")
         expect(card).to_contain_text("Gleison")
         expect(card.locator(".badge")).to_have_text("No prazo")
         expect(card).to_contain_text("◆ Go-live 2026-12-10")
         self.assertEqual(card.locator(".flag").count(), 0)                                     # updated this week: no flag
         expect(page.locator('[data-theme="PHZ-0002"] .flag')).to_have_text("sem atualização esta semana")
         self.assertEqual(page.locator('[data-theme="PHZ-0003"] .flag').count(), 0)             # done themes are not chased
-        page.locator('[data-theme="PHZ-0001"] a.card').click()
+        page.locator('tr[data-theme="PHZ-0001"] td.progress').click()                          # the whole row opens the theme
         page.wait_for_url(re.compile(r"/themes/PHZ-0001/$"))
 
-    def test_what_needs_the_leadership_is_on_top_and_links_to_the_theme(self):
+    def test_what_needs_the_leadership_is_on_the_overview_and_links_to_the_theme(self):
         self.db.seed_blocker("PHZ-0002", {"pt": "Jurídico não aprovou"}, leadership=True, owner="Jurídico", due_date="2026-12-01")
         self.db.seed_decision("PHZ-0001", {"pt": "Qual parceiro?"}, leadership=True, decider="Pedro")
         self.db.seed_blocker("PHZ-0003", {"pt": "Detalhe interno"})                              # not for the leadership
         self.db.seed_blocker("PHZ-0003", {"pt": "Já resolvido"}, leadership=True, state="resolved")
-        self.executive()
+        self.overview()
         items = self.page.get_by_role("region", name="Exige a liderança").locator("li")
         self.assertEqual(items.count(), 2)
         expect(items.nth(0)).to_contain_text("Jurídico não aprovou")                             # earliest deadline first
@@ -208,8 +212,8 @@ class WeeklyTest(SiteCase):
         items.nth(0).get_by_role("link").click()
         self.page.wait_for_url(re.compile(r"/themes/PHZ-0002/$"))
 
-    def test_the_executive_view_says_when_nothing_needs_the_leadership(self):
-        self.executive()
+    def test_the_overview_says_when_nothing_needs_the_leadership(self):
+        self.overview()
         expect(self.page.get_by_text("Nada exige a liderança agora.")).to_be_visible()
 
     def test_open_blockers_and_decisions_are_counted_on_each_theme(self):
@@ -228,16 +232,16 @@ class WeeklyTest(SiteCase):
         self.executive()
         page = self.page
         page.get_by_role("group", name="Status").get_by_role("button", name="Em risco").click()
-        self.assertEqual([c.get_attribute("data-theme") for c in page.locator(".card-li").all()], ["PHZ-0002"])
+        self.assertEqual([c.get_attribute("data-theme") for c in page.locator("tr.theme-row").all()], ["PHZ-0002"])
         page.get_by_role("group", name="Status").get_by_role("button", name="Todos").click()
         page.get_by_label("Etiqueta").select_option("china")
-        self.assertEqual([c.get_attribute("data-theme") for c in page.locator(".card-li").all()], ["PHZ-0001"])
+        self.assertEqual([c.get_attribute("data-theme") for c in page.locator("tr.theme-row").all()], ["PHZ-0001"])
         page.get_by_label("Etiqueta").select_option("")
         page.get_by_label("Responsável").select_option("Bo")
-        self.assertEqual([c.get_attribute("data-theme") for c in page.locator(".card-li").all()], ["PHZ-0003"])
+        self.assertEqual([c.get_attribute("data-theme") for c in page.locator("tr.theme-row").all()], ["PHZ-0003"])
         page.get_by_label("Responsável").select_option("")
         page.get_by_label("Só o que pede atenção").check()
-        self.assertEqual([c.get_attribute("data-theme") for c in page.locator(".card-li").all()], ["PHZ-0002", "PHZ-0010"])      # at risk; and the one with no update
+        self.assertEqual([c.get_attribute("data-theme") for c in page.locator("tr.theme-row").all()], ["PHZ-0002", "PHZ-0010"])      # at risk; and the one with no update
 
     def test_the_executive_view_is_translated_and_marks_machine_translations(self):
         self.db.themes["PHZ-0001"]["progress"] = {"pt": "Contrato fechado"}
@@ -247,9 +251,9 @@ class WeeklyTest(SiteCase):
         self.page.get_by_role("button", name="EN-US").click()
         self.page.keyboard.press("Escape")
         expect(self.page.locator("h1")).to_have_text("Executive view")
-        expect(self.page.locator('[data-theme="PHZ-0001"] p.progress')).to_contain_text("Contract closed")
-        expect(self.page.locator('[data-theme="PHZ-0001"] p.progress .from.auto')).to_have_text("auto")
-        expect(self.page.get_by_text("Nothing needs leadership now.")).to_be_visible()
+        expect(self.page.locator('tr[data-theme="PHZ-0001"] td.progress')).to_contain_text("Contract closed")
+        expect(self.page.locator('tr[data-theme="PHZ-0001"] td.progress .from.auto')).to_have_text("auto")
+        expect(self.page.locator(".themes-table thead")).to_contain_text("Theme")
 
     # -- reader mode ---------------------------------------------------------------
     def test_reader_mode_hides_every_control_and_is_remembered(self):

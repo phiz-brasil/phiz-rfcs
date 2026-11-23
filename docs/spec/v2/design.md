@@ -21,8 +21,10 @@ mode in this version.
 ## Parts
 
 1. **Foundations and navigation** (done; adjusted after review: grouped menus, greener, more compact, numbers per front): tokens, top bar with grouped menu, page head, panels, cards, tables, badges, the KPI band on the executive view.
-2. **Consolidated overview**: one home page for leadership (KPIs, what needs attention, each front in one line, next milestones), and the executive
-   view as a compact table instead of one card per theme.
+2. **Consolidated overview** (done): one home page for leadership (KPIs, what needs attention, each front in one line, next milestones), and the executive
+   view as a compact table instead of one card per theme. Done as `/overview/` (the brand leads there): six numbers (active, on track, at risk or
+   blocked, overdue, no update this week, need leadership; each opens the executive view filtered with `?f=`), what needs attention, the next four weeks,
+   each front in one line with its status mix, and the themes updated this week. The executive view is one table grouped by front; its numbers filter it.
 3. **Theme page and lists**: the theme page in sections/tabs (summary, updates, items, gates, attachments, history) with the editing form folded away;
    the themes list as a dense table.
 4. **The pages that came from the old site** (RFC list, RFC page, new RFC, comments) in the same look.

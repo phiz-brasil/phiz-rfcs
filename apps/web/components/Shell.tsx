@@ -33,9 +33,10 @@ export function Shell({ supabase, children }: { supabase: Supabase; children: Re
     <Context.Provider value={{ lang, db, name, setName, reader }}>
       <header className="appbar">
         <div className="wrap topbar">
-          <a className="brand" href="/executive/" aria-label="PhizChat"><span className="mark">PHIZCHAT</span></a>
+          <a className="brand" href="/overview/" aria-label="PhizChat"><span className="mark">PHIZCHAT</span></a>
           <nav className="mainnav" aria-label={T.navMain[lang]}>
-            <Menu label={T.eyebrowTrack[lang]} paths={["/executive/", "/board/", "/roadmap/", "/metrics/"]}>
+            <Menu label={T.eyebrowTrack[lang]} paths={["/overview/", "/executive/", "/board/", "/roadmap/", "/metrics/"]}>
+              <NavLink href="/overview/">{T.overview[lang]}</NavLink>
               <NavLink href="/executive/">{T.executive[lang]}</NavLink>
               <NavLink href="/board/">{T.board[lang]}</NavLink>
               <NavLink href="/roadmap/">{T.roadmap[lang]}</NavLink>

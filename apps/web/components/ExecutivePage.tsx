@@ -1,11 +1,13 @@
 "use client";
-/* The executive view: every theme by front (Outros last) with the progress sentence, owner, status, estimate, milestones and what needs
-   attention, and, on top, what needs the leadership. A click opens the theme. */
+/* The executive view: every theme in one compact table, grouped by front (Outros last): status, stage, owner, the progress sentence, the estimate,
+   the next milestone and the signals that need attention. The numbers on top filter the table; ?f=<number> opens it filtered (links from the overview). */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { STATUSES, T, t, text } from "../lib/i18n";
 import type { Blocker, Decision, Front, Milestone, Theme } from "../lib/db";
+import { KPI_KEYS, atRisk, isOpen, isOverdue, isStale, kpis, leadershipItems, type Kpi } from "../lib/portfolio";
 import { isoWeek } from "../lib/week";
 import { useApp } from "./Shell";
+import { Kpis } from "./Kpis";
 import { Said, StatusBadge, dateText } from "./ui";
 
 type Data = { fronts: Front[]; themes: Theme[]; weeks: Set<string>; blockers: Blocker[]; decisions: Decision[]; milestones: Milestone[] };
@@ -18,7 +20,9 @@ export function ExecutivePage() {
   const [tag, setTag] = useState("");
   const [owner, setOwner] = useState("");
   const [attention, setAttention] = useState(false);
+  const [focus, setFocus] = useState<Kpi | null>(null);
   const week = isoWeek();
+  const today = new Date().toISOString().slice(0, 10);
 
   const load = useCallback(async () => {
     try {
@@ -28,6 +32,10 @@ export function ExecutivePage() {
     } catch { setFailed(true); }
   }, [db]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const f = new URLSearchParams(location.search).get("f");
+    if (f && (KPI_KEYS as readonly string[]).includes(f)) setFocus(f as Kpi);
+  }, []);
 
   const tags = useMemo(() => [...new Set((data?.themes ?? []).flatMap(x => x.tags))].sort(), [data]);
   const owners = useMemo(() => [...new Set((data?.themes ?? []).map(x => x.owner).filter(Boolean) as string[])].sort(), [data]);
@@ -35,79 +43,23 @@ export function ExecutivePage() {
   if (failed) return <p className="state err">{T.failed[lang]}</p>;
   if (!data) return <p className="state">{T.loading[lang]}</p>;
 
-  const open = (id: string) => ({
-    blockers: data.blockers.filter(b => b.theme_id === id).length,
-    decisions: data.decisions.filter(d => d.theme_id === id).length
-  });
-  const stale = (x: Theme) => x.status !== "done" && x.status !== "cancelled" && !data.weeks.has(`${x.id}|${week}`);
-  const needsAttention = (x: Theme) => stale(x) || x.status === "at_risk" || x.status === "blocked" || open(x.id).blockers + open(x.id).decisions > 0;
-  const shown = data.themes.filter(x => (status === "all" || x.status === status) && (!tag || x.tags.includes(tag)) && (!owner || x.owner === owner) && (!attention || needsAttention(x)));
-  const title = (id: string) => data.themes.find(x => x.id === id)?.title;
-  const leadership = [
-    ...data.blockers.filter(b => b.needs_leadership).map(b => ({ kind: "blocker" as const, row: b })),
-    ...data.decisions.filter(d => d.needs_leadership).map(d => ({ kind: "decision" as const, row: d }))
-  ].sort((a, b) => (a.row.due_date ?? "9999").localeCompare(b.row.due_date ?? "9999"));
+  const stale = isStale(data, week);
+  const overdue = isOverdue(today);
+  const lead = leadershipItems(data);
+  const leadIds = new Set(lead.map(l => l.row.theme_id));
+  const open = (id: string) => ({ blockers: data.blockers.filter(b => b.theme_id === id).length, decisions: data.decisions.filter(d => d.theme_id === id).length });
+  const needsAttention = (x: Theme) => stale(x) || atRisk(x) || overdue(x) || open(x.id).blockers + open(x.id).decisions > 0;
+  const byFocus: Record<Kpi, (x: Theme) => boolean> = { active: isOpen, on_track: x => x.status === "on_track", at_risk: atRisk, overdue, stale, leadership: x => leadIds.has(x.id) };
+  const shown = data.themes.filter(x => (status === "all" || x.status === status) && (!tag || x.tags.includes(tag)) && (!owner || x.owner === owner)
+    && (!attention || needsAttention(x)) && (!focus || byFocus[focus](x)));
+  const next = (id: string) => data.milestones.find(m => m.theme_id === id && m.col !== "done");
 
   return (
     <>
       <p className="eyebrow">{T.eyebrowTrack[lang]}</p>
       <h1>{T.executive[lang]}</h1>
       <p className="lead">{T.executiveLead[lang]}</p>
-      <section className="kpis" aria-label={T.kpis[lang]}>
-        {[
-          { k: "active", n: data.themes.filter(x => x.status !== "done" && x.status !== "cancelled").length, on: () => { setStatus("all"); setAttention(false); } },
-          { k: "on_track", n: data.themes.filter(x => x.status === "on_track").length, on: () => setStatus("on_track") },
-          { k: "at_risk", n: data.themes.filter(x => x.status === "at_risk" || x.status === "blocked").length, tone: "warn", on: () => setStatus("at_risk") },
-          { k: "stale", n: data.themes.filter(stale).length, tone: "warn", on: () => { setStatus("all"); setAttention(true); } },
-          { k: "leadership", n: leadership.length, tone: "alert", on: () => document.getElementById("leadership")?.scrollIntoView({ behavior: "smooth" }) },
-        ].map(c => (
-          <button type="button" key={c.k} className="kpi" data-kpi={c.k} data-tone={c.n ? c.tone : undefined} onClick={c.on}>
-            <span className="kpi-label">{T[`kpi_${c.k}`][lang]}</span>
-            <span className="kpi-n">{c.n}</span>
-          </button>
-        ))}
-      </section>
-      <section className="fronts-sum" aria-label={T.frontSummary[lang]}>
-        <table className="stats">
-          <thead><tr><th>{T.frontSummary[lang]}</th>{["active", "on_track", "at_risk", "stale", "leadership"].map(k => <th key={k}>{T[`kpi_${k}`][lang]}</th>)}</tr></thead>
-          <tbody>
-            {data.fronts.map(f => {
-              const mine = data.themes.filter(x => x.front === f.key);
-              if (!mine.length) return null;
-              const ids = new Set(mine.map(x => x.id));
-              const row = {
-                active: mine.filter(x => x.status !== "done" && x.status !== "cancelled").length,
-                on_track: mine.filter(x => x.status === "on_track").length,
-                at_risk: mine.filter(x => x.status === "at_risk" || x.status === "blocked").length,
-                stale: mine.filter(stale).length,
-                leadership: leadership.filter(l => ids.has(l.row.theme_id)).length,
-              };
-              const tone = (k: keyof typeof row) => (row[k] && (k === "at_risk" || k === "stale") ? "warn" : row[k] && k === "leadership" ? "alert" : undefined);
-              return (
-                <tr key={f.key} data-front={f.key} onClick={() => document.getElementById(`front-${f.key}`)?.scrollIntoView({ behavior: "smooth" })}>
-                  <th><a href={`#front-${f.key}`}>{text(f.name, lang)}</a></th>
-                  {(Object.keys(row) as (keyof typeof row)[]).map(k => <td key={k} className="num" data-k={k} data-tone={tone(k)}>{row[k]}</td>)}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
-      <section className="alert" id="leadership" aria-label={T.leadership[lang]}>
-        <h2>{T.leadership[lang]}</h2>
-        {leadership.length ? (
-          <ul>
-            {leadership.map(({ kind, row }) => (
-              <li key={row.id} data-kind={kind}>
-                <span className="id">{kind === "blocker" ? T.blockers[lang] : T.decisions[lang]}</span>{" "}
-                <Said value={row.what} lang={lang} machine={row.text_meta?.what} />{" — "}
-                <a href={`/themes/${row.theme_id}/`}>{row.theme_id} <Said value={title(row.theme_id)} lang={lang} /></a>
-                <span className="note">{("owner" in row ? row.owner : row.decider) ? ` · ${"owner" in row ? row.owner : row.decider}` : ""}{row.due_date ? ` · ${T.byWhen[lang]}: ${dateText(row.due_date)}` : ""}</span>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="empty">{T.leadershipNone[lang]}</p>}
-      </section>
+      <Kpis values={kpis(data, data.themes, week, today)} lang={lang} active={focus} onPick={k => setFocus(f => (f === k ? null : k))} />
       <div className="bar">
         <div className="filters" role="group" aria-label={T.status[lang]}>
           {["all", ...STATUSES].map(s => <button key={s} type="button" aria-pressed={status === s} onClick={() => setStatus(s)}>{s === "all" ? T.all[lang] : t(`status.${s}`, lang)}</button>)}
@@ -116,41 +68,47 @@ export function ExecutivePage() {
           <select aria-label={T.tag[lang]} value={tag} onChange={e => setTag(e.target.value)}><option value="">{T.tag[lang]}: {T.all[lang]}</option>{tags.map(x => <option key={x} value={x}>#{x}</option>)}</select>
           <select aria-label={T.owner[lang]} value={owner} onChange={e => setOwner(e.target.value)}><option value="">{T.owner[lang]}: {T.all[lang]}</option>{owners.map(x => <option key={x} value={x}>{x}</option>)}</select>
           <label className="checks"><input type="checkbox" checked={attention} onChange={e => setAttention(e.target.checked)} /> {T.onlyAttention[lang]}</label>
+          {focus ? <button type="button" className="mini" data-focus={focus} onClick={() => setFocus(null)}>{T[`kpi_${focus}`][lang]} ✕</button> : null}
         </div>
       </div>
-      {data.fronts.map(f => (
-        <section className="front" key={f.key} id={`front-${f.key}`}>
-          <h2>{text(f.name, lang)}</h2>
-          <ul className="list">
-            {shown.filter(x => x.front === f.key).map(x => {
-              const c = open(x.id);
-              const ms = data.milestones.filter(m => m.theme_id === x.id && m.col !== "done").slice(0, 3);
-              return (
-                <li className="card-li" key={x.id} data-theme={x.id}>
-                  <a className="card" href={`/themes/${x.id}/`}>
-                    <div className="top">
-                      <span className="id">{x.id}</span>
-                      <StatusBadge status={x.status} lang={lang} />
-                      {x.stage ? <span className="ver">{t(`stage.${x.stage}`, lang)}</span> : null}
-                      {stale(x) ? <span className="flag">{T.noUpdate[lang]}</span> : null}
-                      {c.blockers ? <span className="flag lead">{c.blockers} {T.openBlockers[lang]}</span> : null}
-                      {c.decisions ? <span className="flag lead">{c.decisions} {T.openDecisions[lang]}</span> : null}
-                    </div>
-                    <h3><Said value={x.title} lang={lang} machine={x.text_meta?.title} /></h3>
-                    {text(x.progress, lang) ? <p className="progress"><Said value={x.progress} lang={lang} machine={x.text_meta?.progress} /></p> : null}
-                    <div className="meta">
-                      <span>{x.owner ?? "—"}</span>
-                      <span>{T.due[lang]}: {dateText(x.due_date)}</span>
-                      {ms.map(m => <span key={m.id}>◆ {m.title} {dateText(m.due_date)}</span>)}
-                    </div>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-          {!shown.some(x => x.front === f.key) ? <p className="empty">{T.noThemes[lang]}</p> : null}
-        </section>
-      ))}
+      <div className="tablewrap">
+        <table className="stats themes-table">
+          <thead><tr>
+            <th>{T.colTheme[lang]}</th><th>{T.status[lang]}</th><th>{T.stage[lang]}</th><th>{T.owner[lang]}</th><th>{T.progress[lang].replace(/ \(.*\)$/, "")}</th>
+            <th>{T.due[lang]}</th><th>{T.colNext[lang]}</th><th>{T.colSignals[lang]}</th>
+          </tr></thead>
+          {data.fronts.map(f => {
+            const rows = shown.filter(x => x.front === f.key);
+            return (
+              <tbody key={f.key} id={`front-${f.key}`} data-front={f.key}>
+                <tr className="front-row"><th colSpan={8}>{text(f.name, lang)} <span className="note">{rows.length}</span></th></tr>
+                {rows.map(x => {
+                  const c = open(x.id);
+                  const m = next(x.id);
+                  return (
+                    <tr key={x.id} className="theme-row" data-theme={x.id} onClick={e => { if (!(e.target as Element).closest("a")) location.href = `/themes/${x.id}/`; }}>
+                      <th><a href={`/themes/${x.id}/`}><span className="id">{x.id}</span> <Said value={x.title} lang={lang} machine={x.text_meta?.title} /></a></th>
+                      <td><StatusBadge status={x.status} lang={lang} /></td>
+                      <td className="stage">{x.stage ? t(`stage.${x.stage}`, lang) : "—"}</td>
+                      <td>{x.owner ?? "—"}</td>
+                      <td className="progress">{text(x.progress, lang) ? <Said value={x.progress} lang={lang} machine={x.text_meta?.progress} /> : "—"}</td>
+                      <td className={overdue(x) ? "date overdue" : "date"}>{dateText(x.due_date)}</td>
+                      <td>{m ? `◆ ${m.title} ${dateText(m.due_date)}` : "—"}</td>
+                      <td className="signals">
+                        {stale(x) ? <span className="flag">{T.noUpdate[lang]}</span> : null}
+                        {overdue(x) ? <span className="flag lead">{T.kpi_overdue[lang]}</span> : null}
+                        {c.blockers ? <span className="flag lead">{c.blockers} {T.openBlockers[lang]}</span> : null}
+                        {c.decisions ? <span className="flag lead">{c.decisions} {T.openDecisions[lang]}</span> : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!rows.length ? <tr className="empty-row"><td colSpan={8} className="empty">{T.noThemes[lang]}</td></tr> : null}
+              </tbody>
+            );
+          })}
+        </table>
+      </div>
     </>
   );
 }
