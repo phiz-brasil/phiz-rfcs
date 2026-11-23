@@ -56,3 +56,7 @@ export const LATEST = 2147483647;
 export const getAsset = async (id, name, rev) =>
   (await request(`rfc_assets?select=mime,data&rfc_id=eq.${q(id)}&name=eq.${q(name)}&rev=lte.${rev}&order=rev.desc&limit=1`))[0] || null;
 export const listAssets = id => request(`rfc_assets?select=name,rev,mime,size&rfc_id=eq.${q(id)}&order=rev.desc`);
+
+/* Versions that only exist as archived pages: attachments of the theme that carry archive_version (phase 8, the frozen archive moved into the database). */
+export const listArchived = id =>
+  request(`attachments?select=archive_version,archive_date,archive_note&theme_id=eq.${q(id)}&archive_version=not.is.null&order=archive_date.desc`);

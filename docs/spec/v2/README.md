@@ -120,7 +120,12 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
 
 - **Phase 8, first part (this branch)**: the attachments hub (migration `20261128000000_attachments.sql`): files, notes and links, editions, stage and item ties, previews
   by signed address, HTML only as a download, a panel on each theme and `/attachments/`. Until the sign-in phase the bucket policies let the public key upload and read
-  (the same openness as the rest of the data); they are tightened to authenticated users then. Moving the frozen archive (`apps/web/legacy`) in comes next.
+  (the same openness as the rest of the data); they are tightened to authenticated users then. 
+
+- **Phase 8, second part (this branch)**: the frozen archive moved in. Migration `20261129000000_attachments_archive.sql` lets `add_attachment` carry `archive_version`,
+  `archive_date` and `archive_note`; 13 attachments were uploaded to production (PHZ-0001 v1.0–v1.6 and PHZ-0002 v1.0 as self-contained HTML with the CSS inlined, one
+  ZIP with the pictures of PHZ-0001, the OpenAPI page and the three YAML files; SHA-256 checked after the upload). `apps/web/legacy/` is gone; the RFC page lists
+  archived versions from the attachments; `/rfcs/<ID>/<anything>` redirects to the theme's attachments.
 
 ## Pending
 
