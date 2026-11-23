@@ -24,10 +24,11 @@ company.
 |---|---|
 | Order | Move the platform first (same behavior), then the new features, and access control last (phase 2 after phase 9). One change at a time. |
 | Levels | Three fixed levels: **Front → Theme → Execution item**. Themes are `project` or standalone `task`; themes link across fronts by dependencies and tags. |
-| Fronts | POP, API Platform, Mini-Apps, Payments, Product Center, then Outros (permanent, last). |
+| Fronts | POP, API Platform, Mini-Apps, Payments, Product Center, then Outros (permanent, last). Fronts and the front of each theme are editable. Existing RFCs: PHZ-0001 and 0005 API Platform; 0002, 0003, 0006, 0007 Payments; 0004 POP; 0008 Mini-Apps. |
 | Flow | **Project themes** move through the ten V4 stages; their execution items use a simple project kanban (todo, doing, blocked, done). |
 | Board | One board for now, the **BU B2B** board, with configurable columns; every column maps to one V4 stage. |
 | Gates | A checklist that warns: a card can move with gates open; open gates stay visible. |
+| Executive statuses | not started, on track, at risk, blocked, paused, done, cancelled (confirmed). |
 | Metrics | Lead time (creation → done), delivery time (04 → done), cycle time (07 → done) in calendar days, plus CFD, throughput, WIP, aging; for themes and items with a filter. |
 | Sentences | Two: *what it is* (stable) and *progress* (weekly), plus the three slide answers (problem, solution, success). |
 | Executive view | AI suggests the slide answers from the RFC and attachments; a person confirms; a missing answer is shown as missing, never invented. |
@@ -71,10 +72,17 @@ Phase 1 changes no behavior on purpose: it is the riskiest move (new runtime, ne
 and its data stay readable by anyone with the address (as they are today), including the weekly status of the projects once phase 4 is
 in; nothing secret goes into the panel meanwhile.
 
+## Progress
+
+- **Phase 0, 1**: done (specs; Next.js app on Vercel, old site off).
+- **Phase 3, first slice (this branch)**: fronts, themes (project or task), execution items on a four-column kanban, dependencies between themes,
+  tags, Jira links, the event log, the front of a theme and the fronts themselves editable, the published RFCs and the seven themes of Outros
+  seeded, `/themes/` and `/themes/PHZ-NNNN/` in three languages. Left of phase 3: automatic translation of the texts people write (today a text is
+  stored in the language it was typed and shown with a language tag in the others), importing the repository draft `rfcs/checkout-global`,
+  and showing the theme's stage instead of the old status on the RFC page (the status picker goes away then).
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)
    and add the file to the review, or share it with view access for anyone with the link.
-2. **(3) Fronts of the existing RFCs.** Confirm the table in `domain.md` (initial themes), especially PHZ-0005 (Business Account) and PHZ-0008 (PhizClip).
-3. **(4) Statuses.** Confirm the executive statuses: not started, on track, at risk, blocked, paused, done, cancelled.
-4. **(2, later) Microsoft sign-in.** Needs the administrator of the company's Microsoft tenant; until then, sign-in by e-mail link to `@phiz.com`.
+2. **(2, last phase) Microsoft sign-in.** Needs the administrator of the company's Microsoft tenant; until then, sign-in by e-mail link to `@phiz.com`.

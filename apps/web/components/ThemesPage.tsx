@@ -1,0 +1,157 @@
+"use client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { COLS, STATUSES, T, t, text, type Lang } from "../lib/i18n";
+import type { Front, I18n, Theme } from "../lib/db";
+import { useApp } from "./Shell";
+import { Field, Said, StatusBadge, dateText, message } from "./ui";
+
+export function ThemesPage() {
+  const { lang, db, name } = useApp();
+  const [fronts, setFronts] = useState<Front[] | null>(null);
+  const [themes, setThemes] = useState<Theme[]>([]);
+  const [failed, setFailed] = useState(false);
+  const [kind, setKind] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [editing, setEditing] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [f, th] = await Promise.all([db.fronts(), db.themes()]);
+      setFronts(f);
+      setThemes(th);
+      setFailed(false);
+    } catch { setFailed(true); }
+  }, [db]);
+  useEffect(() => { void load(); }, [load]);
+
+  const shown = useMemo(() => themes.filter(x => (kind === "all" || x.kind === kind) && (status === "all" || x.status === status)), [themes, kind, status]);
+
+  return (
+    <>
+      <h1>{T.themes[lang]}</h1>
+      <p className="lead">{T.lead[lang]}</p>
+      <div className="bar">
+        <div className="filters" role="group" aria-label={T.kind[lang]}>
+          {["all", "project", "task"].map(k => (
+            <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>{k === "all" ? T.all[lang] : t(k, lang)}</button>
+          ))}
+        </div>
+        <div className="filters" role="group" aria-label={T.status[lang]}>
+          {["all", ...STATUSES].map(s => (
+            <button key={s} type="button" aria-pressed={status === s} onClick={() => setStatus(s)}>{s === "all" ? T.all[lang] : t(`status.${s}`, lang)}</button>
+          ))}
+        </div>
+        <div className="actions">
+          <button type="button" className="btn primary" onClick={() => setCreating(true)}>＋ {T.newTheme[lang]}</button>
+          <button type="button" className="btn" onClick={() => setEditing(e => !e)}>{editing ? T.doneEditing[lang] : T.editFronts[lang]}</button>
+        </div>
+      </div>
+      {failed ? <p className="state err">{T.failed[lang]}</p> : fronts === null ? <p className="state">{T.loading[lang]}</p> : null}
+      {creating && fronts ? <NewTheme fronts={fronts} onClose={() => setCreating(false)} onCreated={id => { window.location.href = `/themes/${id}/`; }} /> : null}
+      {fronts?.map(f => (
+        <section className="front" key={f.key} id={`front-${f.key}`}>
+          {editing ? <EditFront front={f} onSaved={load} /> : (
+            <>
+              <h2>{text(f.name, lang)}</h2>
+              <p className="scope">{text(f.scope, lang)}</p>
+            </>
+          )}
+          <ul className="list">
+            {shown.filter(x => x.front === f.key).map(x => <ThemeCard key={x.id} theme={x} lang={lang} />)}
+          </ul>
+          {!shown.some(x => x.front === f.key) ? <p className="empty">{T.noThemes[lang]}</p> : null}
+        </section>
+      ))}
+    </>
+  );
+}
+
+function ThemeCard({ theme, lang }: { theme: Theme; lang: Lang }) {
+  return (
+    <li className="card-li" data-theme={theme.id}>
+      <a className="card" href={`/themes/${theme.id}/`}>
+        <div className="top">
+          <span className="id">{theme.id}</span>
+          <span className="ver">{t(theme.kind, lang)}</span>
+          <StatusBadge status={theme.status} lang={lang} />
+          {theme.stage ? <span className="ver">{t(`stage.${theme.stage}`, lang)}</span> : null}
+        </div>
+        <h3><Said value={theme.title} lang={lang} /></h3>
+        {theme.progress && text(theme.progress, lang) ? <p><Said value={theme.progress} lang={lang} /></p> : null}
+        <div className="meta">
+          <span>{theme.owner ?? "—"}</span>
+          <span>{T.due[lang]}: {dateText(theme.due_date)}</span>
+          {theme.tags.map(tag => <span className="tag" key={tag}>#{tag}</span>)}
+        </div>
+      </a>
+    </li>
+  );
+}
+
+function NewTheme({ fronts, onClose, onCreated }: { fronts: Front[]; onClose: () => void; onCreated: (id: string) => void }) {
+  const { lang, db, name } = useApp();
+  const [kind, setKind] = useState("project");
+  const [front, setFront] = useState(fronts[0]?.key ?? "");
+  const [title, setTitle] = useState("");
+  const [owner, setOwner] = useState("");
+  const [note, setNote] = useState("");
+  const submit = async () => {
+    if (!name.trim()) return setNote(T.needName[lang]);
+    if (!title.trim()) return setNote(T.error[lang]);
+    setNote(T.saving[lang]);
+    try {
+      const r = await db.createTheme({ kind, front, title: { [lang]: title.trim() } satisfies I18n, owner: owner.trim() }, name.trim());
+      onCreated(r.id);
+    } catch (e) { setNote(message(e, lang)); }
+  };
+  return (
+    <form className="panel" onSubmit={e => { e.preventDefault(); void submit(); }} aria-label={T.newTheme[lang]}>
+      <h2>{T.newTheme[lang]}</h2>
+      <div className="fields">
+        <Field label={T.kind[lang]}>
+          <select value={kind} onChange={e => setKind(e.target.value)}>{["project", "task"].map(k => <option key={k} value={k}>{t(k, lang)}</option>)}</select>
+        </Field>
+        <Field label={T.front[lang]}>
+          <select value={front} onChange={e => setFront(e.target.value)}>{fronts.map(f => <option key={f.key} value={f.key}>{text(f.name, lang)}</option>)}</select>
+        </Field>
+        <Field label={`${T.title[lang]} (${T.writtenIn[lang]} ${lang.toUpperCase()})`}><input value={title} maxLength={200} onChange={e => setTitle(e.target.value)} /></Field>
+        <Field label={T.owner[lang]}><input value={owner} maxLength={80} onChange={e => setOwner(e.target.value)} /></Field>
+      </div>
+      <p><button type="submit" className="btn primary">{T.create[lang]}</button> <button type="button" className="btn" onClick={onClose}>{T.cancel[lang]}</button> <span className="note" role="status">{note}</span></p>
+    </form>
+  );
+}
+
+function EditFront({ front, onSaved }: { front: Front; onSaved: () => void }) {
+  const { lang, db, name } = useApp();
+  const [nm, setNm] = useState<I18n>(front.name);
+  const [scope, setScope] = useState<I18n>(front.scope);
+  const [ord, setOrd] = useState(String(front.ord));
+  const [note, setNote] = useState("");
+  const save = async () => {
+    if (!name.trim()) return setNote(T.needName[lang]);
+    setNote(T.saving[lang]);
+    try {
+      const p: Record<string, unknown> = { name: nm, scope };
+      if (!front.is_other) p.ord = Number(ord);
+      await db.updateFront(front.key, p, name.trim());
+      setNote(T.saved[lang]);
+      onSaved();
+    } catch (e) { setNote(message(e, lang)); }
+  };
+  return (
+    <form className="panel" onSubmit={e => { e.preventDefault(); void save(); }} aria-label={`${T.editFronts[lang]}: ${front.key}`}>
+      <div className="fields">
+        {(["pt", "en", "zh"] as const).map(l => (
+          <Field key={l} label={`${T.frontName[lang]} (${l.toUpperCase()})`}><input value={nm[l] ?? ""} maxLength={60} onChange={e => setNm({ ...nm, [l]: e.target.value })} /></Field>
+        ))}
+        {!front.is_other ? <Field label={T.frontOrder[lang]}><input type="number" min={1} max={50} value={ord} onChange={e => setOrd(e.target.value)} /></Field> : null}
+      </div>
+      <Field label={`${T.frontScope[lang]} (${lang.toUpperCase()})`}>
+        <textarea rows={3} value={scope[lang] ?? ""} maxLength={1200} onChange={e => setScope({ ...scope, [lang]: e.target.value })} />
+      </Field>
+      <p><button type="submit" className="btn primary">{T.save[lang]}</button> <span className="note" role="status">{note}</span></p>
+    </form>
+  );
+}

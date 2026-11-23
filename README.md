@@ -110,8 +110,18 @@ The database is described by numbered files in [`supabase/migrations`](supabase/
 | `20261022000000_live_rfcs` | `rfc_ids`, `rfc_revisions` and the functions that create RFCs and versions (every RFC lives here) |
 | `20261023000000_rfc_assets` | pictures of the RFCs (`rfc_assets`, `stage_rfc_asset`) |
 | `20261024000000_more_images` | up to 160 pictures per RFC and a larger upload limit |
+| `20261124000000_themes` | fronts, themes, execution items, dependencies, Jira links and the event log; the RFCs become themes (`/themes/`) |
 
 Every file is idempotent (`if not exists` / `or replace`), so applying all of them again is safe. To change the database, add a **new** file with a later timestamp; never edit one that has been applied. Apply a new file in the Supabase **SQL Editor** (paste and run) or with `supabase db push`.
+
+## Themes
+
+`/themes/` lists the **themes** by **front** (POP, API Platform, Mini-Apps, Payments, Product Center, then Outros); `/themes/PHZ-NNNN/` is the page
+of one theme: type (project or standalone task), front, status, V4 stage, owner, dates, tags, the sentences and the three slide answers (each
+written in the reader's language and kept per language), execution items on a four-column kanban, Jira links (paste the address; the page shows the
+issue key and opens Jira in another tab), dependencies on themes of other fronts, the link to the theme's RFC and the history of every change.
+The front of a theme and the fronts themselves (name, scope, order) are editable. Plan and decisions: [`docs/spec/v2`](docs/spec/v2/README.md).
+Apply [`20261124000000_themes.sql`](supabase/migrations/20261124000000_themes.sql) first: it also turns the published RFCs into themes.
 
 ## The app (Next.js)
 
