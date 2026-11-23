@@ -22,7 +22,7 @@ company.
 
 | topic | decision |
 |---|---|
-| Order | Move the platform first (same behavior), then access control, then the new features. One change at a time. |
+| Order | Move the platform first (same behavior), then the new features, and access control last (phase 2 after phase 9). One change at a time. |
 | Levels | Three fixed levels: **Front → Theme → Execution item**. Themes are `project` or standalone `task`; themes link across fronts by dependencies and tags. |
 | Fronts | POP, API Platform, Mini-Apps, Payments, Product Center, then Outros (permanent, last). |
 | Flow | **Project themes** move through the ten V4 stages; their execution items use a simple project kanban (todo, doing, blocked, done). |
@@ -55,7 +55,7 @@ Each phase is one pull request (or a short series), reviewable and testable on i
 | phase | delivers | user-visible change |
 |---|---|---|
 | 0 | These specs; the compatibility contract | none |
-| 1 | Next.js app on Vercel with the same pages and behavior; old addresses redirect; GitHub Pages retired; repository private | new address only |
+| 1 | Next.js app on Vercel with the same pages and behavior; GitHub Pages turned off (no redirect) | new address only |
 | 2 | Access only for `@phiz.com` (e-mail sign-in link first, Microsoft later), database closed to anonymous access | sign-in |
 | 3 | Fronts, themes, execution items, dependencies and tags, Jira links; the RFCs and repository drafts become themes; seed of Outros; content translation | theme pages, front lists |
 | 4 | Weekly updates, blockers and decisions, executive view, reader mode | the panel |
@@ -66,7 +66,10 @@ Each phase is one pull request (or a short series), reviewable and testable on i
 | 9 | Slide export (one or many themes) and AI suggestions for the three answers | slides |
 
 Phase 1 changes no behavior on purpose: it is the riskiest move (new runtime, new host) and the compatibility suite is what proves it.
-Phase 2 comes before any panel data: the weekly status of company projects should not be readable by anyone with the address.
+
+**Order of work (decision of 2026-11-23):** 1, 3, 4, 5, 6, 7, 8, 9, and **phase 2 last**, after every feature is in. Until then the site
+and its data stay readable by anyone with the address (as they are today), including the weekly status of the projects once phase 4 is
+in; nothing secret goes into the panel meanwhile.
 
 ## Pending
 
