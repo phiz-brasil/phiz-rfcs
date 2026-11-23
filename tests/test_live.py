@@ -81,7 +81,7 @@ class LiveRfcTest(SiteCase):
     def test_publishing_creates_the_rfc_with_author_and_collaborators(self):
         self.publish_valid()
         page = self.page
-        fn, body = self.db.calls[-1]
+        fn, body = [c for c in self.db.calls if c[0] == "create_rfc"][-1]
         self.assertEqual(fn, "create_rfc")
         self.assertEqual(body["p_authors"], ["Ana"])
         self.assertEqual(body["p_collaborators"], ["Bo", "Cy"])
@@ -98,6 +98,32 @@ class LiveRfcTest(SiteCase):
             page.click(f"#btn-{lang}")
             self.assertEqual(page.locator(".lang.active section").count(), 3)
         expect(page.locator(".vers summary")).to_have_text(re.compile(r"v1\.0"))
+
+    def test_a_new_rfc_is_also_a_theme_in_the_chosen_front(self):
+        page = self.page
+        page.goto(self.base + "/nova/")
+        expect(page.locator("#front")).to_have_value("outros")                    # the default
+        self.fill(BUNDLE)
+        expect(page.locator("#result .ok")).to_be_visible()
+        page.locator("#front").select_option("payments")
+        page.locator("#by").fill("Ana")
+        page.locator("#publish").click()
+        page.wait_for_url(re.compile(r"/rfc/\?id=PHZ-0003"))
+        theme = self.db.themes["PHZ-0003"]
+        self.assertEqual((theme["kind"], theme["front"], theme["title"]["en"]), ("project", "payments", "Test integration"))
+        self.assertEqual(self.db.calls[-1][0], "create_theme")
+
+    def test_a_failure_to_create_the_theme_does_not_lose_the_rfc(self):
+        self.db.fronts = [f for f in self.db.fronts if f["key"] != "outros"]       # the theme call is refused (unknown front)
+        page = self.page
+        page.goto(self.base + "/nova/")
+        self.fill(BUNDLE)
+        expect(page.locator("#result .ok")).to_be_visible()
+        page.locator("#by").fill("Ana")
+        page.locator("#publish").click()
+        page.wait_for_url(re.compile(r"/rfc/\?id=PHZ-0003"))
+        self.assertEqual(self.db.ids["PHZ-0003"], "site")
+        self.assertNotIn("PHZ-0003", self.db.themes)
 
     def test_comments_and_status_work_on_a_site_rfc(self):
         self.db.seed_rfc(BUNDLE, META)

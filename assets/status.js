@@ -119,6 +119,7 @@
   }
 
   async function initPage() {
+    if (window.PHIZ_THEME_STATUS) return;                     // an RFC that is a theme shows the theme's status and stage (live.js)
     const badge = document.querySelector(".rfcno.st");
     if (badge) picker(badge);
     try { const rows = await current(rfcId); if (rows[0]) applyToPage(rows[0]); } catch (e) { console.warn("status", e); }

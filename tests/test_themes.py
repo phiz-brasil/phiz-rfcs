@@ -118,6 +118,29 @@ class ThemesTest(SiteCase):
         expect(self.page.locator(".note[role=status]").first).to_have_text("Saved.")
         self.assertEqual(self.db.themes["PHZ-0001"]["progress"], {"pt": "Contrato fechado com o parceiro", "en": "Contract closed with the partner"})
 
+    def test_machine_translations_are_marked_and_a_correction_makes_them_a_person_text(self):
+        self.db.themes["PHZ-0001"]["progress"] = {"pt": "Contrato fechado"}
+        self.db.machine_translate("PHZ-0001", "progress", "en", "Contract closed")
+        self.page.goto(self.base + "/themes/PHZ-0001/")
+        self.sign()
+        self.page.get_by_role("button", name="EN-US").click()
+        field = self.page.get_by_label("Progress (one sentence)")
+        expect(field).to_have_value("Contract closed")
+        expect(self.page.locator(".field .from.auto")).to_have_text("machine translation")
+        field.fill("Contract signed")
+        self.page.get_by_role("button", name="Save").click()
+        expect(self.page.locator(".note[role=status]").first).to_have_text("Saved.")
+        self.assertEqual(self.db.themes["PHZ-0001"]["progress"]["en"], "Contract signed")
+        self.assertEqual(self.db.themes["PHZ-0001"]["text_meta"]["progress"], [])             # now written by a person: never overwritten
+        expect(self.page.locator(".field .from.auto")).to_have_count(0)
+
+    def test_the_list_marks_machine_translated_text(self):
+        self.db.themes["PHZ-0001"]["progress"] = {"pt": "Contrato fechado"}
+        self.db.machine_translate("PHZ-0001", "progress", "en", "Contract closed")
+        self.themes()
+        self.page.get_by_role("button", name="EN-US").click()
+        expect(self.page.locator('[data-theme="PHZ-0001"] p .from.auto')).to_have_text("auto")
+
     def test_status_stage_dates_owner_and_tags_are_saved(self):
         self.page.goto(self.base + "/themes/PHZ-0001/")
         self.sign()
@@ -200,6 +223,28 @@ class ThemesTest(SiteCase):
         self.assertEqual(link.get_attribute("href"), "/rfc/?id=PHZ-0002")
         self.page.goto(self.base + "/themes/PHZ-0010/")
         expect(self.page.get_by_text("Este tema ainda não tem RFC.")).to_be_visible()
+
+    def test_the_rfc_page_shows_the_status_and_stage_of_its_theme(self):
+        import_rfc(self.db, "PHZ-0002")
+        self.db.themes["PHZ-0002"].update(status="at_risk", stage=5)
+        self.page.goto(self.base + "/rfc/?id=PHZ-0002")
+        self.page.wait_for_selector(".lang.active h2")
+        badge = self.page.locator(".rfcno.theme-st")
+        expect(badge).to_have_text(re.compile(r"em risco · 05 revisão da solução", re.I))
+        self.assertEqual(badge.get_attribute("href"), "../themes/PHZ-0002/")
+        self.assertEqual(self.page.locator(".st-btn").count(), 0)                  # the old picker is gone
+        expect(self.page.locator(".lang.active .hero .pill")).to_have_text("Em risco · 05 Revisão da solução")
+        self.page.get_by_role("button", name="EN-US").click()
+        expect(self.page.locator(".lang.active .hero .pill")).to_have_text("At risk · 05 Solution review")
+        badge.click()
+        self.page.wait_for_url(re.compile(r"/themes/PHZ-0002/$"))
+
+    def test_an_rfc_without_a_theme_keeps_the_old_status_picker(self):
+        import_rfc(self.db, "PHZ-0001")                                             # seeded as a theme in setUp only for the list tests
+        del self.db.themes["PHZ-0001"]
+        self.page.goto(self.base + "/rfc/?id=PHZ-0001")
+        self.page.wait_for_selector(".lang.active h2")
+        expect(self.page.locator(".rfcno.st.st-btn")).to_be_visible()
 
     def test_an_unknown_theme_says_so(self):
         self.page.goto(self.base + "/themes/PHZ-9999/")

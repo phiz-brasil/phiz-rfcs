@@ -27,6 +27,10 @@ const q = s => encodeURIComponent(s);
 
 export const listLive = () => request("rfc_live_current?select=*&order=rfc_id.desc");
 export const getCurrent = async id => (await request(`rfc_live_current?select=*&rfc_id=eq.${q(id)}`))[0] || null;
+// the theme an RFC belongs to (same id): its executive status and V4 stage are what the RFC page shows
+export const getTheme = async id =>
+  (await request(`themes?select=id,kind,status,stage,front&id=eq.${q(id)}`))[0] || null;
+export const listFronts = () => request("fronts?select=key,name,ord,is_other&order=ord");
 export const listRevisions = id => request(`rfc_live_revisions?select=*&rfc_id=eq.${q(id)}&order=rev.desc`);
 // `select=*` is refused: the public key may read only these columns (not ip_hash)
 const REV_COLS = "id,rfc_id,rev,version,meta,bundle,authors,collaborators,edited_by,note,created_at";
@@ -40,6 +44,8 @@ const post = (fn, body) => request(`rpc/${fn}`, { method: "POST", headers: { "Co
 // `token` ties the images staged with stageAsset() to this publication
 export const createRfc = ({ meta, bundle, authors, collaborators, by, token }) =>
   post("create_rfc", { p_meta: meta, p_bundle: bundle, p_authors: authors, p_collaborators: collaborators, p_by: by, p_token: token || null });
+// a published RFC becomes a theme (domain.md): same id, the front the person chose
+export const createTheme = ({ id, front, title, by }) => post("create_theme", { p: { id, kind: "project", front, title }, p_by: by });
 export const addRevision = ({ id, meta, bundle, authors, collaborators, by, note, token }) =>
   post("add_rfc_revision", { p_rfc_id: id, p_meta: meta, p_bundle: bundle, p_authors: authors, p_collaborators: collaborators, p_by: by, p_note: note || null, p_token: token || null });
 

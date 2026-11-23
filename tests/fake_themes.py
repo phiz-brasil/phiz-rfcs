@@ -30,11 +30,17 @@ class ThemesMixin:
         self.ids.setdefault(tid, "site" if kind == "project" else "theme")
         row = {"id": tid, "kind": kind, "front": front, "title": title or {"pt": f"Tema {tid}"}, "owner": None, "status": "not_started",
                "stage": 1 if kind == "project" else None, "route": "full", "what_it_is": {}, "progress": {}, "problem": {}, "solution": {},
-               "success": {}, "start_date": None, "due_date": None, "tags": [], "resolution": None, "hidden": False, "created_at": now(),
+               "success": {}, "text_meta": {}, "start_date": None, "due_date": None, "tags": [], "resolution": None, "hidden": False, "created_at": now(),
                "created_by": "importação", "updated_at": now()}
         row.update(extra)
         self.themes[tid] = row
         return row
+
+    def machine_translate(self, tid, field, lang, text):
+        """What the translation webhook leaves: the text in `lang`, marked as a machine translation."""
+        t = self.themes[tid]
+        t[field] = {**t[field], lang: text}
+        t["text_meta"][field] = sorted({*t["text_meta"].get(field, []), lang})
 
     def event(self, theme_id, by, field, old=None, new=None, item_id=None):
         self.events.append({"id": str(uuid.uuid4()), "theme_id": theme_id, "item_id": item_id, "at": now(), "edited_by": by, "field": field,
@@ -95,6 +101,11 @@ class ThemesMixin:
                 v = (v or "").strip() or None
             t[k] = v
         t["updated_at"] = now()
+        for k in ("title", "what_it_is", "progress", "problem", "solution", "success"):      # a person who edits a language takes it off the machine list
+            if k in p:
+                for lg in ("pt", "en", "zh"):
+                    if (old[k] or {}).get(lg) != (t[k] or {}).get(lg):
+                        t["text_meta"][k] = [x for x in t["text_meta"].get(k, []) if x != lg]
         for k in ("front", "title", "owner", "status", "stage", "route", "what_it_is", "progress", "problem", "solution", "success",
                   "start_date", "due_date", "tags", "resolution"):
             if old[k] != t[k]:

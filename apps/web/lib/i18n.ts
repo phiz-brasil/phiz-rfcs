@@ -102,6 +102,8 @@ export const T: Dict = {
   noThemes: { pt: "Nenhum tema nesta frente.", en: "No themes in this front.", zh: "该业务线暂无主题。" },
   notFound: { pt: "Tema não encontrado.", en: "Theme not found.", zh: "未找到该主题。" },
   back: { pt: "← Temas", en: "← Themes", zh: "← 主题" },
+  machine: { pt: "tradução automática", en: "machine translation", zh: "机器翻译" },
+  machineNote: { pt: "Este texto é uma tradução automática; se você editar, ele passa a valer como escrito por pessoa.", en: "This text is a machine translation; if you edit it, it counts as written by a person.", zh: "此文本为机器翻译；编辑后将视为人工撰写。" },
   fromLang: { pt: "texto em", en: "text in", zh: "文本语言：" },
   frontName: { pt: "Nome da frente", en: "Front name", zh: "业务线名称" },
   frontScope: { pt: "O que a frente cobre", en: "What the front covers", zh: "业务线范围" },

@@ -92,6 +92,15 @@ mark.cmt-mark:hover { background: color-mix(in srgb, var(--accent) 30%, transpar
 /* Reply form opens under the comment being answered, aligned with the replies */
 .cmt-thread > .cmt-form { margin-left: 22px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 12px; background: var(--bg); }
 /* Live status: clickable badge with a picker, and pill colours that follow the status */
+.rfcno.theme-st { text-decoration: none; }
+.rfcno.theme-st:hover { border-color: var(--accent); color: var(--accent-ink); }
+.pill[data-st="not_started"] { color: var(--muted); }
+.pill[data-st="on_track"] { background: var(--accent-soft); color: var(--accent-ink); }
+.pill[data-st="at_risk"] { background: var(--warn-soft, #fdf0d5); color: var(--warn, #9a6408); }
+.pill[data-st="blocked"] { background: var(--bad-soft); color: var(--bad); }
+.pill[data-st="paused"] { background: var(--line); color: var(--muted); }
+.pill[data-st="done"] { background: var(--info-soft); color: var(--info); }
+.pill[data-st="cancelled"] { background: var(--line); color: var(--muted); text-decoration: line-through; }
 .rfcno.st.st-btn { cursor: pointer; user-select: none; }
 .rfcno.st.st-btn::after { content: " ▾"; font-size: .7em; }
 .rfcno.st.st-btn:hover, .rfcno.st.st-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent-ink); }

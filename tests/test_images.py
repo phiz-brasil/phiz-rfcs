@@ -138,7 +138,7 @@ class ImagesTest(SiteCase):
         page.locator("#by").fill("Ana")
         page.locator("#publish").click()
         page.wait_for_url(re.compile(r"/rfc/\?id=PHZ-0003"))
-        self.assertEqual([c[0] for c in self.db.calls], ["stage_rfc_asset", "create_rfc"])
+        self.assertEqual([c[0] for c in self.db.calls], ["stage_rfc_asset", "create_rfc", "create_theme"])   # the RFC is also created as a theme
         stage, create = self.db.calls[0][1], self.db.calls[1][1]
         self.assertEqual(stage["p_name"], "diagram.png")
         self.assertEqual(stage["p_mime"], "image/png")
@@ -153,7 +153,7 @@ class ImagesTest(SiteCase):
         page.locator("#by").fill("Ana")
         page.locator("#publish").click()
         page.wait_for_url(re.compile(r"/rfc/\?id=PHZ-0003"))
-        self.assertEqual([c[0] for c in self.db.calls], ["create_rfc"])
+        self.assertEqual([c[0] for c in self.db.calls], ["create_rfc", "create_theme"])
         self.assertEqual(self.db.assets, [])
 
     def test_an_image_the_server_refuses_stops_the_publication(self):
