@@ -215,7 +215,7 @@ class ImagesTest(SiteCase):
         self.images_loaded()
         with self.context.expect_page() as popup:
             self.page.locator('.lang.active img[data-asset]').click()
-        self.assertTrue(popup.value.url.startswith("blob:"))
+        popup.value.wait_for_url(re.compile(r"^blob:"))                # over https the new tab gets its address a moment later
 
 
 if __name__ == "__main__":

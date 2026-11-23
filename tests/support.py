@@ -120,7 +120,7 @@ class SiteCase(unittest.TestCase):
         self.context.set_default_timeout(20000)
         # everything outside the local server (fonts, CDNs) is dropped; Playwright tries the last registered route first,
         # so the Supabase route goes after it
-        self.context.route(re.compile(r"^(?!http://127\.0\.0\.1).*"), lambda route: route.abort())
+        self.context.route(re.compile(r"^(?!%s).*" % re.escape(self.base)), lambda route: route.abort())     # only the site under test
         self.context.route(re.compile(r"https://[^/]*supabase\.co/.*"), lambda route: self.db.handle(route))
         self.page = self.context.new_page()
         self.errors = []
