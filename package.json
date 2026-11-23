@@ -1,0 +1,12 @@
+{
+  "name": "phiz-rfcs",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "start": "npm run start -w apps/web",
+    "check:pages": "npm run check:pages -w apps/web"
+  },
+  "engines": { "node": ">=24" }
+}

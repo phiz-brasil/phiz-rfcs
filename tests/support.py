@@ -1,13 +1,18 @@
-"""Shared setup of the browser tests: build the site once, serve dist/ on a free port, start a browser, and give every test a
-fresh context where Supabase is a FakeSupabase and nothing else leaves the machine."""
+"""Shared setup of the browser tests: start the site once (the Next.js app by default, see _Site), start a browser, and give every test
+a fresh context where Supabase is a FakeSupabase and nothing else leaves the machine."""
+import atexit
 import base64
 import functools
 import http.server
 import os
 import re
+import signal
+import socket
 import subprocess
 import sys
 import threading
+import time
+import urllib.request
 import struct
 import unittest
 import zlib
@@ -56,14 +61,52 @@ def import_rfc(db, rfc_id):
             db.add_asset(rfc_id, name, rev["rev"], png_bytes(4, 3))
 
 
+class _Site:
+    """The site under test, started once per run and shared by every test class:
+    - default: the Next.js app (apps/web), built with `npm run build` and served by `next start`;
+    - SITE=static: the old static build (tools/build.py), served from dist/ (to compare the two while both exist);
+    - SITE_URL=<address>: a site that is already running (a preview deployment, `npm run dev`…).
+    SKIP_BUILD=1 reuses the last Next.js build."""
+    url = None
+    proc = None
+    server = None
+
+    @classmethod
+    def start(cls):
+        if cls.url:
+            return cls.url
+        if os.environ.get("SITE_URL"):
+            cls.url = os.environ["SITE_URL"].rstrip("/")
+        elif os.environ.get("SITE") == "static":
+            subprocess.run([sys.executable, str(ROOT / "tools" / "build.py")], cwd=ROOT, check=True, capture_output=True)
+            cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=str(ROOT / "dist")))
+            threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+            cls.url = f"http://127.0.0.1:{cls.server.server_address[1]}"
+        else:
+            if not os.environ.get("SKIP_BUILD"):
+                subprocess.run(["npm", "run", "build"], cwd=ROOT, check=True, capture_output=True)
+            with socket.socket() as s:
+                s.bind(("127.0.0.1", 0))
+                port = s.getsockname()[1]
+            cls.proc = subprocess.Popen([str(ROOT / "node_modules" / ".bin" / "next"), "start", "-p", str(port), "-H", "127.0.0.1"],
+                                        cwd=ROOT / "apps" / "web", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            atexit.register(lambda: os.killpg(cls.proc.pid, signal.SIGTERM))
+            cls.url = f"http://127.0.0.1:{port}"
+            for _ in range(300):
+                try:
+                    urllib.request.urlopen(cls.url + "/", timeout=2).close()
+                    break
+                except OSError:
+                    time.sleep(0.2)
+            else:
+                raise RuntimeError("next start did not answer")
+        return cls.url
+
+
 class SiteCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        subprocess.run([sys.executable, str(ROOT / "tools" / "build.py")], cwd=ROOT, check=True, capture_output=True)
-        handler = functools.partial(Quiet, directory=str(ROOT / "dist"))
-        cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
-        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
-        cls.base = f"http://127.0.0.1:{cls.server.server_address[1]}"
+        cls.base = _Site.start()
         cls.pw = sync_playwright().start()
         cls.browser = cls.pw.chromium.launch(channel=os.environ.get("PW_CHANNEL") or None)
 
@@ -71,7 +114,6 @@ class SiteCase(unittest.TestCase):
     def tearDownClass(cls):
         cls.browser.close()
         cls.pw.stop()
-        cls.server.shutdown()
 
     def setUp(self):
         self.db = FakeSupabase()
@@ -84,6 +126,10 @@ class SiteCase(unittest.TestCase):
         self.page = self.context.new_page()
         self.errors = []
         self.page.on("pageerror", lambda e: self.errors.append(str(e)))
+
+    def serve_page(self, path, html):
+        """A page that exists only for the test, answered by the browser itself (the site is not touched)."""
+        self.context.route(self.base + path, lambda route: route.fulfill(status=200, content_type="text/html; charset=utf-8", body=html))
 
     def tearDown(self):
         self.context.close()
