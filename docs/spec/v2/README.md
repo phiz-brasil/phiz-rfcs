@@ -62,7 +62,7 @@ Each phase is one pull request (or a short series), reviewable and testable on i
 | 5 | The B2B board (V4 stages, configurable columns, gate checklists) and the project kanban | kanban |
 | 6 | Roadmap from the themes' dates and milestones | roadmap |
 | 7 | Metrics: lead, delivery and cycle time, CFD, throughput, WIP, aging | metrics page |
-| 8 | Attachments hub (any kind of file, notes, links) | attachments tab |
+| 8 | Attachments hub (any kind of file, notes, links); the frozen archive of PHZ-0001 and PHZ-0002 moves in as attachments | attachments tab |
 | 9 | Slide export (one or many themes) and AI suggestions for the three answers | slides |
 
 Phase 1 changes no behavior on purpose: it is the riskiest move (new runtime, new host) and the compatibility suite is what proves it.

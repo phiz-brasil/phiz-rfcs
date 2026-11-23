@@ -145,6 +145,10 @@ links. Versions of the RFC document stay as they are (decision of 2026-11-23); a
   of its RFC in a group of their own; another page lists attachments across themes with filters.
 - Files go straight from the browser to Storage with a signed upload address the server issues after checking size (proposal: 50 MB).
   Audio and video play in the page; HTML is a download; notes render with the RFC renderer.
+- **The frozen archive moves in.** What the first two RFCs left outside the database (`apps/web/legacy/`: the versions of PHZ-0001 and
+  PHZ-0002 archived as HTML pages, the pictures they use, and the OpenAPI reference of PHZ-0001) becomes attachments of those themes in this
+  phase, and `apps/web/legacy/` is removed; the old addresses (`/rfcs/<ID>/v1.0.html`, `/rfcs/PHZ-0001/openapi/`) redirect to the attachments.
+  After that the repository holds no RFC content (decision of 2026-11-23).
 
 ## Executive summary and slides
 
