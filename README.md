@@ -131,6 +131,7 @@ The database is described by numbered files in [`supabase/migrations`](supabase/
 | `20261124000000_themes` | fronts, themes, execution items, dependencies, Jira links and the event log; the RFCs become themes (`/themes/`) |
 | `20261125000000_theme_translations` | `themes.text_meta` (which languages of a text are machine translations) and `update_theme` keeping it |
 | `20261126000000_weekly_updates` | weekly updates, blockers and decisions of the themes (`theme_updates`, `theme_blockers`, `theme_decisions`) and the functions that write them |
+| `20261127000000_board_columns` | the B2B board: `stage_gates` (the V4 gates, seeded), `board_columns` (the ten default columns), `theme_gate_checks`, and the functions to move a card, tick a gate and configure columns |
 
 Every file is idempotent (`if not exists` / `or replace`), so applying all of them again is safe. To change the database, add a **new** file with a later timestamp; never edit one that has been applied. Apply a new file in the Supabase **SQL Editor** (paste and run) or with `supabase db push`.
 
@@ -148,6 +149,12 @@ theme; every update is kept), **blockers** and **decisions** (who, by when, and 
 is the **executive view**: what needs the leadership on top, then every theme by front with its progress sentence, owner, status, estimate, next
 milestones (execution items marked as milestones) and flags (*no update this week*, open blockers and decisions), with filters. **Reader mode**
 (button in the header, remembered; `?mode=reader` or `?mode=edit` in a link) hides every control to create or edit.
+
+`/board/` is the **B2B board**: the project themes of every front (a swimlane per front) on the columns of the board, each column mapping to one of the ten
+V4 stages. A card moves by drag or by its *Move to* menu; every move is one `move` event (from/to column and stage, who, the open gates, and a reason
+when the move skips a stage of the theme's route or leaves it). **Gates** (the checklist of the standard, on each project theme) are ticked with an
+evidence; an open gate warns on the card and never blocks. **Columns** are configurable (name in three languages, stage, optional WIP limit, order);
+there are no admins until the sign-in phase, so for now anyone with a name can configure them.
 
 ## The app (Next.js)
 

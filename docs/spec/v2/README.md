@@ -100,6 +100,14 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   same webhook to three more tables. Reader mode only hides controls: it is not a permission (there are no profiles until the sign-in phase,
   decision of 2026-11-23).
 
+- **Phase 5 (this branch)**: the B2B board at `/board/` (migration `20261127000000_board_columns.sql`): configurable columns (each maps to one stage, several
+  may map to the same one), a swimlane per front, drag or menu to move, one `move` event per move with the gates that were open, a mandatory reason
+  when a move skips a stage of the route or leaves it (routes: full 01–10, bug 06–10, P0 07–10), the gate checklist on each project theme (ticked
+  with an evidence; open gates warn, non-waivable ones in red), WIP limits, filters (front, tag, owner, status, blocked, aging), and the "no Jira link
+  from 04" warning. The project kanban of the execution items already existed (phase 3). Column configuration is open to anyone with a name until the
+  sign-in phase makes it admin-only. A `move` event is the stage change of that move (it replaces the `stage` event the theme form writes); the metrics
+  phase must read both.
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)
