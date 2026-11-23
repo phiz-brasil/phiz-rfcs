@@ -58,6 +58,8 @@ export const T: Dict = {
   kpi_at_risk: { pt: "Em risco ou bloqueados", en: "At risk or blocked", zh: "有风险或受阻" },
   kpi_stale: { pt: "Sem atualização na semana", en: "No update this week", zh: "本周未更新" },
   kpi_leadership: { pt: "Pedem a liderança", en: "Need leadership", zh: "需要管理层处理" },
+  userMenu: { pt: "Preferências", en: "Preferences", zh: "偏好设置" },
+  frontSummary: { pt: "Por frente", en: "By front", zh: "按业务线" },
   navDocs: { pt: "Documentos", en: "Documents", zh: "文档" },
   rfcs: { pt: "RFCs", en: "RFCs", zh: "RFC" },
   newRfc: { pt: "Nova RFC", en: "New RFC", zh: "新建 RFC" },

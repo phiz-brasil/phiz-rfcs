@@ -28,7 +28,9 @@ class BoardTest(SiteCase):
         expect(self.page.locator("article.kcard").first).to_be_visible()
 
     def sign(self, name="Ana"):
+        self.prefs()
         self.page.get_by_label("Seu nome").fill(name)
+        self.page.keyboard.press("Escape")
 
     def card(self, tid):
         return self.page.locator(f'article.kcard[data-theme="{tid}"]')

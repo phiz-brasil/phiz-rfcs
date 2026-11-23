@@ -7,10 +7,10 @@ layout of nium.com/developers).
 
 | from the reference layout | in this app |
 |---|---|
-| near-black top bar, boxed monospace wordmark | `PHIZCHAT` in the bright PhizChat green, main menu, a *Documents* menu, name / reader mode / language on the right |
-| warm stone page, white rounded panels | page `#ECEAE3`, panels white with 18 px corners; filter bars on a lighter stone panel |
+| dark top bar, boxed monospace wordmark | a deep PhizChat green bar (`#0B3B22`) with `PHIZCHAT` in the bright green; three menus (*Tracking*: executive view, B2B board, roadmap, metrics; *Portfolio*: themes; *Documents*: RFCs, attachments, comments) and a *Preferences* menu (name, reader mode, language) |
+| warm stone page, white rounded panels | a light green-grey page (`#EEF1EC`), white panels with 12 px corners, compact spacing for daily use |
 | monospace uppercase eyebrows over light display headings | an eyebrow (*Tracking*, *Portfolio*, *Documents*) over a light 300-weight heading |
-| big numbers split by thin rules | the KPI band of the executive view (each number is also a filter) |
+| big numbers split by thin rules | the KPI band of the executive view on the dark green (each number is also a filter), and the same numbers per front in a table below it |
 | one loud highlight block | the yellow *Needs leadership* block |
 
 Colours come from the PhizChat app (`sources/PHZ-0001/whatsapp-design/phiz.css`): green `#15803D` (action), bright green `#25D366` (brand mark,
@@ -20,7 +20,7 @@ mode in this version.
 
 ## Parts
 
-1. **Foundations and navigation** (done): tokens, top bar with grouped menu, page head, panels, cards, tables, badges, the KPI band on the executive view.
+1. **Foundations and navigation** (done; adjusted after review: grouped menus, greener, more compact, numbers per front): tokens, top bar with grouped menu, page head, panels, cards, tables, badges, the KPI band on the executive view.
 2. **Consolidated overview**: one home page for leadership (KPIs, what needs attention, each front in one line, next milestones), and the executive
    view as a compact table instead of one card per theme.
 3. **Theme page and lists**: the theme page in sections/tabs (summary, updates, items, gates, attachments, history) with the editing form folded away;
