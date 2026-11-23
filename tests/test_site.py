@@ -4,7 +4,8 @@ The RFCs are the ones of rfcs/ as the importer leaves them in the database (test
   .venv/bin/python -m unittest discover -s tests -v
 
 Locally, use your installed Chrome:  PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests -v
-(CI installs Playwright's own Chromium). The tests build the site first (tools/build.py) and serve dist/ on a free port.
+(CI installs Playwright's own Chromium). The tests build and start the Next.js app first (tests/support.py, _Site); SITE=static runs
+them against the old static build instead.
 """
 import sys
 import unittest

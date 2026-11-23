@@ -69,13 +69,9 @@ def canon(html):
 
 
 class ParityTest(SiteCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        (ROOT / "dist" / "__render_host.html").write_text(HOST, encoding="utf-8")
-
     def setUp(self):
         super().setUp()
+        self.serve_page("/__render_host.html", HOST)      # a bare page that loads the renderer modules
         self.page.goto(self.base + "/__render_host.html")
         self.page.wait_for_function("window.ready === true")
 
