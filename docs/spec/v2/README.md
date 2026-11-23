@@ -108,6 +108,10 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   sign-in phase makes it admin-only. A `move` event is the stage change of that move (it replaces the `stage` event the theme form writes); the metrics
   phase must read both.
 
+- **Phase 6 (this branch)**: the roadmap at `/roadmap/` (no new migration): the time axis is whole months covering every date shown and today; a theme is a bar
+  (start to estimate), or a marker when it has one date; milestones are diamonds; open themes past their estimate are flagged *Overdue*; themes with
+  no dates are listed under the timeline. Filters: status, front, tag, owner. Everything is read from `themes` and the milestone items.
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)
