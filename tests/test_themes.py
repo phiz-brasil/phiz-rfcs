@@ -19,6 +19,9 @@ class ThemesTest(SiteCase):
         db.seed_theme("PHZ-0002", "payments", title={"pt": "Migração CredPay"}, tags=["china"], due_date="2026-12-15")
         db.seed_theme("PHZ-0010", "outros", kind="task", title={"pt": "Game Center"})
 
+    def tform(self):
+        return self.page.get_by_role("form", name="theme")             # the theme's own form (the weekly update has fields with the same labels)
+
     def themes(self):
         self.page.goto(self.base + "/themes/")
         expect(self.page.locator(".card-li").first).to_be_visible()
@@ -78,7 +81,7 @@ class ThemesTest(SiteCase):
         self.page.goto(self.base + "/themes/PHZ-0002/")
         expect(self.page.locator("h1")).to_have_text("Migração CredPay")
         self.sign("Ana")
-        self.page.get_by_label("Frente").select_option("pop")
+        self.tform().get_by_label("Frente").select_option("pop")
         self.page.get_by_role("button", name="Salvar").click()
         expect(self.page.locator(".note[role=status]").first).to_have_text("Salvo.")
         fn, body = self.db.calls[-1]
@@ -107,13 +110,13 @@ class ThemesTest(SiteCase):
     def test_text_is_written_per_language_and_the_other_languages_are_kept(self):
         self.page.goto(self.base + "/themes/PHZ-0001/")
         self.sign()
-        self.page.get_by_label("Andamento (uma frase)").fill("Contrato fechado com o parceiro")
+        self.tform().get_by_label("Andamento (uma frase)").fill("Contrato fechado com o parceiro")
         self.page.get_by_role("button", name="Salvar").click()
         expect(self.page.locator(".note[role=status]").first).to_have_text("Salvo.")
         self.assertEqual(self.db.themes["PHZ-0001"]["progress"], {"pt": "Contrato fechado com o parceiro"})
         self.page.get_by_role("button", name="EN-US").click()
-        expect(self.page.get_by_label("Progress (one sentence)")).to_have_attribute("placeholder", "Contrato fechado com o parceiro")
-        self.page.get_by_label("Progress (one sentence)").fill("Contract closed with the partner")
+        expect(self.tform().get_by_label("Progress (one sentence)")).to_have_attribute("placeholder", "Contrato fechado com o parceiro")
+        self.tform().get_by_label("Progress (one sentence)").fill("Contract closed with the partner")
         self.page.get_by_role("button", name="Save").click()
         expect(self.page.locator(".note[role=status]").first).to_have_text("Saved.")
         self.assertEqual(self.db.themes["PHZ-0001"]["progress"], {"pt": "Contrato fechado com o parceiro", "en": "Contract closed with the partner"})
@@ -124,7 +127,7 @@ class ThemesTest(SiteCase):
         self.page.goto(self.base + "/themes/PHZ-0001/")
         self.sign()
         self.page.get_by_role("button", name="EN-US").click()
-        field = self.page.get_by_label("Progress (one sentence)")
+        field = self.tform().get_by_label("Progress (one sentence)")
         expect(field).to_have_value("Contract closed")
         expect(self.page.locator(".field .from.auto")).to_have_text("machine translation")
         field.fill("Contract signed")
@@ -144,10 +147,10 @@ class ThemesTest(SiteCase):
     def test_status_stage_dates_owner_and_tags_are_saved(self):
         self.page.goto(self.base + "/themes/PHZ-0001/")
         self.sign()
-        self.page.get_by_label("Status").select_option("at_risk")
-        self.page.get_by_label("Etapa").select_option("5")
-        self.page.get_by_label("Conclusão estimada").fill("2026-12-20")
-        self.page.get_by_label("Etiquetas (separadas por vírgula)").fill("Mission China, #q1")
+        self.tform().get_by_label("Status").select_option("at_risk")
+        self.tform().get_by_label("Etapa").select_option("5")
+        self.tform().get_by_label("Conclusão estimada").fill("2026-12-20")
+        self.tform().get_by_label("Etiquetas (separadas por vírgula)").fill("Mission China, #q1")
         self.page.get_by_role("button", name="Salvar").click()
         expect(self.page.locator(".note[role=status]").first).to_have_text("Salvo.")
         t = self.db.themes["PHZ-0001"]
@@ -158,7 +161,7 @@ class ThemesTest(SiteCase):
     def test_a_task_has_no_stage_and_no_execution_items(self):
         self.page.goto(self.base + "/themes/PHZ-0010/")
         expect(self.page.locator("h1")).to_have_text("Game Center")
-        self.assertEqual(self.page.get_by_label("Etapa").count(), 0)
+        self.assertEqual(self.tform().get_by_label("Etapa").count(), 0)
         self.assertEqual(self.page.get_by_role("region", name="Itens de execução").count(), 0)
 
     def test_execution_items_are_added_and_moved_between_columns(self):
@@ -207,7 +210,7 @@ class ThemesTest(SiteCase):
 
     def test_a_name_is_required_to_save_and_a_rate_limit_is_explained(self):
         self.page.goto(self.base + "/themes/PHZ-0001/")
-        self.page.get_by_label("Status").select_option("paused")
+        self.tform().get_by_label("Status").select_option("paused")
         self.page.get_by_role("button", name="Salvar").click()
         expect(self.page.locator(".note[role=status]").first).to_have_text("Informe seu nome para salvar.")
         self.assertEqual(self.db.calls, [])

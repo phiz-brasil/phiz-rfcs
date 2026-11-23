@@ -11,6 +11,22 @@ export type Theme = {
   text_meta?: Record<string, string[]> | null;        // per text field, the languages that are machine translations
 };
 export type Item = { id: string; theme_id: string; title: string; owner: string | null; col: string; due_date: string | null; milestone: boolean; created_at: string };
+export type Update = {
+  id: string; theme_id: string; week: string; edited_by: string; created_at: string; progress: I18n; advanced: I18n; next_step: I18n;
+  status_from: string | null; status_to: string | null; due_from: string | null; due_to: string | null; due_reason: string | null;
+  text_meta?: Record<string, string[]> | null;
+};
+export type Blocker = {
+  id: string; theme_id: string; item_id: string | null; what: I18n; owner: string | null; due_date: string | null; needs_leadership: boolean;
+  state: "open" | "resolved"; how_resolved: I18n; resolved_at: string | null; resolved_by: string | null; created_at: string; created_by: string;
+  text_meta?: Record<string, string[]> | null;
+};
+export type Decision = {
+  id: string; theme_id: string; item_id: string | null; what: I18n; decider: string | null; due_date: string | null; needs_leadership: boolean;
+  state: "open" | "decided" | "dropped"; decision: I18n; decided_at: string | null; decided_by: string | null; created_at: string; created_by: string;
+  text_meta?: Record<string, string[]> | null;
+};
+export type Milestone = { id: string; theme_id: string; title: string; due_date: string | null; col: string };
 export type Link = { theme_id: string; to_theme: string; kind: string };
 export type Jira = { id: string; theme_id: string; item_id: string | null; url: string; label: string | null; issue_key: string | null };
 export type EventRow = { id: string; theme_id: string; item_id: string | null; at: string; edited_by: string; field: string; old_value: unknown; new_value: unknown };
@@ -48,6 +64,19 @@ export function client({ url, key }: Supabase) {
     events: (id: string) => request<EventRow[]>(`theme_events?select=*&theme_id=eq.${q(id)}&order=at.desc&limit=40`),
     rfc: async (id: string) => (await request<{ rfc_id: string; version: string }[]>(`rfc_live_current?select=rfc_id,version&rfc_id=eq.${q(id)}`))[0] ?? null,
     titles: (ids: string[]) => request<{ id: string; title: I18n }[]>(`themes?select=id,title&id=in.(${ids.map(q).join(",")})`),
+    updates: (id: string) => request<Update[]>(`theme_updates?select=*&theme_id=eq.${q(id)}&order=created_at.desc&limit=30`),
+    blockers: (id: string) => request<Blocker[]>(`theme_blockers?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
+    decisions: (id: string) => request<Decision[]>(`theme_decisions?select=*&theme_id=eq.${q(id)}&order=created_at.desc`),
+    // for the executive view: what it needs across every theme
+    updateWeeks: () => request<{ theme_id: string; week: string }[]>("theme_updates?select=theme_id,week&order=created_at.desc&limit=3000"),
+    openBlockers: () => request<Blocker[]>("theme_blockers?select=*&state=eq.open&order=created_at"),
+    openDecisions: () => request<Decision[]>("theme_decisions?select=*&state=eq.open&order=created_at"),
+    milestones: () => request<Milestone[]>("theme_items?select=id,theme_id,title,due_date,col&milestone=eq.true&order=due_date"),
+    postUpdate: (theme: string, p: Record<string, unknown>, by: string) => rpc<{ id: string; week: string }>("post_theme_update", { p_theme: theme, p, p_by: by }),
+    saveBlocker: (theme: string, id: string | null, p: Record<string, unknown>, by: string) => rpc("save_theme_blocker", { p_theme: theme, p_id: id, p, p_by: by }),
+    resolveBlocker: (id: string, how: I18n, by: string) => rpc("resolve_theme_blocker", { p_id: id, p_how: how, p_by: by }),
+    saveDecision: (theme: string, id: string | null, p: Record<string, unknown>, by: string) => rpc("save_theme_decision", { p_theme: theme, p_id: id, p, p_by: by }),
+    decideDecision: (id: string, state: "decided" | "dropped", decision: I18n, by: string) => rpc("decide_theme_decision", { p_id: id, p_state: state, p_decision: decision, p_by: by }),
     createTheme: (p: Record<string, unknown>, by: string) => rpc<{ id: string }>("create_theme", { p, p_by: by }),
     updateTheme: (id: string, p: Record<string, unknown>, by: string) => rpc("update_theme", { p_id: id, p, p_by: by }),
     updateFront: (key: string, p: Record<string, unknown>, by: string) => rpc("update_front", { p_key: key, p, p_by: by }),

@@ -6,6 +6,13 @@
 // language a person typed is never overwritten. The function's own write marks its targets as machine in text_meta, so the webhook it
 // triggers finds no person-typed change and does nothing.
 export const FIELDS = ["title", "what_it_is", "progress", "problem", "solution", "success"] as const;
+// the tables the webhooks watch and the {pt, en, zh} text fields of each (all of them have text_meta)
+export const TABLE_FIELDS: Record<string, readonly string[]> = {
+  themes: FIELDS,
+  theme_updates: ["progress", "advanced", "next_step"],
+  theme_blockers: ["what", "how_resolved"],
+  theme_decisions: ["what", "decision"],
+};
 export const LANGS = ["pt", "en", "zh"] as const;
 export type Lang = typeof LANGS[number];
 type Texts = Partial<Record<Lang, string>>;
@@ -14,9 +21,9 @@ export type Job = { field: string; src: Lang; text: string; targets: Lang[] };
 
 const filled = (s: string | undefined) => (s ?? "").trim().length > 0;
 
-export function translationPlan(oldRec: ThemeRow | null | undefined, rec: ThemeRow): Job[] {
+export function translationPlan(oldRec: ThemeRow | null | undefined, rec: ThemeRow, fields: readonly string[] = FIELDS): Job[] {
   const jobs: Job[] = [];
-  for (const field of FIELDS) {
+  for (const field of fields) {
     const before = ((oldRec?.[field] as Texts | undefined) ?? {});
     const now = ((rec[field] as Texts | undefined) ?? {});
     const machine = new Set<string>(rec.text_meta?.[field] ?? []);

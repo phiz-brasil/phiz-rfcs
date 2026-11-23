@@ -8,10 +8,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def plan(old, rec):
-    code = ("import { translationPlan } from './supabase/functions/translate-comment/themes.ts';"
-            "const [o, r] = JSON.parse(process.argv[1]); console.log(JSON.stringify(translationPlan(o, r)));")
-    out = subprocess.run(["node", "--input-type=module", "-e", code, json.dumps([old, rec])], cwd=ROOT, capture_output=True, text=True, check=True)
+def plan(old, rec, table="themes"):
+    code = ("import { translationPlan, TABLE_FIELDS } from './supabase/functions/translate-comment/themes.ts';"
+            "const [o, r, t] = JSON.parse(process.argv[1]); console.log(JSON.stringify(translationPlan(o, r, TABLE_FIELDS[t])));")
+    out = subprocess.run(["node", "--input-type=module", "-e", code, json.dumps([old, rec, table])], cwd=ROOT, capture_output=True, text=True, check=True)
     return json.loads(out.stdout)
 
 
@@ -44,6 +44,15 @@ class TranslationPlan(unittest.TestCase):
         rec = {"progress": {"pt": "Texto", "en": "Corrected", "zh": "文本"}, "text_meta": {"progress": ["zh"]}}
         jobs = plan({"progress": {"pt": "Texto", "en": "Text", "zh": "文本"}}, rec)
         self.assertEqual(jobs, [{"field": "progress", "src": "en", "text": "Corrected", "targets": ["zh"]}])
+
+    def test_weekly_updates_blockers_and_decisions_are_translated_too(self):
+        jobs = plan(None, {"progress": {"pt": "Vai bem"}, "advanced": {"pt": "Contrato"}, "next_step": {}, "text_meta": {}}, "theme_updates")
+        self.assertEqual([(j["field"], j["targets"]) for j in jobs], [("progress", ["en", "zh"]), ("advanced", ["en", "zh"])])
+        jobs = plan({"what": {"pt": "Bloqueio"}, "how_resolved": {}}, {"what": {"pt": "Bloqueio"}, "how_resolved": {"en": "Fixed"}, "text_meta": {}}, "theme_blockers")
+        self.assertEqual(jobs, [{"field": "how_resolved", "src": "en", "text": "Fixed", "targets": ["pt", "zh"]}])
+        jobs = plan(None, {"what": {"zh": "决定什么"}, "decision": {}, "text_meta": {}}, "theme_decisions")
+        self.assertEqual(jobs[0]["targets"], ["pt", "en"])
+        self.assertEqual(plan(None, {"what": {"pt": "x"}, "text_meta": {}}, "themes"), [])       # `what` is not a field of themes
 
     def test_clearing_a_text_or_changing_other_fields_translates_nothing(self):
         self.assertEqual(plan({"progress": {"pt": "A"}}, {"progress": {"pt": ""}, "text_meta": {}}), [])

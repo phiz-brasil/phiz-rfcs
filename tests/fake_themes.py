@@ -8,7 +8,7 @@ STATUSES = ("not_started", "on_track", "at_risk", "blocked", "paused", "done", "
 COLS = ("todo", "doing", "blocked", "done")
 FRONTS = [("pop", "POP", 1, False), ("api-platform", "API Platform", 2, False), ("mini-apps", "Mini-Apps", 3, False),
           ("payments", "Payments", 4, False), ("product-center", "Product Center", 5, False), ("outros", "Outros", 99, True)]
-TABLES = ("fronts", "themes", "theme_items", "theme_links", "theme_jira", "theme_events")
+TABLES = ("fronts", "themes", "theme_items", "theme_links", "theme_jira", "theme_events", "theme_updates", "theme_blockers", "theme_decisions")
 
 
 def now():
@@ -24,6 +24,8 @@ class ThemesMixin:
         self.fronts = [{"key": k, "name": {"pt": n, "en": n, "zh": n}, "scope": {"pt": f"Escopo de {n}", "en": f"Scope of {n}", "zh": ""}, "ord": o, "is_other": other}
                        for k, n, o, other in FRONTS]
         self.themes, self.items, self.links, self.jira, self.events = {}, [], [], [], []
+        self.updates, self.blockers, self.decisions = [], [], []
+        self.week = "2026-W48"                            # the ISO week the "server" is in
 
     # -- test helpers -----------------------------------------------------------
     def seed_theme(self, tid, front="payments", kind="project", title=None, **extra):
@@ -45,6 +47,28 @@ class ThemesMixin:
     def event(self, theme_id, by, field, old=None, new=None, item_id=None):
         self.events.append({"id": str(uuid.uuid4()), "theme_id": theme_id, "item_id": item_id, "at": now(), "edited_by": by, "field": field,
                             "old_value": old, "new_value": new})
+
+    def seed_update(self, tid, week=None, progress=None, by="Ana", **extra):
+        row = {"id": str(uuid.uuid4()), "theme_id": tid, "week": week or self.week, "edited_by": by, "created_at": now(),
+               "progress": progress or {"pt": "Tudo certo"}, "advanced": {}, "next_step": {}, "status_from": None, "status_to": None,
+               "due_from": None, "due_to": None, "due_reason": None, "text_meta": {}}
+        row.update(extra)
+        self.updates.append(row)
+        return row
+
+    def seed_blocker(self, tid, what, leadership=False, state="open", **extra):
+        row = {"id": str(uuid.uuid4()), "theme_id": tid, "item_id": None, "what": what, "owner": None, "due_date": None, "needs_leadership": leadership,
+               "state": state, "how_resolved": {}, "resolved_at": None, "resolved_by": None, "created_at": now(), "created_by": "Ana", "text_meta": {}}
+        row.update(extra)
+        self.blockers.append(row)
+        return row
+
+    def seed_decision(self, tid, what, leadership=False, state="open", **extra):
+        row = {"id": str(uuid.uuid4()), "theme_id": tid, "item_id": None, "what": what, "decider": None, "due_date": None, "needs_leadership": leadership,
+               "state": state, "decision": {}, "decided_at": None, "decided_by": None, "created_at": now(), "created_by": "Ana", "text_meta": {}}
+        row.update(extra)
+        self.decisions.append(row)
+        return row
 
     # -- the functions ----------------------------------------------------------
     @staticmethod
@@ -186,11 +210,104 @@ class ThemesMixin:
             self.links = [x for x in self.links if x != row]
             self.event(theme, by.strip(), "link_removed", {"to": to, "kind": kind}, None)
 
+    def post_theme_update(self, theme, p, by):
+        self._name(by)
+        t = self.themes.get(theme)
+        if not t or t["hidden"]:
+            raise Invalid("unknown theme")
+        self._i18n(p.get("progress") or {}, 1200, True)
+        self._i18n(p.get("advanced") or {}, 2000, False)
+        self._i18n(p.get("next_step") or {}, 2000, False)
+        st = p.get("status")
+        if st is not None and st not in STATUSES:
+            raise Invalid("invalid status")
+        if len(p.get("due_reason") or "") > 300:
+            raise Invalid("invalid reason")
+        due_set = "due_date" in p
+        due = (p.get("due_date") or None) if due_set else None
+        status_changed = st is not None and st != t["status"]
+        due_changed = due_set and due != t["due_date"]
+        row = {"id": str(uuid.uuid4()), "theme_id": theme, "week": self.week, "edited_by": by.strip(), "created_at": now(), "progress": p["progress"],
+               "advanced": p.get("advanced") or {}, "next_step": p.get("next_step") or {},
+               "status_from": t["status"] if status_changed else None, "status_to": st if status_changed else None,
+               "due_from": t["due_date"] if due_changed else None, "due_to": due if due_changed else None,
+               "due_reason": (p.get("due_reason") or "").strip() or None, "text_meta": {}}
+        self.updates.append(row)
+        old_status, old_due = t["status"], t["due_date"]
+        t["progress"] = p["progress"]
+        t["text_meta"].pop("progress", None)
+        t["status"] = st or t["status"]
+        if due_set:
+            t["due_date"] = due
+        t["updated_at"] = now()
+        self.event(theme, by.strip(), "update_posted", None, self.week)
+        if status_changed:
+            self.event(theme, by.strip(), "status", old_status, st)
+        if due_changed:
+            self.event(theme, by.strip(), "due_date", old_due, due)
+        return {"id": row["id"], "week": self.week}
+
+    def _record(self, table, theme, rid, p, by, kind):
+        self._name(by)
+        t = self.themes.get(theme)
+        if not t or t["hidden"]:
+            raise Invalid("unknown theme")
+        item = p.get("item_id") or None
+        if item and not any(i["id"] == item and i["theme_id"] == theme for i in self.items):
+            raise Invalid("unknown item")
+        who = "owner" if kind == "blocker" else "decider"
+        if "what" in p:
+            self._i18n(p["what"], 1200, True)
+        if rid is None:
+            self._i18n(p.get("what") or {}, 1200, True)
+            row = (self.seed_blocker if kind == "blocker" else self.seed_decision)(theme, p["what"], bool(p.get("needs_leadership")),
+                                                                                 item_id=item, due_date=p.get("due_date") or None, created_by=by.strip(), **{who: (p.get(who) or "").strip() or None})
+            self.event(theme, by.strip(), f"{kind}_added", None, p["what"], item)
+            return {"id": row["id"]}
+        row = next((r for r in table if r["id"] == rid and r["theme_id"] == theme), None)
+        if not row:
+            raise Invalid(f"unknown {kind}")
+        before = dict(row["what"])
+        for k in ("what", who, "due_date", "needs_leadership"):
+            if k in p:
+                row[k] = (p[k] or None) if k in (who, "due_date") else p[k]
+        for lg in ("pt", "en", "zh"):
+            if before.get(lg) != row["what"].get(lg):
+                row["text_meta"]["what"] = [x for x in row["text_meta"].get("what", []) if x != lg]
+        return {"id": rid}
+
+    def save_theme_blocker(self, theme, rid, p, by):
+        return self._record(self.blockers, theme, rid, p, by, "blocker")
+
+    def save_theme_decision(self, theme, rid, p, by):
+        return self._record(self.decisions, theme, rid, p, by, "decision")
+
+    def resolve_theme_blocker(self, rid, how, by):
+        self._name(by)
+        b = next((r for r in self.blockers if r["id"] == rid and r["state"] == "open"), None)
+        if not b:
+            raise Invalid("unknown blocker")
+        self._i18n(how or {}, 1200, False)
+        b.update(state="resolved", how_resolved=how or {}, resolved_at=now(), resolved_by=by.strip())
+        self.event(b["theme_id"], by.strip(), "blocker_resolved", b["what"], None, b["item_id"])
+
+    def decide_theme_decision(self, rid, state, decision, by):
+        self._name(by)
+        if state not in ("decided", "dropped"):
+            raise Invalid("invalid state")
+        d = next((r for r in self.decisions if r["id"] == rid and r["state"] == "open"), None)
+        if not d:
+            raise Invalid("unknown decision")
+        self._i18n(decision or {}, 1200, state == "decided")
+        d.update(state=state, decision=decision or {}, decided_at=now(), decided_by=by.strip())
+        self.event(d["theme_id"], by.strip(), f"decision_{state}", d["what"], decision, d["item_id"])
+
     # -- the HTTP side ----------------------------------------------------------
     def themes_handle(self, path, q, body, ok):
         """True when the request was about themes (and has been answered)."""
         fn = path.rsplit("/", 1)[1]
-        if "/rpc/" in path and fn in ("create_theme", "update_theme", "update_front", "save_theme_item", "add_theme_jira", "remove_theme_jira", "set_theme_link"):
+        if "/rpc/" in path and fn in ("create_theme", "update_theme", "update_front", "save_theme_item", "add_theme_jira", "remove_theme_jira", "set_theme_link",
+                                      "post_theme_update", "save_theme_blocker", "resolve_theme_blocker", "save_theme_decision", "decide_theme_decision"):
             self.calls.append((fn, body))
             if self.rate_limited:
                 ok({"message": "rate limit"}, 429)
@@ -204,6 +321,11 @@ class ThemesMixin:
                     "add_theme_jira": lambda: self.add_theme_jira(body["p_theme"], body["p_item"], body["p_url"], body["p_label"], body["p_by"]),
                     "remove_theme_jira": lambda: self.remove_theme_jira(body["p_id"], body["p_by"]),
                     "set_theme_link": lambda: self.set_theme_link(body["p_theme"], body["p_to"], body["p_kind"], body["p_on"], body["p_by"]),
+                    "post_theme_update": lambda: self.post_theme_update(body["p_theme"], body["p"], body["p_by"]),
+                    "save_theme_blocker": lambda: self.save_theme_blocker(body["p_theme"], body["p_id"], body["p"], body["p_by"]),
+                    "resolve_theme_blocker": lambda: self.resolve_theme_blocker(body["p_id"], body["p_how"], body["p_by"]),
+                    "save_theme_decision": lambda: self.save_theme_decision(body["p_theme"], body["p_id"], body["p"], body["p_by"]),
+                    "decide_theme_decision": lambda: self.decide_theme_decision(body["p_id"], body["p_state"], body["p_decision"], body["p_by"]),
                 }[fn]()
             except Invalid as e:
                 ok({"message": str(e)}, 400)
@@ -214,12 +336,13 @@ class ThemesMixin:
         if table not in TABLES:
             return False
         rows = {"fronts": self.fronts, "themes": [t for t in self.themes.values() if not t["hidden"]], "theme_items": self.items,
-                "theme_links": self.links, "theme_jira": self.jira, "theme_events": self.events}[table]
+                "theme_links": self.links, "theme_jira": self.jira, "theme_events": self.events, "theme_updates": self.updates,
+                "theme_blockers": self.blockers, "theme_decisions": self.decisions}[table]
         for col, val in q.items():
             if col in ("select", "order", "limit"):
                 continue
             if val.startswith("eq."):
-                rows = [r for r in rows if str(r.get(col)) == val[3:]]
+                rows = [r for r in rows if str(r.get(col)).lower() == val[3:].lower()]
             elif val.startswith("in.("):
                 wanted = val[4:-1].split(",")
                 rows = [r for r in rows if str(r.get(col)) in wanted]

@@ -13,10 +13,11 @@
 // otherwise Portuguese vs English by accents and common words) and falls back to the language
 // the page was in when the comment was written (rfc_comments.lang).
 //
-// The same webhook, created on public.themes (INSERT and UPDATE), also translates the texts people write in a theme (title, what it is,
-// progress, the three slide answers): see themes.ts for what is translated and what is never overwritten.
+// The same webhook, created on public.themes, theme_updates, theme_blockers and theme_decisions (INSERT and UPDATE), also translates the texts
+// people write there (title, what it is, progress, the three slide answers, weekly updates, blockers, decisions): see themes.ts for what is
+// translated and what is never overwritten.
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { type Lang as ThemeLang, translationPlan, type ThemeRow } from "./themes.ts";
+import { TABLE_FIELDS, type Lang as ThemeLang, translationPlan, type ThemeRow } from "./themes.ts";
 
 const ACCOUNT = Deno.env.get("CF_ACCOUNT_ID") ?? "";
 const TOKEN = Deno.env.get("CF_API_TOKEN") ?? "";
@@ -79,10 +80,10 @@ async function translateRow(row: Row) {
   if (error) throw error;
 }
 
-async function translateTheme(oldRec: ThemeRow | null, rec: ThemeRow & { id: string }) {
-  const jobs = translationPlan(oldRec, rec);
+async function translateTheme(table: string, oldRec: ThemeRow | null, rec: ThemeRow & { id: string }) {
+  const jobs = translationPlan(oldRec, rec, TABLE_FIELDS[table]);
   if (!jobs.length) return 0;
-  const { data: current, error } = await db.from("themes").select("*").eq("id", rec.id).single();
+  const { data: current, error } = await db.from(table).select("*").eq("id", rec.id).single();
   if (error) throw error;
   const row = current as ThemeRow & { id: string };
   const meta: Record<string, string[]> = { ...((row.text_meta as Record<string, string[]> | null) ?? {}) };
@@ -98,7 +99,7 @@ async function translateTheme(oldRec: ThemeRow | null, rec: ThemeRow & { id: str
     }
     patch[job.field] = texts;
   }
-  const { error: upd } = await db.from("themes").update({ ...patch, text_meta: meta }).eq("id", rec.id);
+  const { error: upd } = await db.from(table).update({ ...patch, text_meta: meta }).eq("id", rec.id);
   if (upd) throw upd;
   return jobs.length;
 }
@@ -116,8 +117,8 @@ Deno.serve(async (req) => {
       for (const row of data ?? []) await translateRow(row as Row);
       return Response.json({ translated: data?.length ?? 0 });
     }
-    if (payload.table === "themes" && (payload.type === "INSERT" || payload.type === "UPDATE") && payload.record?.id) {
-      return Response.json({ translated: await translateTheme(payload.old_record ?? null, payload.record) });
+    if (TABLE_FIELDS[payload.table] && (payload.type === "INSERT" || payload.type === "UPDATE") && payload.record?.id) {
+      return Response.json({ translated: await translateTheme(payload.table, payload.old_record ?? null, payload.record) });
     }
     const row = payload.record as Row | undefined;
     if (payload.type !== "INSERT" || payload.table !== "rfc_comments" || !row?.id) return Response.json({ skipped: true });
