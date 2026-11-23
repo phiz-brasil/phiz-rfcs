@@ -3,6 +3,7 @@ a fresh context where Supabase is a FakeSupabase and nothing else leaves the mac
 import atexit
 import base64
 import functools
+import json
 import http.server
 import os
 import re
@@ -45,19 +46,17 @@ def png_bytes(width=2, height=2, color=(200, 30, 30)):
 
 @functools.lru_cache(maxsize=None)
 def imported(rfc_id):
-    """The revisions tools/import_rfcs.py makes of an RFC of rfcs/ (converted once per run)."""
-    sys.path.insert(0, str(ROOT / "tools"))
-    import import_rfcs
-    return import_rfcs.revisions_of(ROOT / "rfcs" / rfc_id)
+    """The revisions of an RFC that came from the repository, as the importer put them in the database (tests/fixtures/imported/)."""
+    return json.loads((ROOT / "tests" / "fixtures" / "imported" / f"{rfc_id}.json").read_text(encoding="utf-8"))
 
 
 def import_rfc(db, rfc_id):
-    """What the importer leaves in the database for an RFC of rfcs/: its revisions and images (tiny stand-ins), under its own id."""
+    """What the database holds for an RFC that came from the repository: its revisions and images (tiny stand-ins), under its own id."""
     db.ids[rfc_id] = "site"
     for rev in imported(rfc_id):
         db.add_revision(rfc_id, rev["bundle"], rev["meta"], rev["authors"], rev["collaborators"], by=rev["edited_by"],
                         note=rev["note"] or None, rev=rev["rev"], created_at=rev["created_at"])
-        for name in rev["assets"].files:
+        for name in rev["assets"]:
             db.add_asset(rfc_id, name, rev["rev"], png_bytes(4, 3))
 
 

@@ -1,9 +1,9 @@
 # Spec: RFC format (Markdown)
 
-Status: **legacy folder format**. The first two RFCs were written this way; they now live in the database as single-file RFCs
-(`rfc-bundle.md`, `tools/import_rfcs.py`), and new RFCs are written that way. This document stays for the Markdown syntax (sections,
-directives, diagrams, code, tables), which both formats share, and for the folder layout `tools/import_rfcs.py` reads.
-Implemented by `tools/rfc_md.py` (render). Versions archived before the Markdown format stay as frozen HTML pages (`versions/<v>/source.html`).
+Status: **retired folder format**. The first two RFCs were written this way; they were imported into the database as single-file RFCs
+(`rfc-bundle.md`) and the folders left the repository (they are in the git history). New RFCs are single files. This document stays for
+the Markdown syntax (sections, directives, diagrams, code, tables), which both formats share, and as the record of the old layout.
+The syntax is implemented by `assets/js/render/` and its Python twin `tools/rfc_md.py`.
 
 ## Why
 
@@ -11,7 +11,7 @@ An RFC must be easy to fill in (by a person or by the `phiz-rfc` skill from othe
 identical in structure in PT-BR, EN-US and 中文. The format is a contract between authors, the skill, the validator and the
 site features that depend on structure (contents rail, per-paragraph comments, versions).
 
-## Layout
+## Layout (historical)
 
 ```
 rfcs/PHZ-NNNN/

@@ -98,13 +98,13 @@ The site stores each upload in the database instead of the repository (`supabase
 
 ## The RFCs that came from the repository
 
-PHZ-0001 and PHZ-0002 were written in the folder format (`rfcs/<ID>/`). `tools/import_rfcs.py` converted their current versions into bundles and
-inserted them as revisions with the service-role key (`SUPABASE_SERVICE_KEY=… .venv/bin/python tools/import_rfcs.py`; `--dry-run` converts and
-checks only). The conversion replaces the raw HTML with the Markdown above, turns the pictures into attachments named after their path and
-language (`pt-whatsapp-b01-architecture.png`), and keeps the revision number of the version (1.7 is revision 8, so the next version made on
-the site is 1.8). `tests/test_import.py` checks that nothing the pages showed is lost: same commentable blocks per section (so comments keep
-their paragraph), same diagrams and code, same text.
+PHZ-0001 and PHZ-0002 were written in the folder format (`rfc-format.md`). A one-off importer (since removed; in the git history) converted
+their current versions into bundles and inserted them as revisions with the service-role key: the raw HTML became the Markdown above, the
+pictures became attachments named after their path and language (`pt-whatsapp-b01-architecture.png`), and each kept the revision number of its
+version (1.7 is revision 8, so the next version made on the site was 1.8). `tests/fixtures/imported/` keeps what it produced, so the tests
+still render them.
 
-What the database does not hold stays in `rfcs/<ID>/` and is published by `tools/build.py`: versions archived as HTML pages (`/rfcs/<ID>/v<version>.html`,
-listed in the version menu through `archive.json`), the OpenAPI generator of PHZ-0001 (`/rfcs/PHZ-0001/openapi/` and the YAML files) and the images those
-pages use. The old address `/rfcs/<ID>/` redirects to `/rfc/?id=<ID>`.
+What the database does not hold yet is frozen in `apps/web/legacy/` and served as files: versions archived as HTML pages
+(`/rfcs/<ID>/v<version>.html`, listed in the version menu through `archive.json`), the pictures those pages use, and the OpenAPI reference of
+PHZ-0001 (`/rfcs/PHZ-0001/openapi/` and the YAML files). Phase 8 of `docs/spec/v2` moves them into the database as attachments. The old
+address `/rfcs/<ID>/` redirects to `/rfc/?id=<ID>`.
