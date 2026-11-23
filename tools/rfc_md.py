@@ -1,18 +1,13 @@
-"""Markdown RFCs: renders rfcs/<ID>/rfc.{pt,en,zh}.md into the page the site expects, and checks the rules of
-docs/spec/rfc-format.md.
+"""The Python twin of the browser renderer (assets/js/render/): Markdown of an RFC → the body HTML the site shows, its structure (the
+numbering of per-paragraph comments) and the page header. tools/publish_rfc.py checks RFCs with it; tests/test_parity.py keeps it equal
+to the JavaScript one.
 
-Needs `markdown-it-py` and `mdit-py-plugins` (requirements.txt). RFCs written as HTML do not use this module,
-so tools/build.py still runs without those packages when the repository has only HTML RFCs.
+Needs `markdown-it-py` and `mdit-py-plugins` (requirements.txt).
 """
 import html
-import importlib.util
-import json
 import re
 from html.parser import HTMLParser
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-TEMPLATES = ROOT / "templates"
 LANGS = ("pt", "en", "zh")
 BCP = {"pt": "pt-BR", "en": "en-US", "zh": "zh-CN"}
 
@@ -505,31 +500,6 @@ def structure(body):
     return {"blocks": p.counts, "diagrams": p.diagrams, "code": p.code}
 
 
-def md_files(folder):
-    return {l: Path(folder) / f"rfc.{l}.md" for l in LANGS}
-
-
-def is_markdown_rfc(folder):
-    return (Path(folder) / "rfc.pt.md").exists() or (Path(folder) / "rfc.en.md").exists()
-
-
-def read_meta(folder):
-    return json.loads((Path(folder) / "rfc.json").read_text(encoding="utf-8"))
-
-
-def render_all(folder):
-    """{lang: (body html, ids)} for the three languages; raises RfcError with the language in the message."""
-    out = {}
-    for lang, path in md_files(folder).items():
-        if not path.exists():
-            raise RfcError(f"{path.name} is missing")
-        try:
-            out[lang] = render_body(path.read_text(encoding="utf-8"), lang)
-        except RfcError as e:
-            raise RfcError(f"{path.name}: {e}")
-    return out
-
-
 def wrap_fragment(page):
     """A page that starts with <title>… (the shell is a fragment) needs the document skeleton around it."""
     if page.lstrip().lower().startswith("<!doctype"):
@@ -542,39 +512,6 @@ def wrap_fragment(page):
 
 
 # ---------------------------------------------------------------- OpenAPI reference (optional, per RFC)
-
-SWAGGER_VERSION = "5.17.14"
-OPENAPI_BLOCK = """
-    <div class="swagger-wrap">
-      <div class="swagger-tools">
-        <button type="button" class="btn" id="copy-yaml"><span data-l="pt">Copiar OpenAPI (YAML)</span><span data-l="en">Copy OpenAPI (YAML)</span><span data-l="zh">复制 OpenAPI (YAML)</span></button>
-        <span class="note" id="copy-note" aria-live="polite"></span>
-      </div>
-      <div id="swagger-ui"></div>
-      <textarea id="yaml-fallback" aria-label="OpenAPI YAML" readonly hidden></textarea>
-    </div>"""
-
-
-def openapi_specs(folder):
-    """{lang: OpenAPI spec dict} when rfcs/<ID>/openapi_gen.py exists (it defines build(lang)); otherwise None."""
-    path = Path(folder) / "openapi_gen.py"
-    if not path.exists():
-        return None
-    try:
-        spec = importlib.util.spec_from_file_location(f"openapi_gen_{Path(folder).name}", path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return {lang: mod.build(lang) for lang in LANGS}
-    except Exception as e:      # the generator is project code: report what broke instead of a traceback
-        raise RfcError(f"openapi_gen.py: {type(e).__name__}: {e}")
-
-
-def openapi_yaml(specs):
-    import yaml
-    return {lang: yaml.safe_dump(s, allow_unicode=True, sort_keys=False, width=110) for lang, s in specs.items()}
-
-
-# ---------------------------------------------------------------- page
 
 def _date(iso, lang):
     m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", iso or "")
@@ -622,52 +559,3 @@ def hero_html(meta, lang, status=None):
             f'  <h1>{html.escape(meta["title"][lang])}</h1>\n'
             f'  <p class="lede">{html.escape(meta["summary"][lang])}</p>\n'
             f'  <dl class="meta">\n    ' + "\n    ".join(rows) + "\n  </dl>\n</header>\n")
-
-
-def render_openapi_page(folder, meta):
-    """dist/rfcs/<ID>/openapi/index.html: the interactive OpenAPI reference of an RFC, on a page of its own."""
-    specs = openapi_specs(folder)
-    blocks = [f'<div class="lang" data-lang="{lang}" lang="{BCP[lang]}"><header class="hero">\n'
-              f'  <div class="eyebrow">RFC {html.escape(meta["id"])} · OpenAPI</div>\n  <h1>{html.escape(meta["title"][lang])}</h1>\n'
-              f'  <p class="lede"><a href="../../../rfc/?id={html.escape(meta["id"])}">{html.escape(meta["id"])}</a></p>\n</header></div>' for lang in LANGS]
-    shell = (TEMPLATES / "shell.html").read_text(encoding="utf-8")
-    css = (TEMPLATES / "page.css").read_text(encoding="utf-8")
-    page = (shell.replace("{{ID}}", html.escape(meta["id"])).replace("{{SHORT_TITLE}}", "OpenAPI")
-            .replace("/*CSS*/", css).replace("<!--CONTENT-->", "\n".join(blocks) + OPENAPI_BLOCK).replace("<!--TOC-->", ""))
-    data = ("window.PHIZ_SPECS=" + json.dumps(specs, ensure_ascii=False).replace("</", "<\\/") + ";"
-            "window.PHIZ_YAML=" + json.dumps(openapi_yaml(specs), ensure_ascii=False).replace("</", "<\\/") + ";")
-    page += (f'\n<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui.css">'
-             f'\n<script>{data}</script>'
-             f'\n<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui-bundle.js"></script>'
-             '\n<script src="../../../assets/openapi.js"></script>')
-    page = wrap_fragment(page).replace("</title>", '</title>\n<link rel="stylesheet" href="../../../assets/rfc-site.css">', 1)
-    return page
-
-
-def render_page(folder, meta, status=None, rfc_dir=None):
-    """The full page (what source.html holds for HTML RFCs) for the Markdown files in `folder`.
-    `rfc_dir` is the RFC's own folder when `folder` is an archived version: it holds openapi_gen.py, if any."""
-    rendered = render_all(folder)
-    specs = openapi_specs(rfc_dir or folder)
-    blocks, tocs = [], []
-    for lang in LANGS:
-        body, ids = rendered[lang]
-        body = body.replace('id="§', f'id="{lang}-').replace('href="#§', f'href="#{lang}-')
-        toc = "".join(f'<li><a href="#{lang}-{m.group(1)}">{re.sub(r"<[^>]+>", "", re.sub(r"<span class=.n.>.*?</span>", "", m.group(2))).strip()}</a></li>'
-                      for m in re.finditer(r'<h2 id="%s-([^"]+)">(.*?)</h2>' % lang, body, re.S))
-        blocks.append(f'<div class="lang" data-lang="{lang}" lang="{BCP[lang]}">{hero_html(meta, lang, status)}{body}</div>')
-        tocs.append(f'<ol class="toc-list" data-lang="{lang}" lang="{BCP[lang]}">{toc}</ol>')
-    shell = (TEMPLATES / "shell.html").read_text(encoding="utf-8")
-    css = (TEMPLATES / "page.css").read_text(encoding="utf-8")
-    short = meta.get("short") or meta["title"]["en"]
-    page = (shell.replace("{{ID}}", html.escape(meta["id"])).replace("{{SHORT_TITLE}}", html.escape(short))
-            .replace("/*CSS*/", css).replace("<!--CONTENT-->", "\n".join(blocks) + (OPENAPI_BLOCK if specs else ""))
-            .replace("<!--TOC-->", "\n".join(tocs)))
-    if specs:       # the reference reads these and redraws itself when the language changes (assets/openapi.js)
-        data = ("window.PHIZ_SPECS=" + json.dumps(specs, ensure_ascii=False).replace("</", "<\\/") + ";"
-                "window.PHIZ_YAML=" + json.dumps(openapi_yaml(specs), ensure_ascii=False).replace("</", "<\\/") + ";")
-        page += (f'\n<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui.css">'
-                 f'\n<script>{data}</script>'
-                 f'\n<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{SWAGGER_VERSION}/swagger-ui-bundle.js"></script>'
-                 '\n<script src="{{UP}}assets/openapi.js"></script>')
-    return page

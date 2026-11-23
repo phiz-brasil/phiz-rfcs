@@ -170,14 +170,12 @@ With Claude Code, the `phiz-rfc` skill ([`skills/phiz-rfc`](skills/phiz-rfc)) fo
 
 ## The RFCs that came from the repository
 
-PHZ-0001 and PHZ-0002 were written as Markdown folders (`rfcs/<ID>/`, format in [`docs/spec/rfc-format.md`](docs/spec/rfc-format.md)). `tools/import_rfcs.py` moved their current versions to the database once (service-role key from **Project Settings → API**, kept out of the repository):
-
-```bash
-.venv/bin/python tools/import_rfcs.py --dry-run --out /tmp/bundles      # convert and check; look at the files
-SUPABASE_SERVICE_KEY=… .venv/bin/python tools/import_rfcs.py            # insert (safe to run again)
-```
-
-It rewrites the raw HTML as the Markdown of the site (galleries, screen cards, legends, coloured labels), attaches the pictures and keeps the version number (1.7 becomes revision 8, so the next version is 1.8), the reviewers and the original date. Run the migrations first, because it marks the ids as site RFCs. What the database cannot hold stays in `rfcs/<ID>/` and is published by the build: versions archived as HTML pages (`/rfcs/<ID>/v<version>.html`, listed in the version menu), the OpenAPI of PHZ-0001 (`/rfcs/PHZ-0001/openapi/` and `openapi.{pt,en,zh}.yaml`) and the pictures those pages use. The old address `/rfcs/<ID>/` redirects to the new one.
+PHZ-0001 and PHZ-0002 were first written as Markdown folders (`rfcs/<ID>/`); a one-off importer moved them to the database, rewriting their
+raw HTML as the Markdown of the site, attaching their pictures and keeping version numbers, reviewers and dates. The folders, the importer
+and the OpenAPI generator are gone from the repository (they are in the git history). What the database does not hold yet is frozen in
+[`apps/web/legacy/`](apps/web/legacy): the versions archived as HTML pages (`/rfcs/<ID>/v<version>.html`, listed in the version menu), the
+pictures they use, the OpenAPI reference of PHZ-0001 (`/rfcs/PHZ-0001/openapi/` and `openapi.{pt,en,zh}.yaml`) and `archive.json`. Phase 8
+of the plan moves them to the database as attachments. The old address `/rfcs/<ID>/` redirects to the new one.
 
 ## Status
 
@@ -198,7 +196,7 @@ Every pull request runs the build and the smoke tests (`.github/workflows/check.
 ## Notes
 
 - Every RFC is a single Markdown file in the database, drawn in the browser; nothing generated is committed. The build only publishes what the database cannot hold (see *The RFCs that came from the repository*): versions archived before the Markdown format (PHZ-0001 v1.0–v1.6, PHZ-0002 v1.0) remain as frozen HTML pages in `rfcs/<ID>/versions/<v>/source.html`.
-- The OpenAPI of PHZ-0001 comes from `rfcs/PHZ-0001/openapi_gen.py` (`build(lang)`): the build publishes `openapi.{pt,en,zh}.yaml` and an interactive page (`/rfcs/PHZ-0001/openapi/`) that the RFC links to (needs `PyYAML`, in `requirements.txt`; Swagger UI itself is loaded from jsDelivr).
+- The OpenAPI of PHZ-0001 is frozen in `apps/web/legacy/rfcs/PHZ-0001/` (`openapi.{pt,en,zh}.yaml` and the interactive page `/rfcs/PHZ-0001/openapi/` the RFC links to; Swagger UI is loaded from jsDelivr).
 - The screens of PHZ-0001 sections 03 (WhatsApp reference) and 04 (PhizChat opt-in, boards P* and Q*, which also use `phiz.css`) come from `sources/PHZ-0001/whatsapp-design/` (English `.dc.html` files plus `i18n.json` with PT-BR and 中文). Render them with `python3 tools/render_wa_mocks.py sources/PHZ-0001/whatsapp-design rfcs/PHZ-0001/mocks` (needs playwright, beautifulsoup4 and a CJK font such as Noto Sans CJK SC).
 - `.github/workflows/keepalive.yml` reads one row from Supabase every Monday and Thursday, because free projects are paused after about a week without activity (it fails, and GitHub emails you, if the project is already paused: restore it in the Supabase dashboard).
 - Mermaid is bundled in `assets/` (v10.9.1), so diagrams do not depend on a CDN. Fonts and Swagger UI load from Google Fonts and jsDelivr.

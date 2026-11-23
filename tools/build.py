@@ -1,25 +1,19 @@
 #!/usr/bin/env python3
-"""Builds the static site into dist/.
+"""Builds the static site into dist/ (GitHub Pages, until the Next.js app in apps/web replaces it; see docs/spec/v2).
 
-The RFCs live in the database (tools/import_rfcs.py moved the ones of this repository there); the pages that show them
-(dist/rfc/, dist/nova/, the index, the comments page) read it in the browser. What is built from rfcs/ is only what the database
-cannot hold:
-
-  rfcs/<ID>/versions/<v>/source.html   versions archived as HTML pages: published as dist/rfcs/<ID>/v<v>.html and listed in the
-                                       history of the RFC through dist/archive.json
-  rfcs/<ID>/openapi_gen.py             the OpenAPI spec: published as YAML and as an interactive page (dist/rfcs/<ID>/openapi/)
-  rfcs/<ID>/*                          images and other files the archived pages use, copied as they are
-  dist/rfcs/<ID>/index.html            sends the old address of an RFC to dist/rfc/?id=<ID>
-Folders that start with "_" are ignored.
+The RFCs live in the database; the pages that show them (dist/rfc/, dist/nova/, the index, the comments page) read it in the browser.
+What is not in the database is frozen in apps/web/legacy/ and copied as is: the versions archived as HTML pages (with the pictures they
+use), the OpenAPI reference of PHZ-0001 and archive.json. dist/rfcs/<ID>/index.html sends the old address of an RFC to dist/rfc/?id=<ID>.
 """
 import html, json, re, shutil, sys, zipfile
 from pathlib import Path
 
 import rfc_md
-from rfc_md import LANGS, STATUS
+from rfc_md import LANGS
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
+LEGACY = ROOT / "apps" / "web" / "legacy"
 CFG = json.loads((ROOT / "site.config.json").read_text(encoding="utf-8"))
 
 e = html.escape
@@ -29,134 +23,10 @@ def spans(d, cls=""):
     return "".join(f'<span data-l="{l}"{f" class={chr(34)}{cls}{chr(34)}" if cls else ""}>{e(d[l])}</span>' for l in LANGS)
 
 
-def load():
-    out = []
-    for d in sorted((ROOT / "rfcs").iterdir()):
-        if not d.is_dir() or d.name.startswith("_"):
-            continue
-        if not (d / "rfc.json").exists():      # a draft written in the repository (RFC.md + anexos/): published from the site, not built
-            print(f"skipping rfcs/{d.name}: no rfc.json (a draft; publish it on the site or with tools/publish_rfc.py)")
-            continue
-        meta = json.loads((d / "rfc.json").read_text(encoding="utf-8"))
-        if meta["status"] not in STATUS:
-            sys.exit(f"{d.name}: invalid status {meta['status']!r}; use one of {', '.join(STATUS)}")
-        out.append((d, meta))
-    return out
-
-
-VER_RE = re.compile(r"\d+\.\d+")
-T_VERSIONS = {"pt": "Histórico de versões", "en": "Version history", "zh": "版本历史"}
-T_CURRENT = {"pt": "atual", "en": "current", "zh": "当前"}
-T_NOFILE = {"pt": "sem arquivo", "en": "no archive", "zh": "无存档"}
-
-
-def versions_of(d, meta):
-    """(current version, changelog newest first). Older rfc.json without versioning counts as 1.0."""
-    cur = str(meta.get("version", "1.0"))
-    if not VER_RE.fullmatch(cur):
-        sys.exit(f"{d.name}: invalid version {cur!r}; use MAJOR.MINOR, e.g. 1.0")
-    log = meta.get("changelog") or [{"version": cur, "date": meta.get("created", ""), "note": {l: "" for l in LANGS}}]
-    seen = [str(x["version"]) for x in log]
-    if cur not in seen:
-        sys.exit(f"{d.name}: version {cur} is missing from changelog")
-    if len(set(seen)) != len(seen):
-        sys.exit(f"{d.name}: duplicate versions in changelog")
-    return cur, log
-
-
-def snapshot(d, v):
-    """The frozen copy of version v: the folder with the Markdown files, or source.html for versions archived as HTML."""
-    folder = d / "versions" / v
-    return folder if rfc_md.is_markdown_rfc(folder) else folder / "source.html"
-
-
-def versions_html(d, meta, shown, current_href="./"):
-    cur, log = versions_of(d, meta)
-    lis = []
-    for ent in log:
-        v = str(ent["version"])
-        href = current_href if v == cur else (f"v{v}.html" if snapshot(d, v).exists() else None)
-        tag = spans(T_CURRENT, "vtag") if v == cur else ("" if href else spans(T_NOFILE, "vtag"))
-        head = f'<b>v{e(v)}</b>{tag}<time>{e(ent.get("date", ""))}</time>'
-        head = f'<a href="{href}">{head}</a>' if href else f"<span>{head}</span>"
-        note = spans({l: ent.get("note", {}).get(l, "") for l in LANGS}, "vnote")
-        cur_attr = ' aria-current="true"' if v == shown else ""
-        lis.append(f"<li{cur_attr}>{head}<div class=\"vnote-wrap\">{note}</div></li>")
-    return (f'<details class="vers"><summary class="rfcno ver" aria-label="Version">v{e(shown)}</summary>'
-            f'<div class="vers-pop"><h3>{spans(T_VERSIONS)}</h3><ul>{"".join(lis)}</ul></div></details>')
-
-
-def banner_html(shown, cur, current_href="./"):
-    msg = {"pt": f"Você está lendo a versão {shown}, arquivada e somente leitura. A versão atual é a {cur}.",
-           "en": f"You are reading version {shown}, archived and read-only. The current version is {cur}.",
-           "zh": f"你正在阅读已存档的只读版本 {shown}。当前版本为 {cur}。"}
-    go = {"pt": "Ver versão atual", "en": "View current version", "zh": "查看当前版本"}
-    return (f'<div class="ver-banner" role="note">{spans(msg)} '
-            f'<a href="{current_href}">{spans(go)}</a></div>')
-
-
-def render_rfc(d, meta, text, out, shown, frozen, status, up):
-    """Writes one RFC page. `up` is the path from the page to the site root ('../../')."""
-    page = rfc_md.wrap_fragment(text)
-    cur, _ = versions_of(d, meta)
-    page = page.replace("{{UP}}", up)
-    page = page.replace('<span class="rfcno">', f'<a class="back" href="{up}">← RFCs</a><span class="rfcno">', 1)
-    badge = (f'<span class="rfcno st" data-st="{status}">'
-             + "".join(f'<span class="lang-st" data-l="{l}">{e(STATUS[status][l])}</span>' for l in LANGS) + "</span>")
-    to_current = f"{up}rfc/?id={meta['id']}"                 # the current version is the one in the database
-    extra = badge + versions_html(d, meta, shown, to_current)
-    page = re.sub(r'(<span class="rfcno">[^<]*</span>)', lambda m: m.group(1) + extra, page, count=1)
-    if frozen:
-        page = page.replace("</header>", "</header>\n" + banner_html(shown, cur, to_current), 1)
-        page = page.replace("</title>", f" · v{shown}</title>", 1)
-    page = page.replace("</title>", f"</title>\n<link rel=\"stylesheet\" href=\"{up}assets/rfc-site.css\">", 1)
-    cfg = {"repo": CFG["repo"], "giscus": CFG["giscus"], "comments": CFG.get("comments", {})}
-    inject = (f'<script>window.PHIZ_SITE={json.dumps(cfg)};window.PHIZ_RFC_ID={json.dumps(meta["id"])};'
-              f'window.PHIZ_FROZEN={json.dumps(frozen)};</script>\n'
-              f'<script src="{up}assets/mermaid.min.js"></script>\n<script type="module" src="{up}assets/js/main.js"></script>\n<script src="{up}assets/status.js"></script>\n</body>')
-    page = page.replace("</body>", inject, 1) if "</body>" in page else page + inject
-    out.write_text(page, encoding="utf-8")
-
-
 REDIRECT = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="robots" content="noindex">
 <title>{id}</title><meta http-equiv="refresh" content="0;url=../../rfc/?id={id}">
 <script>location.replace("../../rfc/?id={id}" + location.search.replace(/^\\?/, "&") + location.hash);</script></head>
 <body><p><a href="../../rfc/?id={id}">{id}</a></p></body></html>"""
-
-
-def build_rfc(d, meta):
-    """The files an RFC of rfcs/ still needs; → its archived versions, for dist/archive.json."""
-    dest = DIST / "rfcs" / d.name
-    shutil.copytree(d, dest, ignore=shutil.ignore_patterns("source.html", "versions", "rfc.*.md", "openapi_gen.py", "__pycache__"))
-    specs = rfc_md.openapi_specs(d)
-    if specs:       # the spec is generated from openapi_gen.py: published as files and as an interactive page
-        for lang, text in rfc_md.openapi_yaml(specs).items():
-            (dest / f"openapi.{lang}.yaml").write_text(text, encoding="utf-8")
-        (dest / "openapi").mkdir()
-        (dest / "openapi" / "index.html").write_text(rfc_md.render_openapi_page(d, meta), encoding="utf-8")
-    cur, log = versions_of(d, meta)
-    (dest / "index.html").write_text(REDIRECT.format(id=meta["id"]), encoding="utf-8")     # the old address of the RFC
-    archived = []
-    for ent in log:
-        v = str(ent["version"])
-        if v == cur:
-            continue
-        if not snapshot(d, v).exists():
-            print(f"warning: {d.name} v{v} is in the changelog but has no archive ({snapshot(d, v).relative_to(ROOT)})")
-            continue
-        st = ent.get("status", meta["status"])
-        if st not in STATUS:
-            sys.exit(f"{d.name} v{v}: invalid status {st!r}")
-        snap = snapshot(d, v)
-        if snap.is_dir():       # Markdown RFC: render the frozen files with the header data they had
-            old = json.loads((snap / "rfc.json").read_text(encoding="utf-8")) if (snap / "rfc.json").exists() else meta
-            text = rfc_md.render_page(snap, old, status=st, rfc_dir=d)
-        else:
-            text = snap.read_text(encoding="utf-8")
-        render_rfc(d, meta, text, dest / f"v{v}.html", v, True, st, "../../")
-        archived.append({"version": v, "date": ent.get("date", ""), "note": {l: ent.get("note", {}).get(l, "") for l in LANGS},
-                         "href": f"rfcs/{d.name}/v{v}.html"})
-    return archived
 
 
 INDEX_CSS = """
@@ -243,7 +113,6 @@ data=d.filter(function(x){return!x.parent_id||tops[x.parent_id]});paint()}).catc
 new MutationObserver(paint).observe(document.documentElement,{attributes:true,attributeFilter:["data-lang"]})})();
 """
 
-SECTION_RE = re.compile(r'<h2 id="(pt|en|zh)-([a-z0-9-]+)"[^>]*>(.*?)</h2>', re.S)
 
 
 COMMENTS_CSS = """
@@ -462,14 +331,15 @@ def main():
         shutil.rmtree(DIST)
     shutil.copytree(ROOT / "assets", DIST / "assets")
     (DIST / ".nojekyll").write_text("")
-    items = load()
-    archive = {m["id"]: build_rfc(d, m) for d, m in items}
-    (DIST / "archive.json").write_text(json.dumps({k: v for k, v in archive.items() if v}, ensure_ascii=False), encoding="utf-8")
+    shutil.copytree(LEGACY, DIST, dirs_exist_ok=True)
+    ids = sorted(d.name for d in (LEGACY / "rfcs").iterdir() if d.is_dir())
+    for rid in ids:
+        (DIST / "rfcs" / rid / "index.html").write_text(REDIRECT.format(id=rid), encoding="utf-8")     # the old address of the RFC
     (DIST / "index.html").write_text(build_index(), encoding="utf-8")          # the list is read from the database in the browser
     build_live_pages()
     (DIST / "comments").mkdir()
     (DIST / "comments" / "index.html").write_text(build_comments(), encoding="utf-8")
-    print(f"built the site -> {DIST} ({len(items)} legacy RFC folder(s), {sum(len(v) for v in archive.values())} archived version page(s))")
+    print(f"built the site -> {DIST} (archived pages of {', '.join(ids)})")
 
 
 main()
