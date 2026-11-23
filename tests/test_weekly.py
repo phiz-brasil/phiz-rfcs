@@ -301,6 +301,7 @@ class WeeklyTest(SiteCase):
 
     def test_the_index_links_to_the_executive_view(self):
         self.page.goto(self.base + "/")
+        self.page.locator("header.appbar summary", has_text="Acompanhamento").click()          # the menus of the top bar are on the old pages too
         self.page.get_by_role("link", name="Visão executiva").click()
         self.page.wait_for_url(re.compile(r"/executive/$"))
 

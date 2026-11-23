@@ -265,6 +265,7 @@ class ThemesTest(SiteCase):
 
     def test_the_index_links_to_the_themes(self):
         self.page.goto(self.base + "/")
+        self.page.locator("header.appbar summary", has_text="Portfólio").click()               # grouped in a menu of the top bar
         self.page.get_by_role("link", name="Temas").click()
         self.page.wait_for_url(re.compile(r"/themes/$"))
 

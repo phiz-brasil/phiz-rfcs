@@ -105,6 +105,34 @@ class SiteTest(SiteCase):
         expect(self.page).to_have_url(self.base + "/rfc/?id=PHZ-0001")                      # the RFC itself still has its own redirect
         self.assertEqual(self.context.request.get(self.base + "/rfcs/nope/v1.0.html", max_redirects=0).status, 404)
 
+    def test_the_old_pages_have_the_top_bar_of_the_app_and_its_look(self):
+        for path in ("/", f"/rfc/?id={RFC}", "/nova/", "/comments/"):
+            with self.subTest(path):
+                self.page.goto(self.base + path)
+                bar = self.page.locator("header.appbar")
+                expect(bar).to_have_count(1)
+                self.assertEqual(bar.locator("details.menu > summary").all_inner_texts(), ["Acompanhamento ▾", "Portfólio ▾", "Documentos ▾"])
+                self.assertEqual(bar.locator("a.brand").get_attribute("href"), "/overview/")
+                self.assertEqual(self.page.locator('link[href="/assets/theme-v2.css"]').count(), 1)
+                self.assertTrue(self.context.request.get(self.base + "/assets/theme-v2.css").ok)
+
+    def test_a_menu_of_the_top_bar_opens_and_closes_when_clicking_elsewhere(self):
+        self.page.goto(self.base + "/")
+        menu = self.page.locator("header.appbar details.menu").first
+        menu.locator("summary").click()
+        expect(menu.get_by_role("link", name="Visão geral")).to_be_visible()
+        self.page.locator("main h1").click()
+        expect(menu).not_to_have_attribute("open", "")
+        expect(menu.get_by_role("link", name="Visão geral")).to_be_hidden()
+
+    def test_the_rfc_page_keeps_its_own_bar_under_the_top_bar(self):
+        page = self.open(wait_comments=False)
+        expect(page.locator("header.appbar")).to_have_count(1)
+        expect(page.locator("header.bar a.newver")).to_be_visible()
+        top = page.locator("header.appbar").bounding_box()["y"]
+        bar = page.locator("header.bar").bounding_box()["y"]
+        self.assertLess(top, bar)
+
     def test_index_lists_rfcs_and_filters_by_status(self):
         self.db.status_log.append({"rfc_id": RFC, "status": "approved", "author": "Ana", "created_at": "2026-10-21T10:00:00Z"})
         page = self.open("/", wait_comments=False)

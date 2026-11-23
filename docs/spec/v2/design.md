@@ -29,4 +29,6 @@ mode in this version.
    the themes list as a dense table. Done as: a header with the key facts (status, stage, owner, estimate in red when overdue, progress) and the actions
    (open the RFC, export the slide, edit), a sticky menu of sections (summary, weekly update, blockers and decisions, execution, attachments, Jira and
    dependencies, history), the theme's data read-only until *Edit theme data* is pressed, and one aligned table per front on the themes page.
-4. **The pages that came from the old site** (RFC list, RFC page, new RFC, comments) in the same look.
+4. **The pages that came from the old site** (RFC list, RFC page, new RFC, comments) in the same look (done): the same top bar (as HTML with native
+   `<details>` menus, `pages.ts` `appBar()`), and `assets/theme-v2.css` loaded after each page's own styles to switch the tokens, fonts and components; the
+   RFC page keeps its own bar (number, status, versions, new version) under the top bar.

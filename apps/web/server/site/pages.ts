@@ -5,16 +5,35 @@ import { join } from "node:path";
 import { COMMENTS_CSS, INDEX_COUNTS_JS, INDEX_CSS, INDEX_JS, T_COMMENTS, T_NEW } from "./constants.ts";
 import { CFG, REPO_ROOT, esc, liveConfig, pyJson, spans, type Tri } from "./html.ts";
 
+
+/* The top bar of the management pages (apps/web/components/Shell.tsx), as HTML for the pages that came from the old site: the same three menus
+   (native <details>, closed when you click elsewhere) and, on the right, what each page needs (its language buttons, and on the index the comments
+   and the new-RFC button). Styles: assets/theme-v2.css. */
+const NEWFONT_LINK = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">';
+const M = (pt: string, en: string, zh: string) => spans({ pt, en, zh });
+const LANG_BUTTONS = '<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div>';
+export function appBar(right: string, here: "docs" | "" = "docs", extraClass = ""): string {
+  const menu = (label: string, links: [string, string][], on = false) =>
+    `<details class="menu"><summary class="navlink"${on ? ' data-here="1"' : ""}>${label} <span aria-hidden="true">▾</span></summary><div class="menu-pop">` +
+    links.map(([href, text]) => `<a class="navlink" href="${href}">${text}</a>`).join("") + "</div></details>";
+  return `<header class="appbar${extraClass ? " " + extraClass : ""}"><div class="wrap topbar"><a class="brand" href="/overview/" aria-label="PhizChat"><span class="mark">PHIZCHAT</span></a>
+<nav class="mainnav" aria-label="${esc("Navegação principal")}">` +
+    menu(M("Acompanhamento", "Tracking", "跟进"), [["/overview/", M("Visão geral", "Overview", "总览")], ["/executive/", M("Visão executiva", "Executive view", "管理层视图")],
+      ["/board/", M("Quadro B2B", "B2B board", "B2B 看板")], ["/roadmap/", "Roadmap"], ["/metrics/", M("Métricas", "Metrics", "指标")]]) +
+    menu(M("Portfólio", "Portfolio", "组合"), [["/themes/", M("Temas", "Themes", "主题")], ["/slides/", "Slides"]]) +
+    menu(M("Documentos", "Documents", "文档"), [["/", "RFCs"], ["/attachments/", M("Anexos", "Attachments", "附件")], ["/comments/", M("Comentários", "Comments", "评论")]], here === "docs") +
+    `</nav><div class="tools">${right}</div></div></header>
+<script>document.addEventListener("click",function(e){document.querySelectorAll("header.appbar details.menu[open]").forEach(function(d){if(!d.contains(e.target))d.removeAttribute("open")})});document.addEventListener("keydown",function(e){if(e.key==="Escape")document.querySelectorAll("header.appbar details.menu[open]").forEach(function(d){d.removeAttribute("open")})});</script>`;
+}
+
 export function indexPage(): string {
   const fl = '<button type="button" data-filter="all" aria-pressed="true">' + spans({ pt: "Todas", en: "All", zh: "全部" }) + "</button>";
   return `<!doctype html><html lang="pt-BR" data-lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(CFG.title)}</title><meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap">
-<style>${INDEX_CSS}</style></head><body>
-<header><div class="wrap"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>PHIZCHAT</span></div>
-<div class="hright"><a class="navc" href="themes/">${spans({ pt: "Temas", en: "Themes", zh: "主题" })}</a><a class="navc" href="board/">${spans({ pt: "Quadro B2B", en: "B2B board", zh: "B2B 看板" })}</a><a class="navc" href="roadmap/">Roadmap</a><a class="navc" href="metrics/">${spans({ pt: "Métricas", en: "Metrics", zh: "指标" })}</a><a class="navc" href="attachments/">${spans({ pt: "Anexos", en: "Attachments", zh: "附件" })}</a><a class="navc" href="slides/">Slides</a><a class="navc" href="executive/">${spans({ pt: "Visão executiva", en: "Executive view", zh: "管理层视图" })}</a><a class="navc newrfc" href="nova/">＋ ${spans(T_NEW)}</a><a class="navc" href="comments/">💬 ${spans(T_COMMENTS)}<span class="ccount" hidden></span><span class="cnewb" hidden></span></a>
-<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></div></header>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>${INDEX_CSS}</style><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
+${appBar(`<a class="navc" href="comments/">💬 ${spans(T_COMMENTS)}<span class="ccount" hidden></span><span class="cnewb" hidden></span></a><a class="navc newrfc" href="nova/">＋ ${spans(T_NEW)}</a>${LANG_BUTTONS}`)}
 <main class="wrap"><h1>RFCs</h1>
 <p class="lead">${spans({"pt": "Propostas técnicas da plataforma, com status e comentários por seção.", "en": "Platform technical proposals, with status and per-section comments.", "zh": "平台技术提案，含状态与分节评论。"})}</p>
 <div class="filters" role="group">${fl}</div>
@@ -33,10 +52,9 @@ export function commentsPage(): string {
   return `<!doctype html><html lang="pt-BR" data-lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(T_COMMENTS.pt)} · ${esc(CFG.title)}</title><meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap">
-<style>${INDEX_CSS}${COMMENTS_CSS}</style></head><body>
-<header><div class="wrap"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>PHIZCHAT</span><a class="back" href="../">← RFCs</a></div>
-<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></header>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>${INDEX_CSS}${COMMENTS_CSS}</style><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
+${appBar(LANG_BUTTONS)}
 <main class="wrap"><h1>${spans(T_COMMENTS)}</h1><p class="lead">${spans(lead)}</p><div id="cmt-root"></div></main>
 <script>window.PHIZ_COMMENTS=${data};${INDEX_JS}</script>
 <script src="../assets/comments-page.js"></script></body></html>`;
@@ -62,6 +80,8 @@ export function viewerPage(): string {
   page = wrapFragment(page);
   page = page.replace('<span class="rfcno">', '<a class="back" href="../">← RFCs</a><span class="rfcno">');
   page = page.replace("</title>", '</title>\n<link rel="stylesheet" href="../assets/rfc-site.css">');
+  page = page.replace("</head>", `<link rel="preconnect" href="https://fonts.googleapis.com">${NEWFONT_LINK}<link rel="stylesheet" href="/assets/theme-v2.css">\n</head>`);
+  page = page.replace("<body>", `<body class="legacy viewer">\n${appBar("", "docs", "static")}`);
   const inject = `<script>window.PHIZ_SITE=${pyJson(liveConfig())};</script>\n<script src="../assets/mermaid.min.js"></script>\n` +
     '<script src="../assets/vendor/markdown-it.min.js"></script>\n<script src="../assets/vendor/markdown-it-container.min.js"></script>\n' +
     '<script src="../assets/vendor/purify.min.js"></script>\n<script type="module" src="../assets/js/live.js"></script>\n</body>';
@@ -73,11 +93,9 @@ export function newRfcPage(): string {
   return `<!doctype html><html lang="pt-BR" data-lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(CFG.title)} · Nova RFC</title><meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap">
-<style>${INDEX_CSS}</style><link rel="stylesheet" href="../assets/nova.css"></head><body>
-<header><div class="wrap"><div class="brand"><span class="logo" aria-hidden="true">P</span><span>PHIZCHAT</span></div>
-<div class="hright"><a class="navc" href="../">← RFCs</a>
-<div class="langs" role="group" aria-label="Language"><button type="button" data-set-lang="pt">PT-BR</button><button type="button" data-set-lang="en">EN-US</button><button type="button" data-set-lang="zh">中文</button></div></div></div></header>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>${INDEX_CSS}</style><link rel="stylesheet" href="../assets/nova.css"><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
+${appBar(LANG_BUTTONS)}
 <main class="wrap nova">
 <h1 id="nova-title"><span class="only-new">${S("Nova RFC", "New RFC", "新建 RFC")}</span><span class="only-edit" hidden>${S("Nova versão de", "New version of", "新版本：")} <span id="edit-id"></span></span></h1>
 <p class="lead">${S("Monte a sua RFC em quatro passos. Não precisa de conta nem de código: o arquivo que você enviar vira uma página do site, com comentários, status e histórico de versões.",
