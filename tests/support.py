@@ -112,6 +112,12 @@ class SiteCase(unittest.TestCase):
         self.errors = []
         self.page.on("pageerror", lambda e: self.errors.append(str(e)))
 
+    def prefs(self):
+        """Open the menu of the top bar that holds the name, reader mode and language (it is closed after every page load)."""
+        button = self.page.locator(".menu.user > button")
+        if button.get_attribute("aria-expanded") != "true":
+            button.click()
+
     def serve_page(self, path, html):
         """A page that exists only for the test, answered by the browser itself (the site is not touched)."""
         self.context.route(self.base + path, lambda route: route.fulfill(status=200, content_type="text/html; charset=utf-8", body=html))

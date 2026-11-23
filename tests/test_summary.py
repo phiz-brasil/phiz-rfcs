@@ -30,7 +30,9 @@ class SummaryTest(SiteCase):
         expect(self.page.locator("h1")).to_be_visible()
 
     def sign(self, name="Ana"):
+        self.prefs()
         self.page.get_by_label("Seu nome").fill(name)
+        self.page.keyboard.press("Escape")
 
     def box(self):
         return self.page.get_by_role("region", name="Resumo para os slides")

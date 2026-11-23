@@ -29,6 +29,7 @@ export function AttachmentsPage() {
   if (!data) return <p className="state">{T.loading[lang]}</p>;
   return (
     <>
+      <p className="eyebrow">{T.eyebrowDocs[lang]}</p>
       <h1>{T.attachments[lang]}</h1>
       <p className="lead">{T.attachmentsLead[lang]}</p>
       <div className="bar">

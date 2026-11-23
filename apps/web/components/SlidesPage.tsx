@@ -47,6 +47,7 @@ export function SlidesPage() {
   };
   return (
     <>
+      <p className="eyebrow">{T.eyebrowPortfolio[lang]}</p>
       <h1>{T.slides[lang]}</h1>
       <p className="lead">{T.slidesLead[lang]}</p>
       <div className="bar">

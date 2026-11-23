@@ -191,6 +191,7 @@ class SlidesPageTest(SiteCase):
 
     def test_the_header_links_to_the_slides(self):
         self.page.goto(self.base + "/themes/")
+        self.page.get_by_role("button", name="Portfólio").click()                      # grouped in a menu of the top bar
         self.page.get_by_role("link", name="Slides").click()
         expect(self.page).to_have_url(self.base + "/slides/")
 

@@ -26,7 +26,9 @@ class AttachmentsTest(SiteCase):
         expect(self.page.locator("h1")).to_be_visible()
 
     def sign(self, name="Ana"):
+        self.prefs()
         self.page.get_by_label("Seu nome").fill(name)
+        self.page.keyboard.press("Escape")
 
     def box(self):
         return self.page.get_by_role("region", name="Anexos")
@@ -297,6 +299,7 @@ class AttachmentsTest(SiteCase):
 
     def test_the_header_links_to_the_attachments_and_an_empty_hub_still_loads(self):
         self.page.goto(self.base + "/themes/")
+        self.page.get_by_role("button", name="Documentos").click()                      # the documents are grouped in a menu of the top bar
         self.page.get_by_role("link", name="Anexos").click()
         expect(self.page).to_have_url(self.base + "/attachments/")
         expect(self.page.get_by_text("Nenhum anexo ainda.")).to_be_visible()

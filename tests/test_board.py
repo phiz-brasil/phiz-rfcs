@@ -28,7 +28,9 @@ class BoardTest(SiteCase):
         expect(self.page.locator("article.kcard").first).to_be_visible()
 
     def sign(self, name="Ana"):
+        self.prefs()
         self.page.get_by_label("Seu nome").fill(name)
+        self.page.keyboard.press("Escape")
 
     def card(self, tid):
         return self.page.locator(f'article.kcard[data-theme="{tid}"]')
@@ -50,7 +52,7 @@ class BoardTest(SiteCase):
         expect(self.page.locator('article[data-theme="PHZ-0010"]')).to_have_count(0)
         expect(self.page.locator(".board .bhead")).to_have_count(10)
         # swimlanes follow the fixed order of the fronts and skip the fronts without projects
-        self.assertEqual(self.page.locator(".lane h2").all_inner_texts(), ["POP", "API Platform", "Payments"])
+        self.assertEqual(self.page.locator(".lane h2").all_text_contents(), ["POP", "API Platform", "Payments"])
 
     def test_the_board_is_as_wide_as_its_columns_even_with_very_long_titles(self):
         self.db.seed_theme("PHZ-0030", "pop", title={"pt": "Um título " + "muito comprido " * 30}, stage=3)
