@@ -42,5 +42,6 @@ The usage page (`supabase.com/dashboard/org/<org>/usage`) shows the egress per d
 - The images of a language that is not on screen are not read until that language is chosen.
 - The images below the viewport are not read until the reader scrolls near them; an image that is read is shown, can be opened full size and keeps the "missing" mark when it does not exist.
 - An image that was read once is not read again by a reload of the page, by the other language, or by another version of the RFC that uses the same row (the same `rev`); a different `rev` is read.
+- Printing (or saving as PDF) the page reads the images of the language on screen that were not read yet, so the printout has them all.
 - Without the cache (it throws), the page still shows every image.
 - The compatibility tests of the images (`tests/test_images.py`, `tests/test_live.py`) keep passing.
