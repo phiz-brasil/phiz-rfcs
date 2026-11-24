@@ -142,6 +142,9 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   carries the token (old and React pages), the account in the menu with *Sign out*, the account name on writes, and the guard behind `auth.required` (false). Nothing changes for visitors until slices 2 (database lock,
   migration written and applied only when the owner says) and 3 (go-live). Prerequisites for the owner: custom SMTP and the Auth URL settings.
 
+- **Phase 2, long window (this branch)**: the session ends only on an invalid refresh token (400/401/403); the token is renewed silently before it is needed and one tab at a time (Web Locks);
+  a session unused for a month renews on the first request. Supabase settings for the owner are in `login.md` (no short time-box or inactivity timeout).
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)

@@ -248,3 +248,88 @@ class GuardTest(SiteCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LongWindowTest(SiteCase):
+    """docs/spec/v2/login.md, "A long window of sign-in": the session ends only when Supabase says the refresh token is invalid, and the token is renewed before it is needed."""
+    def setUp(self):
+        super().setUp()
+        self.db.seed_theme("PHZ-0001", "api-platform", title={"pt": "Business API"}, owner="Ana")
+
+    def tokens(self):
+        return [b for n, b in self.db.auth_calls if n == "token"]
+
+    def themes(self):
+        self.page.goto(self.base + "/themes/")
+        expect(self.page.locator("tr.theme-row").first).to_be_visible()
+
+    def test_a_refresh_that_fails_for_a_reason_that_is_not_final_keeps_the_session(self):
+        for status in (500, 503, 429):
+            with self.subTest(status):
+                self.db.token_status = status
+                self.page.goto(self.base + "/themes/")
+                self.page.evaluate("localStorage.clear(); sessionStorage.clear()")
+                self.sign_in_as(expires_in=10)
+                self.page.reload()
+                expect(self.page.locator("tr.theme-row").first).to_be_visible()
+                self.assertIsNotNone(stored(self.page), f"a {status} must not end the session")
+                self.assertEqual(stored(self.page)["refresh_token"], "ref-ana.souza")
+
+    def test_a_refresh_that_never_arrives_keeps_the_session(self):
+        self.sign_in_as(expires_in=10)
+        self.context.route(re.compile(r".*/auth/v1/token.*"), lambda r: r.abort())
+        self.page.goto(self.base + "/themes/")
+        expect(self.page.locator("tr.theme-row").first).to_be_visible()
+        self.assertIsNotNone(stored(self.page))
+
+    def test_an_invalid_refresh_token_ends_the_session_for_every_final_status(self):
+        for status in (400, 401, 403):
+            with self.subTest(status):
+                self.db.token_status = status
+                self.sign_in_as(expires_in=10)
+                self.page.goto(self.base + "/themes/")
+                expect(self.page.locator("tr.theme-row").first).to_be_visible()
+                self.assertIsNone(stored(self.page))
+                self.page.evaluate("sessionStorage.clear()")
+
+    def test_a_session_that_expired_a_month_ago_renews_on_the_first_request_and_works(self):
+        self.sign_in_as(expires_in=-30 * 86400)
+        self.themes()
+        self.assertEqual(len(self.tokens()), 1)
+        self.assertTrue(all(a == "Bearer tok-ana.souza-r" for a in self.db.rest_auth), set(self.db.rest_auth))
+        self.assertGreater(stored(self.page)["expires_at"], time.time() + 3000)
+
+    def test_coming_back_to_a_tab_renews_a_token_that_is_about_to_expire_without_any_page_request(self):
+        self.sign_in_as(expires_in=3600)
+        self.themes()
+        self.page.evaluate("(() => { const s = JSON.parse(localStorage.getItem('phiz-auth')); s.expires_at = Math.floor(Date.now() / 1000) + 120; localStorage.setItem('phiz-auth', JSON.stringify(s)); })()")
+        before = len(self.tokens())
+        self.page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+        self.page.wait_for_function("JSON.parse(localStorage.getItem('phiz-auth')).access_token.endsWith('-r')")
+        self.assertEqual(len(self.tokens()), before + 1)
+
+    def test_a_token_with_plenty_of_time_left_is_not_renewed_when_coming_back(self):
+        self.sign_in_as(expires_in=3600)
+        self.themes()
+        self.page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+        self.page.wait_for_timeout(500)
+        self.assertEqual(self.tokens(), [])
+
+    def test_a_tab_left_open_renews_the_token_by_itself_before_it_expires(self):
+        self.sign_in_as(expires_in=3600)
+        self.page.clock.install()
+        self.page.goto(self.base + "/themes/")
+        expect(self.page.locator("tr.theme-row").first).to_be_visible()
+        self.assertEqual(self.tokens(), [])
+        self.page.clock.run_for(56 * 60 * 1000)                                            # 4 minutes from the end of the hour: renews within one tick
+        self.page.wait_for_function("JSON.parse(localStorage.getItem('phiz-auth')).access_token.endsWith('-r')")
+
+    def test_two_tabs_that_need_a_new_token_at_the_same_moment_make_one_call(self):
+        self.sign_in_as(expires_in=10)
+        other = self.context.new_page()
+        self.page.goto(self.base + "/themes/")
+        other.goto(self.base + "/themes/")
+        expect(self.page.locator("tr.theme-row").first).to_be_visible()
+        expect(other.locator("tr.theme-row").first).to_be_visible()
+        self.assertEqual(len(self.tokens()), 1)
+        self.assertTrue(all(a == "Bearer tok-ana.souza-r" for a in self.db.rest_auth), set(self.db.rest_auth))

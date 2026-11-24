@@ -37,6 +37,7 @@ class FakeSupabase(ThemesMixin):
         self.assets = []                  # rfc_assets rows
         self.auth_calls = []              # (endpoint, body) of every call to /auth/v1: otp, verify, token, user, logout
         self.rest_auth = []               # the Authorization header of every call to the REST API, Storage or Edge Functions (None when absent)
+        self.token_status = None          # when set (500, 429…), the refresh answers with that status instead of a session
         self.valid_codes = {"123456"}     # the 6-digit codes the fake Auth accepts
         self.refreshable = {}             # refresh_token -> email: what the fake Auth can refresh
         self.asset_reads = []             # (rfc, name, rev) of every read that carried the bytes (select includes `data`): what costs egress
@@ -160,6 +161,8 @@ class FakeSupabase(ThemesMixin):
                 return route.fulfill(status=200, headers=H, body=json.dumps(sess))
             return route.fulfill(status=403, headers=H, body=json.dumps({"code": 403, "error_code": "otp_expired", "msg": "Token has expired or is invalid"}))
         if endpoint == "token" and q.get("grant_type") == "refresh_token":
+            if self.token_status:
+                return route.fulfill(status=self.token_status, headers=H, body=json.dumps({"msg": "unavailable"}))
             email = self.refreshable.get(body.get("refresh_token"))
             if not email:
                 return route.fulfill(status=400, headers=H, body=json.dumps({"error": "invalid_grant", "error_description": "Invalid Refresh Token"}))

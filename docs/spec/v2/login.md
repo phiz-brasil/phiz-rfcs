@@ -27,6 +27,23 @@ Only people with a `@phiz.com` account read or write anything. Today the publish
    `window.PHIZ_AUTH` (session, name, member check, send link, verify code, sign out), keeps the session fresh, and **wraps `window.fetch`**: any request to the Supabase address (REST, Storage, Edge Functions; never
    `/auth/v1/`) leaves with `Authorization: Bearer <access token>` when there is a session. Because of the wrapper no request site of the old or the new pages needs to change. It also runs the guard (decision 4).
 
+## A long window of sign-in (decision of 2026-11-24: "garanta que o login tenha uma janela longa")
+
+Signing in should be rare: the person signs in once and stays in for as long as they keep coming back, and even after weeks away. Two parts, the code and Supabase's settings.
+
+**In the code** (`assets/auth.js`)
+1. The access token is short (Supabase's default, 1 h) and is renewed **silently**; the refresh token is what makes the window long, and the client never throws it away for a reason that is not final.
+   The session ends **only** when Supabase answers the refresh with *invalid* (HTTP 400, 401 or 403). A network error, `429` or any `5xx` keeps the session and tries again later.
+2. A session that was not used for a long time (the access token expired weeks ago) renews on the first request and carries on, as long as Supabase still accepts the refresh token.
+3. The token is renewed **before** it is needed: when the tab becomes visible again, when the network comes back, and every 4 minutes in a tab that stays open, whenever less than 5 minutes are left.
+4. Several tabs renew **one at a time** (the Web Locks API, `phiz-auth-refresh`): a tab that waited for the lock reads the session the other one saved and does not call Supabase again (no spent refresh token, no spurious sign-out).
+
+**In Supabase** (owner; Authentication → Sessions, and Project Settings → JWT)
+- Do **not** set a *time-box* or an *inactivity timeout* shorter than the window wanted. On the Free plan these options do not exist and refresh tokens do not expire, which is the longest window there is; on a paid plan
+  set the inactivity timeout to 30 days or more and leave the time-box off (or 90 days or more).
+- Keep *Refresh token reuse detection* on (default) and the JWT expiry at 3600 s: a longer access token only lengthens what a stolen token can do and adds nothing to the window.
+- Anyone can end their own session with *Sign out*; a member who leaves the company is cut off by the database lock (slice 2) — their e-mail stops being valid — and not by the session length.
+
 ## Slices
 
 | slice | what | reaches production how |
@@ -59,6 +76,13 @@ Only people with a `@phiz.com` account read or write anything. Today the publish
 - With `auth.required` (or the browser's own strict flag) a page without a session goes to `/login/?next=…`, with a session stays, and `/login/` never redirects; `next` outside this site is ignored.
 - With a session, writes carry the account name (`Ana Souza`); on the React pages the typed-name field is not shown, on the old pages it is filled in with the account name.
 - The whole suite passes as before (no session, switch off) — and the part of it that writes passes with a session too.
+
+## Acceptance (the long window)
+
+- A refresh answered with `500` or `429`, or that does not arrive, keeps the session; one answered with `400` ends it.
+- A session whose access token expired 30 days ago renews on the first request and works.
+- When the tab becomes visible again with less than 5 minutes left, the token is renewed without any page request; in a tab that stays open it is renewed by itself before it expires.
+- Two tabs that need a new token at the same moment make **one** call to Supabase.
 
 ## Acceptance (slices 2 and 3)
 
