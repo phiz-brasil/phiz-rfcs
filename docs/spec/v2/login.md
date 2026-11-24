@@ -20,10 +20,12 @@ Only people with a `@phiz.com` account read or write anything. Today the publish
    (deep links to a comment keep working). `/login/` always works, so the sign-in can be tried before the switch. A person can also make *their own* browser strict with `localStorage["phiz-auth-required"] = "1"`
    (it only adds strictness; the tests use it).
 5. **Names.** With a session, "your name" is the account's: `user_metadata.name`, else the part of the e-mail before `@` with `.`, `_` and `-` turned into spaces and capitalised (`ana.souza@phiz.com` → `Ana Souza`).
-   The typed-name field disappears from Preferences; the account (e-mail and *Sign out*) takes its place. The functions keep their `p_by` argument and the client sends the account name there.
-   Without a session (before go-live) nothing changes: the typed name stays.
-6. **Where the code lives.** The same small module twice, because the old pages are plain scripts and the new ones are React: `assets/auth.js` (a classic script that defines `window.PHIZ_AUTH`, loaded first on every old page)
-   and `apps/web/lib/auth.ts`. Both read and write the same `localStorage` entry and behave the same; `tests/` drive both through the real pages.
+   On the React pages the typed-name field leaves Preferences and the account (e-mail and *Sign out*) takes its place; the functions keep their `p_by` argument and the client sends the account name there. The old
+   pages (RFC, new RFC, comments, index) keep their name field, **filled in with the account name** (they read the name remembered under `phiz-rfc-author`, which the session overwrites); the server trusts
+   `p_by` as it does today, all members being trusted. Without a session (before go-live) nothing changes: the typed name stays.
+6. **One script does it all: `assets/auth.js`.** A classic script, loaded first on every page (old and React) with the Supabase address, the publishable key and the switch in `data-` attributes. It defines
+   `window.PHIZ_AUTH` (session, name, member check, send link, verify code, sign out), keeps the session fresh, and **wraps `window.fetch`**: any request to the Supabase address (REST, Storage, Edge Functions; never
+   `/auth/v1/`) leaves with `Authorization: Bearer <access token>` when there is a session. Because of the wrapper no request site of the old or the new pages needs to change. It also runs the guard (decision 4).
 
 ## Slices
 
@@ -55,7 +57,7 @@ Only people with a `@phiz.com` account read or write anything. Today the publish
 - An expiring access token is refreshed before the request; a refresh that fails clears the session.
 - *Sign out* clears the session; the menu shows the account.
 - With `auth.required` (or the browser's own strict flag) a page without a session goes to `/login/?next=…`, with a session stays, and `/login/` never redirects; `next` outside this site is ignored.
-- With a session, writes carry the account name (`Ana Souza`), and the typed-name field is not shown.
+- With a session, writes carry the account name (`Ana Souza`); on the React pages the typed-name field is not shown, on the old pages it is filled in with the account name.
 - The whole suite passes as before (no session, switch off) — and the part of it that writes passes with a session too.
 
 ## Acceptance (slices 2 and 3)
