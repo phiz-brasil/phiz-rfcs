@@ -350,3 +350,67 @@ class CodeOnlyTextsTest(SiteCase):
         self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
         self.page.get_by_role("button", name="Enviar código").click()
         expect(self.page.locator("main")).to_contain_text("o último substitui os anteriores")
+
+
+class MicrosoftSignInTest(SiteCase):
+    """docs/spec/v2/login.md, "Microsoft sign-in (SSO), slice 4": a button that goes to the Azure provider of Supabase; the way back is the address with the tokens."""
+
+    def login(self, query=""):
+        self.page.goto(self.base + "/login/" + query)
+        expect(self.page.get_by_label("E-mail")).to_be_visible()
+
+    def go(self, query=""):
+        self.login(query)
+        with self.page.expect_request(re.compile(r"/auth/v1/authorize")) as req:
+            self.page.get_by_role("button", name="Entrar com Microsoft").click()
+        return req.value.url
+
+    def test_the_button_goes_to_the_azure_provider_and_comes_back_to_the_login_page(self):
+        from urllib.parse import parse_qs, urlparse
+        q = parse_qs(urlparse(self.go()).query)
+        self.assertEqual(q["provider"], ["azure"])
+        self.assertTrue(q["redirect_to"][0].endswith("/login/"))
+        self.assertEqual(q["scopes"], ["email"])
+
+    def test_the_button_is_translated_and_sits_next_to_the_e_mail_form(self):
+        self.login()
+        expect(self.page.get_by_role("button", name="Entrar com Microsoft")).to_be_visible()
+        expect(self.page.get_by_role("button", name="Enviar código")).to_be_visible()                  # the code by e-mail stays
+        self.page.get_by_role("button", name="EN-US").click()
+        expect(self.page.get_by_role("button", name="Sign in with Microsoft")).to_be_visible()
+        self.page.get_by_role("button", name="中文").click()
+        expect(self.page.get_by_role("button", name="使用 Microsoft 登录")).to_be_visible()
+
+    def test_where_the_person_was_going_survives_the_trip_to_microsoft(self):
+        self.go("?next=%2Fthemes%2F")
+        self.assertEqual(self.page.evaluate("sessionStorage.getItem('phiz-auth-next')"), "/themes/")
+        self.db.refreshable["ref-bo"] = "bo@phizchat.com"
+        self.page.goto(self.base + "/login/#access_token=tok-bo&refresh_token=ref-bo&expires_in=3600&token_type=bearer")        # the return has no ?next=
+        self.page.wait_for_url(re.compile(r"/themes/$"))
+        self.assertIsNone(self.page.evaluate("sessionStorage.getItem('phiz-auth-next')"))              # used once
+
+    def test_the_trip_cannot_carry_the_person_to_another_site(self):
+        self.login()
+        self.page.evaluate("sessionStorage.setItem('phiz-auth-next', 'https://evil.example/x')")
+        self.db.refreshable["ref-bo"] = "bo@phizchat.com"
+        self.page.goto(self.base + "/login/#access_token=tok-bo&refresh_token=ref-bo&expires_in=3600&token_type=bearer")
+        self.page.wait_for_url(re.compile(r"/overview/$"))
+
+    def test_a_microsoft_account_outside_the_domain_is_ended_with_a_message(self):
+        self.db.refreshable["ref-x"] = "x@outlook.com"
+        self.page.goto(self.base + "/login/#access_token=tok-x&refresh_token=ref-x&expires_in=3600&token_type=bearer&provider_token=abc")
+        expect(self.page.locator("main [role=alert]")).to_contain_text("@phizchat.com")
+        self.assertIsNone(stored(self.page))
+
+    def test_the_url_of_the_button_carries_no_token_and_no_secret(self):
+        url = self.go()
+        for word in ("secret", "token", "password", "client_id"):
+            self.assertNotIn(word, url.lower())
+
+    def test_no_secret_of_the_provider_is_in_the_sources(self):
+        from support import ROOT
+        for folder in ("apps/web", "assets", "supabase", "site.config.json"):
+            p = ROOT / folder
+            files = [p] if p.is_file() else [f for f in p.rglob("*") if f.is_file() and f.suffix in {".ts", ".tsx", ".js", ".json", ".sql", ".css"} and "node_modules" not in f.parts and ".next" not in f.parts]
+            for f in files:
+                self.assertNotRegex(f.read_text(encoding="utf-8", errors="ignore"), r"(?i)client_secret|azure_secret|AZURE_CLIENT", str(f))
