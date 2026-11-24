@@ -184,7 +184,7 @@ the translation (optional `CF_SUGGEST_MODEL`, default `@cf/meta/llama-3.3-70b-in
 `phiz-auth`) and `assets/auth.js` — loaded first on every page — wraps `fetch` so every request to Supabase carries the token; with a session the account (and *Sign out*) is in the menu, and the name
 written on changes is the account's. Whether pages **require** sign-in is the switch `auth.required` of `site.config.json` (false today: nothing changes for anyone until the database is locked — slice 2 —
 and the switch turned on together, slice 3). Before that, open `/login/` to try it; `localStorage["phiz-auth-required"] = "1"` makes only your own browser strict. Needs custom SMTP and the redirect URLs
-in Supabase (the prerequisites of the spec).
+in Supabase (the prerequisites of the spec). **The window of sign-in is long:** the access token (1 h) is renewed silently, before it is needed (when the tab comes back, when the network comes back, every 4 minutes in an open tab, one tab at a time), and the session ends only when Supabase says the refresh token is invalid, never for a network error or a `5xx`; on the Free plan refresh tokens do not expire, so a person stays signed in as long as they come back. Do not set a short time-box or inactivity timeout in Supabase (Authentication → Sessions).
 
 `/roadmap/` is the **roadmap**: every theme over time, grouped by front, drawn from the theme's own dates (a bar from its start to its estimated
 completion, a marker when only one of them is set) and from the execution items marked as milestones (diamonds, filled when done), with a line for today,
