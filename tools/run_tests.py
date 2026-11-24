@@ -3,7 +3,7 @@
 
     python tools/run_tests.py [--workers N]
 
-Same tests as `python -m unittest discover -s tests`, but the site is built once, `next start` runs once and the test FILES are spread over N processes
+Same tests as `python -m unittest discover -s tests`, but the site is built once and the test FILES are spread over N processes, each with its own `next start`
 (each file runs whole in one process, in the same order as before). A file that is in no shard would silently not run, so `shards()` is tested to cover every
 tests/test_*.py exactly once, and the count of tests is compared with `unittest discover`."""
 import argparse
@@ -74,8 +74,10 @@ def main(argv=None):
     expected = count_tests(files)
     env = dict(os.environ)
     sys.path.insert(0, str(TESTS))
-    from support import _Site  # builds once (unless SKIP_BUILD / SITE_URL) and starts one `next start`
-    env["SITE_URL"] = _Site.start()
+    from support import _Site  # builds once (unless SKIP_BUILD / SITE_URL); every shard then starts its own `next start` from that build
+    if not env.get("SITE_URL"):
+        _Site.build()
+        env["SKIP_BUILD"] = "1"
     code, report = run_shards(TESTS, lists, env)
     print(report)
     print("\n%d test files, %d tests, %d workers, %.1fs" % (len(files), expected, len(lists), time.time() - t0))
