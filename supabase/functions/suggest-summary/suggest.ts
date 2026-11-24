@@ -146,4 +146,4 @@ export function validate(parsed: unknown, sources: Source[]): Record<Field, Answ
 }
 
 /* The same rule as public.is_member() in the database: an address of the company domain (docs/spec/v2/login.md). */
-export const memberEmail = (email: unknown): boolean => typeof email === "string" && /^[^@\s]+@phiz\.com$/i.test(email.trim());
+export const memberEmail = (email: unknown): boolean => typeof email === "string" && /^[^@\s]+@phizchat\.com$/i.test(email.trim());

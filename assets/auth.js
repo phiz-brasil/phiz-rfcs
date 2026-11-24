@@ -11,7 +11,7 @@
   const URL_ = ((tag && tag.dataset.url) || "").replace(/\/+$/, "");
   const KEY = (tag && tag.dataset.key) || "";
   const STORE = "phiz-auth", NAME_KEY = "phiz-rfc-author", STRICT_KEY = "phiz-auth-required";
-  const DOMAIN = /@phiz\.com$/i;
+  const DOMAIN = /@phizchat\.com$/i;
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* blocked */ } },
@@ -23,7 +23,7 @@
   function session() {
     try { const s = JSON.parse(store.get(STORE) || "null"); return s && s.access_token && s.refresh_token ? s : null; } catch (e) { return null; }
   }
-  /* "ana.souza@phiz.com" -> "Ana Souza"; a name in the account wins */
+  /* "ana.souza@phizchat.com" -> "Ana Souza"; a name in the account wins */
   function nameOf(s) {
     if (!s || !s.user) return null;
     const n = s.user.user_metadata && (s.user.user_metadata.name || s.user.user_metadata.full_name);

@@ -1,5 +1,5 @@
 "use client";
-/* The sign-in page (docs/spec/v2/login.md): the e-mail of the company, a link and a 6-digit code in one message. The work is done by assets/auth.js (window.PHIZ_AUTH). */
+/* The sign-in page (docs/spec/v2/login.md): the e-mail of the company, a 6-digit code in one message. The work is done by assets/auth.js (window.PHIZ_AUTH). */
 import { useEffect, useRef, useState } from "react";
 import { LANGS, T, useLang } from "../lib/i18n";
 
@@ -75,7 +75,7 @@ export function LoginPage() {
             <input type="email" autoComplete="email" value={email} disabled={!!sentTo} onChange={e => setEmail(e.target.value)} /></label>
           {sentTo ? (
             <>
-              <p className="note" role="status">{T.loginSent[lang]} {sentTo}</p>
+              <p className="note" role="status">{T.loginSent[lang]} {sentTo}. {T.loginOneAtATime[lang]}</p>
               <label className="field"><span>{T.loginCode[lang]}</span>
                 <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} /></label>
             </>

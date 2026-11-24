@@ -26,38 +26,38 @@ class LoginPageTest(SiteCase):
     def test_an_address_outside_the_domain_is_refused_without_any_request(self):
         self.login()
         self.page.get_by_label("E-mail").fill("pessoa@gmail.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
-        expect(self.page.locator("main [role=alert]")).to_contain_text("@phiz.com")
+        self.page.get_by_role("button", name="Enviar código").click()
+        expect(self.page.locator("main [role=alert]")).to_contain_text("@phizchat.com")
         self.assertEqual(self.db.auth_calls, [])
 
-    def test_a_company_address_asks_for_a_link_and_a_code_and_shows_the_code_field(self):
+    def test_a_company_address_asks_for_a_code_and_shows_the_code_field(self):
         self.login()
-        self.page.get_by_label("E-mail").fill("Ana.Souza@PHIZ.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
-        expect(self.page.get_by_text("Enviamos um link e um código para ana.souza@phiz.com")).to_be_visible()
+        self.page.get_by_label("E-mail").fill("Ana.Souza@PHIZCHAT.com")
+        self.page.get_by_role("button", name="Enviar código").click()
+        expect(self.page.get_by_text("Enviamos um código para ana.souza@phizchat.com")).to_be_visible()
         (otp,) = self.calls("otp")
-        self.assertEqual((otp["email"], otp["create_user"]), ("ana.souza@phiz.com", True))
+        self.assertEqual((otp["email"], otp["create_user"]), ("ana.souza@phizchat.com", True))
         self.assertTrue(otp["_q"]["redirect_to"].endswith("/login/"))
         expect(self.page.get_by_label("Código de 6 dígitos")).to_be_visible()
         expect(self.page.get_by_role("button", name="Enviar de novo")).to_be_disabled()           # not before 30 seconds
 
     def test_the_right_code_makes_a_session_and_leads_to_the_overview(self):
         self.login()
-        self.page.get_by_label("E-mail").fill("ana.souza@phiz.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
+        self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
+        self.page.get_by_role("button", name="Enviar código").click()
         self.page.get_by_label("Código de 6 dígitos").fill("123456")
         self.page.get_by_role("button", name="Entrar").click()
         self.page.wait_for_url(re.compile(r"/overview/$"))
         s = stored(self.page)
-        self.assertEqual((s["user"]["email"], s["access_token"], s["refresh_token"]), ("ana.souza@phiz.com", "tok-ana.souza", "ref-ana.souza"))
+        self.assertEqual((s["user"]["email"], s["access_token"], s["refresh_token"]), ("ana.souza@phizchat.com", "tok-ana.souza", "ref-ana.souza"))
         self.assertGreater(s["expires_at"], time.time() + 3000)
         (v,) = self.calls("verify")
-        self.assertEqual((v["type"], v["email"], v["token"]), ("email", "ana.souza@phiz.com", "123456"))
+        self.assertEqual((v["type"], v["email"], v["token"]), ("email", "ana.souza@phizchat.com", "123456"))
 
     def test_a_wrong_code_shows_an_error_and_keeps_the_form(self):
         self.login()
-        self.page.get_by_label("E-mail").fill("ana.souza@phiz.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
+        self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
+        self.page.get_by_role("button", name="Enviar código").click()
         self.page.get_by_label("Código de 6 dígitos").fill("000000")
         self.page.get_by_role("button", name="Entrar").click()
         expect(self.page.locator("main [role=alert]")).to_contain_text("inválido ou expirou")
@@ -65,24 +65,24 @@ class LoginPageTest(SiteCase):
         expect(self.page.get_by_label("Código de 6 dígitos")).to_be_visible()
 
     def test_the_link_in_the_message_brings_the_tokens_in_the_address_and_signs_the_person_in(self):
-        self.db.refreshable["ref-bo"] = "bo@phiz.com"
+        self.db.refreshable["ref-bo"] = "bo@phizchat.com"
         self.page.goto(self.base + "/login/?next=%2Fthemes%2F#access_token=tok-bo&refresh_token=ref-bo&expires_in=3600&token_type=bearer&type=magiclink")
         self.page.wait_for_url(re.compile(r"/themes/$"))
         s = stored(self.page)
-        self.assertEqual((s["user"]["email"], s["access_token"]), ("bo@phiz.com", "tok-bo"))
+        self.assertEqual((s["user"]["email"], s["access_token"]), ("bo@phizchat.com", "tok-bo"))
         self.assertEqual(self.calls("user")[0]["_auth"], "Bearer tok-bo")
         self.assertNotIn("access_token", self.page.url)
 
     def test_a_session_of_an_outside_address_is_ended_with_a_message(self):
         self.db.refreshable["ref-x"] = "x@gmail.com"
         self.page.goto(self.base + "/login/#access_token=tok-x&refresh_token=ref-x&expires_in=3600&token_type=bearer&type=magiclink")
-        expect(self.page.locator("main [role=alert]")).to_contain_text("@phiz.com")
+        expect(self.page.locator("main [role=alert]")).to_contain_text("@phizchat.com")
         self.assertIsNone(stored(self.page))
 
     def test_next_must_stay_on_this_site(self):
         for evil in ("https://evil.example/x", "//evil.example/x"):
             with self.subTest(evil):
-                self.db.refreshable["ref-bo"] = "bo@phiz.com"
+                self.db.refreshable["ref-bo"] = "bo@phizchat.com"
                 self.page.goto(self.base + f"/login/?next={evil}#access_token=tok-bo&refresh_token=ref-bo&expires_in=3600&type=magiclink")
                 self.page.wait_for_url(re.compile(r"/overview/$"))
                 self.page.evaluate("localStorage.clear()")
@@ -91,7 +91,7 @@ class LoginPageTest(SiteCase):
         self.page.goto(self.base + "/login/")
         self.page.get_by_role("button", name="EN-US").click()
         expect(self.page.get_by_label("E-mail")).to_be_visible()
-        expect(self.page.get_by_role("button", name="Send link and code")).to_be_visible()
+        expect(self.page.get_by_role("button", name="Send code")).to_be_visible()
 
 
 class SessionTest(SiteCase):
@@ -141,10 +141,10 @@ class SessionTest(SiteCase):
         self.assertTrue(all(a is None for a in self.db.rest_auth))
 
     def test_the_account_is_in_the_menu_and_signing_out_clears_the_session(self):
-        self.sign_in_as("ana.souza@phiz.com")
+        self.sign_in_as("ana.souza@phizchat.com")
         self.page.goto(self.base + "/themes/")
         self.prefs()
-        expect(self.page.locator(".user-pop")).to_contain_text("ana.souza@phiz.com")
+        expect(self.page.locator(".user-pop")).to_contain_text("ana.souza@phizchat.com")
         expect(self.page.get_by_label("Seu nome")).to_have_count(0)                          # the typed name is gone
         self.page.get_by_role("button", name="Sair").click()
         self.page.wait_for_function("localStorage.getItem('phiz-auth') === null")
@@ -157,7 +157,7 @@ class SessionTest(SiteCase):
         expect(self.page.get_by_role("button", name="Sair")).to_have_count(0)
 
     def test_writes_carry_the_name_of_the_account(self):
-        self.sign_in_as("ana.souza@phiz.com")
+        self.sign_in_as("ana.souza@phizchat.com")
         self.page.goto(self.base + "/themes/PHZ-0001/")
         form = self.page.get_by_role("region", name="Atualização semanal")
         form.get_by_label("Andamento (uma frase)").fill("Contrato fechado")
@@ -167,7 +167,7 @@ class SessionTest(SiteCase):
         self.assertEqual(call["p_by"], "Ana Souza")
 
     def test_a_name_in_the_account_wins_over_the_one_made_from_the_address(self):
-        self.sign_in_as("a.souza@phiz.com", name="Ana Paula Souza")
+        self.sign_in_as("a.souza@phizchat.com", name="Ana Paula Souza")
         self.page.goto(self.base + "/themes/PHZ-0001/")
         form = self.page.get_by_role("region", name="Atualização semanal")
         form.get_by_label("Andamento (uma frase)").fill("x")
@@ -176,14 +176,14 @@ class SessionTest(SiteCase):
         self.assertEqual([b["p_by"] for n, b in self.db.calls if n == "post_theme_update"], ["Ana Paula Souza"])
 
     def test_the_old_pages_remember_the_account_name_for_their_own_name_field(self):
-        self.sign_in_as("bo.lima@phiz.com")
+        self.sign_in_as("bo.lima@phizchat.com")
         self.page.goto(self.base + "/nova/")
         expect(self.page.locator("#by")).to_have_value("Bo Lima")
         self.assertEqual(self.page.evaluate("localStorage.getItem('phiz-rfc-author')"), "Bo Lima")
 
     def test_a_comment_on_an_rfc_is_written_by_the_account_with_the_token(self):
         import_rfc(self.db, "PHZ-0002")
-        self.sign_in_as("bo.lima@phiz.com")
+        self.sign_in_as("bo.lima@phizchat.com")
         self.page.goto(self.base + "/rfc/?id=PHZ-0002")
         self.page.wait_for_selector(".lang.active h2 .cmt-btn")
         self.page.locator("#pt-summary .cmt-btn").click()
@@ -197,9 +197,9 @@ class SessionTest(SiteCase):
         self.assertTrue(self.db.rest_auth and all(a == "Bearer tok-bo.lima" for a in self.db.rest_auth), set(self.db.rest_auth))
 
     def test_the_old_pages_show_the_account_and_a_way_out(self):
-        self.sign_in_as("bo.lima@phiz.com")
+        self.sign_in_as("bo.lima@phizchat.com")
         self.page.goto(self.base + "/")
-        expect(self.page.locator("header.appbar [data-auth-slot]")).to_contain_text("bo.lima@phiz.com")
+        expect(self.page.locator("header.appbar [data-auth-slot]")).to_contain_text("bo.lima@phizchat.com")
         self.page.locator("header.appbar [data-auth-slot] button").click()
         self.page.wait_for_function("localStorage.getItem('phiz-auth') === null")
 
@@ -333,3 +333,20 @@ class LongWindowTest(SiteCase):
         expect(other.locator("tr.theme-row").first).to_be_visible()
         self.assertEqual(len(self.tokens()), 1)
         self.assertTrue(all(a == "Bearer tok-ana.souza-r" for a in self.db.rest_auth), set(self.db.rest_auth))
+
+
+class CodeOnlyTextsTest(SiteCase):
+    """docs/spec/v2/login.md, "Decision 2026-11-24": the message carries only the code, so the page never promises a link."""
+
+    def test_the_page_speaks_of_a_code_and_never_of_a_link(self):
+        self.page.goto(self.base + "/login/")
+        main = self.page.locator("main")
+        expect(main).to_contain_text("código de 6 dígitos")
+        expect(main).not_to_contain_text("link")
+        expect(self.page.get_by_role("button", name="Enviar código")).to_be_visible()
+
+    def test_the_form_tells_that_each_request_replaces_the_previous_code(self):
+        self.page.goto(self.base + "/login/")
+        self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
+        self.page.get_by_role("button", name="Enviar código").click()
+        expect(self.page.locator("main")).to_contain_text("o último substitui os anteriores")

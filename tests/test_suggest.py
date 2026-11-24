@@ -163,8 +163,8 @@ if __name__ == "__main__":
 class MemberTest(unittest.TestCase):
     """The domain test of the Edge Function (docs/spec/v2/login.md, slice 2): the same rule as public.is_member() in the database."""
     def test_only_addresses_of_the_company_domain_are_members(self):
-        cases = {"ana@phiz.com": True, "Ana.Souza@PHIZ.COM": True, "a@b.phiz.com": False, "ana@phiz.com.evil.net": False, "ana@notphiz.com": False,
-                 "phiz.com": False, "@phiz.com": False, "": False, None: False, "ana@phiz.com ": True}
+        cases = {"ana@phizchat.com": True, "Ana.Souza@PHIZCHAT.COM": True, "a@b.phizchat.com": False, "ana@phizchat.com.evil.net": False, "ana@notphizchat.com": False, "ana@phiz.com": False,
+                 "phizchat.com": False, "@phizchat.com": False, "": False, None: False, "ana@phizchat.com ": True}
         for email, want in cases.items():
             with self.subTest(email):
                 self.assertEqual(run("S.memberEmail(D.e)", {"e": email}), want)

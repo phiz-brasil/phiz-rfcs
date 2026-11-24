@@ -5,21 +5,21 @@ nothing changes for anyone until the owner flips the switch.
 
 ## Goal
 
-Only people with a `@phiz.com` account read or write anything. Today the publishable key is in every page, so anyone with the address can read and edit everything.
+Only people with a `@phizchat.com` account read or write anything. Today the publishable key is in every page, so anyone with the address can read and edit everything.
 
 ## Decisions
 
-1. **Supabase Auth, e-mail first.** A person types their `@phiz.com` address; Supabase sends one message with a **link** and a **6-digit code**; either signs them in. Microsoft sign-in comes later
+1. **Supabase Auth, e-mail first.** A person types their `@phizchat.com` address; Supabase sends one message with a **link** and a **6-digit code**; either signs them in. Microsoft sign-in comes later
    (it needs the administrator of the company's Microsoft tenant, `README.md` open question 2). Everyone with the domain is a *member*; no profiles yet.
 2. **Three locks, the last one is the real one.** (a) the sign-in page refuses other domains before sending anything; (b) the Supabase hook *before user created* (when the plan allows) refuses them
-   at the source; (c) **the database**: every table, function and Storage policy requires a verified e-mail that ends in `@phiz.com`, so a non-member who got an account still reads nothing.
+   at the source; (c) **the database**: every table, function and Storage policy requires a verified e-mail that ends in `@phizchat.com`, so a non-member who got an account still reads nothing.
 3. **The session is in the browser, not in cookies.** The pages are static shells; the data is behind the API, so the protection is in the database and a server-side middleware would add nothing.
    The session (`access_token`, `refresh_token`, `expires_at`, `user`) is kept in `localStorage` under `phiz-auth`; the access token is refreshed a minute before it expires; every request to Supabase sends the
    publishable key as `apikey` and the access token as `Authorization: Bearer`. A refresh that fails ends the session. (`@supabase/ssr` is not used.)
 4. **The switch.** `site.config.json` → `auth.required` (false until go-live). When true, a page without a session sends the visitor to `/login/?next=<where they were>` and brings them back after sign-in
    (deep links to a comment keep working). `/login/` always works, so the sign-in can be tried before the switch. A person can also make *their own* browser strict with `localStorage["phiz-auth-required"] = "1"`
    (it only adds strictness; the tests use it).
-5. **Names.** With a session, "your name" is the account's: `user_metadata.name`, else the part of the e-mail before `@` with `.`, `_` and `-` turned into spaces and capitalised (`ana.souza@phiz.com` → `Ana Souza`).
+5. **Names.** With a session, "your name" is the account's: `user_metadata.name`, else the part of the e-mail before `@` with `.`, `_` and `-` turned into spaces and capitalised (`ana.souza@phizchat.com` → `Ana Souza`).
    On the React pages the typed-name field leaves Preferences and the account (e-mail and *Sign out*) takes its place; the functions keep their `p_by` argument and the client sends the account name there. The old
    pages (RFC, new RFC, comments, index) keep their name field, **filled in with the account name** (they read the name remembered under `phiz-rfc-author`, which the session overwrites); the server trusts
    `p_by` as it does today, all members being trusted. Without a session (before go-live) nothing changes: the typed name stays.
@@ -56,7 +56,7 @@ Signing in should be rare: the person signs in once and stays in for as long as 
 
 Written and tested now, **applied only at go-live** (slice 3), because it closes the door on anonymous visitors at once. It keeps what already works for members and changes nothing else.
 
-1. **Who is a member** — `public.is_member()`: the request's JWT has role `authenticated` and an e-mail that matches `^[^@]+@phiz\.com$` (case-insensitive). `public.is_admin()`: a member whose e-mail is in `public.app_admins`;
+1. **Who is a member** — `public.is_member()`: the request's JWT has role `authenticated` and an e-mail that matches `^[^@]+@phizchat\.com$` (case-insensitive). `public.is_admin()`: a member whose e-mail is in `public.app_admins`;
    **while that table is empty every member is an admin** (so naming admins is optional and nobody is locked out by forgetting it).
 2. **One gate for the whole REST API** — `public.check_request()` is set as PostgREST's `db_pre_request` (`alter role authenticator set pgrst.db_pre_request`), so it runs before **every** request,
    whatever table, view or function is asked for: `service_role` passes (Edge Functions, webhooks, migrations); `/rpc/ping` passes for everyone; role `anon` is refused with **401**; an `authenticated` account that is not a member with **403**.
@@ -66,7 +66,7 @@ Written and tested now, **applied only at go-live** (slice 3), because it closes
 4. **Storage** — the policies of the `attachments` bucket (`attachments read`, `attachments upload`) are recreated for `authenticated` members only; a restrictive policy keeps non-members out of that bucket.
 5. **Admins** — `save_board_column` and `delete_board_column` are recreated with one added first line, `is_admin()` or an error: nothing else in them changes (a test compares the bodies).
 6. **Keep-alive** — `public.ping()` returns `true` to anyone; the weekly job calls it, with the old read as a fallback.
-7. **`suggest-summary`** — when the secret `REQUIRE_MEMBER` is `1`, the Edge Function reads the bearer token, asks Supabase Auth who it is and refuses (401/403) anything but a `@phiz.com` member. Without the secret it behaves as today.
+7. **`suggest-summary`** — when the secret `REQUIRE_MEMBER` is `1`, the Edge Function reads the bearer token, asks Supabase Auth who it is and refuses (401/403) anything but a `@phizchat.com` member. Without the secret it behaves as today.
 8. **The last statement** of the migration turns the gate on; its undo, in case something goes wrong, is the comment at the end of the file
    (`alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`) and it is run in the SQL editor, which does not go through the REST API, so the owner can always reach it.
 9. **Not in this slice**: the Supabase hook that refuses other domains at sign-up (a dashboard setting, owner), moderation limited to admins (comments stay open to members), per-person permissions.
@@ -82,16 +82,16 @@ checks against production → if anything is wrong, run the undo.
 
 ## What the sign-in page does (`/login/`)
 
-- A field for the e-mail and a button. An address that is not `@phiz.com` is refused on the page with a message and **nothing is sent**.
+- A field for the e-mail and a button. An address that is not `@phizchat.com` is refused on the page with a message and **nothing is sent**.
 - Sending calls Supabase (`/auth/v1/otp`, `create_user: true`) and shows "we sent a link and a code to …", with a field for the code and a *Send again* button (not before 30 s).
 - Typing the code calls `/auth/v1/verify` (`type: email`); the link brings the visitor back to `/login/` with the tokens in the address (`#access_token=…`), which the page reads, fetches the user, saves the session
   and removes from the address. Either way the visitor goes to `next` (only paths of this site; default `/overview/`).
-- A session whose e-mail is not `@phiz.com` is ended with a message. An invalid or expired code shows an error and keeps the form.
+- A session whose e-mail is not `@phizchat.com` is ended with a message. An invalid or expired code shows an error and keeps the form.
 - Texts in pt-BR, en and zh-Hans.
 
 ## Acceptance (slice 1)
 
-- `/login/` refuses a non-`@phiz.com` address without any request; with a `@phiz.com` address it asks Supabase for a link and a code; a correct code, or the tokens in the address, make a session and lead to `next`.
+- `/login/` refuses a non-`@phizchat.com` address without any request; with a `@phizchat.com` address it asks Supabase for a link and a code; a correct code, or the tokens in the address, make a session and lead to `next`.
 - With a session every request to the REST API of the React pages **and** of the old pages carries `Authorization: Bearer <access token>`; without one none does (nothing changes before the switch).
 - An expiring access token is refreshed before the request; a refresh that fails clears the session.
 - *Sign out* clears the session; the menu shows the account.
@@ -116,8 +116,8 @@ Tested before the migration is ever applied (there is no Postgres in the test en
 
 Checked against production at go-live:
 
-- A request with the publishable key alone (no session) reads nothing from any table and cannot call any function except `ping()`; a non-`@phiz.com` account reads nothing and cannot write; a member can do everything they could before;
-  a member who is not admin cannot change board columns; a non-`@phiz.com` address cannot be created.
+- A request with the publishable key alone (no session) reads nothing from any table and cannot call any function except `ping()`; a non-`@phizchat.com` account reads nothing and cannot write; a member can do everything they could before;
+  a member who is not admin cannot change board columns; a non-`@phizchat.com` address cannot be created.
 - The keep-alive workflow still succeeds (`ping()`); the Edge Function `suggest-summary` refuses a call without a member's token.
 - The compatibility suite passes against production while signed in.
 
@@ -126,7 +126,24 @@ Checked against production at go-live:
 - **The switch** is `site.config.json` → `auth.required: true`. The environment variable `PHIZ_AUTH_REQUIRED` overrides it (`0` or `1`) so the test suite, which opens every page without a session, builds and serves the site with `PHIZ_AUTH_REQUIRED=0`; production has no variable and follows the file.
 - **Owner prerequisites done 2026-11-24:** Site URL and redirect `/login/` set; sessions never expire (Supabase default, locked on the free plan); custom SMTP through a Gmail app password (sender `gleisonpc@gmail.com`, about 500 e-mails a day; moving to a company domain later is only a change of the SMTP fields); template *Magic link or OTP* with `{{ .Token }}` and `{{ .ConfirmationURL }}`; a test e-mail arrived.
 - **Admins:** `app_admins` stays empty, so every member is admin until the owner names some.
-- **Acceptance against production** (after the migration): without a session `…/rest/v1/rfc_comments?select=id` answers 401; with the token of a `@phiz.com` account it answers 200; with another domain 403; `rpc/ping` answers 200 to anyone; the attachment bucket refuses an anonymous signed URL; `suggest-summary` refuses without a token.
+- **Acceptance against production** (after the migration): without a session `…/rest/v1/rfc_comments?select=id` answers 401; with the token of a `@phizchat.com` account it answers 200; with another domain 403; `rpc/ping` answers 200 to anyone; the attachment bucket refuses an anonymous signed URL; `suggest-summary` refuses without a token.
 - **Undo**, in this order: run the comment at the end of the migration in the SQL editor (the gate goes off); then set `auth.required` back to false.
 
-**Go-live done 2026-11-24:** `auth.required` true (PR #49), secret `REQUIRE_MEMBER=1` and `suggest-summary` redeployed, migration `20261201000000_member_lock.sql` applied in production. Checked against production as an anonymous caller: REST reads of `rfc_comments` and `themes` answer 401 (`PT401`), `rpc/ping` 200, `suggest-summary` 401. Not yet checked: a real `@phiz.com` session reading data (200) and another domain (403) — the owner signs in with a company address to confirm.
+## Decision 2026-11-24: the company domain is `phizchat.com`
+
+The owner's mailbox is `…@phizchat.com`; the first code was asked for an address at `phiz.com` (which is not the team's domain) and never arrived. Decided by the owner ("Só phizchat.com"): **only `@phizchat.com` is a member**; `@phiz.com` is not. Everything above that says `@phizchat.com` was written for `@phiz.com` and is corrected here.
+
+- Migration `20261201000000_member_lock.sql` was already applied with `phiz.com` and is not edited (an applied migration is never edited). The new migration **`20261202000000_member_domain.sql`** recreates `is_member()` with `^[^@]+@phizchat\.com$`, and replaces the check of `app_admins.email`. `check_request()` and the policies call `is_member()`, so they need no change.
+- `memberEmail` (Edge Function `suggest-summary`), `assets/auth.js` (the page's refusal and the end of a session of another domain) and the texts of the sign-in page use the same domain.
+- Applying the new migration is part of the same go-live: until it runs, the database still admits only `phiz.com`; the function is redeployed at the same time.
+
+## Decision 2026-11-24: the e-mail carries only the code (no link)
+
+Found on the day of the go-live (owner's real sign-in): the company's Microsoft 365 *Safe Links* opens every link of an incoming message, and the link and the 6-digit code are the **same one-time token**; the scanner spent it before the person typed it (Supabase log: `403: Email link is invalid or has expired` and a `Login` nobody asked for, then `otp_expired` on the person's attempt).
+
+- The templates *Magic link or OTP* and *Confirm sign up* contain **only `{{ .Token }}`**: no `{{ .ConfirmationURL }}`. A new person is created by the first request, so both templates are used (the first message is the *Confirm sign up* one).
+- Supabase **Email OTP length is 6** (it is 8 by default; the page accepts 6 digits). It is a dashboard setting and part of the prerequisites.
+- The page says "code", not "link and code": *Enviar código*, *Enviamos um código para…*. The code in the address of the page (`#access_token=…`, the old link flow) stays supported: it costs nothing and nobody is sent that link any more.
+- A person asks for **one** code at a time: every new request invalidates the earlier code (the message says it in the form).
+
+**Go-live done and confirmed 2026-11-24:** `auth.required` true (PR #49), secret `REQUIRE_MEMBER=1`, `suggest-summary` redeployed and the migrations `20261201000000_member_lock.sql` and `20261202000000_member_domain.sql` applied in production. Checked as an anonymous caller: REST reads of `rfc_comments` and `themes` answer 401 (`PT401`), `rpc/ping` 200, `suggest-summary` 401. The owner then signed in with a `@phizchat.com` address and it worked.

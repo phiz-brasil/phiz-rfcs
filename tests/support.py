@@ -113,7 +113,7 @@ class SiteCase(unittest.TestCase):
         self.errors = []
         self.page.on("pageerror", lambda e: self.errors.append(str(e)))
 
-    def sign_in_as(self, email="ana.souza@phiz.com", name=None, expires_in=3600, fake_refresh=True):
+    def sign_in_as(self, email="ana.souza@phizchat.com", name=None, expires_in=3600, fake_refresh=True):
         """Start every page of this browser with a session, as if the person had signed in (the fake Auth can refresh it)."""
         import json as _json
         who = email.split("@")[0]
