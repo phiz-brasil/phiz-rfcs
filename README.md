@@ -1,6 +1,6 @@
-# PHIZ RFCs
+# PhizChat Command Center
 
-The PHIZ RFC site: a Next.js app on Vercel (<https://phiz-rfcs.vercel.app>), with the RFCs, comments and pictures in Supabase.
+PhizChat Command Center (it started as the PHIZ RFC site): a Next.js app on Vercel (<https://phiz-rfcs.vercel.app>), with the RFCs, comments and pictures in Supabase.
 
 - **Index** (`/`): every RFC with status, authors and reviewers; filter by status; PT-BR / EN-US / 中文.
 - **RFC page** (`/rfc/?id=PHZ-0001`): the document, with Mermaid diagrams and a **Comment** button on every section.

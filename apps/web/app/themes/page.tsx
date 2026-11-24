@@ -2,7 +2,7 @@ import { Shell } from "../../components/Shell";
 import { ThemesPage } from "../../components/ThemesPage";
 import { liveConfig } from "../../server/site/html.ts";
 
-export const metadata = { title: "Temas · PHIZ RFCs" };
+export const metadata = { title: "Temas · PhizChat Command Center" };
 
 export default function Page() {
   const c = liveConfig().comments as { supabaseUrl: string; supabaseKey: string };

@@ -2,7 +2,7 @@ import { Shell } from "../../../components/Shell";
 import { ThemeDetail } from "../../../components/ThemeDetail";
 import { liveConfig } from "../../../server/site/html.ts";
 
-export const metadata = { title: "Tema · PHIZ RFCs" };
+export const metadata = { title: "Tema · PhizChat Command Center" };
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
