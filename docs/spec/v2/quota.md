@@ -44,6 +44,7 @@ Opening PHZ-0001 reads **no image bytes** on the first screens (the first pictur
 | date | egress used in the cycle | egress per day | note |
 |---|---|---|---|
 | 2026-11-24 | 0.78 GB (of 5 GB) | 100–240 MB | baseline, before the on-demand images (PR #44) were live; database 0.105 GB, Storage 0.003 GB |
+| 2026-11-24 (late) | 0.82 GB (of 5 GB, 16%) | 62–241 MB, the last days lower | cycle 16 Nov–16 Dec; grace period until 12 Dec; sign-in live (login requests are tiny); database 0.105 GB, Edge Functions 28 calls, 2 active users |
 | 2026-12-01 | — | — | check scheduled (a one-time task of the owner's Claude app reads the usage page and reports); fill in here |
 
 The usage page (`supabase.com/dashboard/org/<org>/usage`) shows the egress per day; the target is to stay under 3 GB a month. A reading of `Egress` above 4 GB before the end of a cycle reopens this spec.
