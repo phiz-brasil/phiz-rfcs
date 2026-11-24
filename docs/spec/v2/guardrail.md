@@ -30,7 +30,7 @@ To make CI binding, the jobs `guardrail`, `check` and `smoke-tests` must be *req
 - the files of the branch against the merge base (`git diff --name-status <base>...HEAD`), sorted into code, tests, specs and other;
 - rule 1: a file under `docs/spec/` changed; and, as a warning only, the first commit that touches the spec is not later than the first commit that touches code;
 - rule 2: the diff of `tests/` has at least one added line `def test_`;
-- rule 3: the tests removed (`def test_` lines removed) are not more than the tests added; no added `skip`, `skipTest`, `expectedFailure` or `@unittest.skipIf/Unless` in `tests/`;
+- rule 3: the tests removed (`def test_` lines removed) are not more than the tests added; no added `skip`, `skipTest`, `expectedFailure` or `@unittest.skipIf/Unless` in `tests/` — only real uses count (a decorator, or a `self.skipTest(` / `raise unittest.SkipTest` statement at the start of a line), not those words inside a string or a comment, and not `skipUnless(shutil.which(…))` / `skipUnless(pglast)`, which skip a test only where a tool is missing;
 - the suite itself is not run by the checker (CI does it, and the hook leaves it to the assistant and to CI, which is where it is cheap).
 
 ## Skips (the only way out)
@@ -49,6 +49,7 @@ A skip is visible in the history and in the pull request; a reviewer decides whe
 
 - A branch that changes code and nothing else fails with the three rules listed.
 - A branch with a spec change, a new test and no loss of tests passes; with only docs, or only tests that add tests, it passes.
-- Removing a test, or adding a skip, fails unless `Guardrail-Skip: regression — …` is present.
+- Removing a test, or adding a real skip, fails unless `Guardrail-Skip: regression — …` is present.
+- The word `skip` inside a string or comment is not a skip; `@unittest.skip(...)` and `self.skipTest(...)` are.
 - A skip line with a short reason, an unknown rule, or `all` is refused.
 - The hook refuses `git push` and `gh pr create` when the checker fails and lets every other command through.
