@@ -180,7 +180,7 @@ To turn the suggestion on: apply `20261130000000_theme_answers.sql`, then deploy
 the translation (optional `CF_SUGGEST_MODEL`, default `@cf/meta/llama-3.3-70b-instruct-fp8-fast`). What is read and how the answer is checked is
 [`suggest.ts`](supabase/functions/suggest-summary/suggest.ts), tested by `tests/test_suggest.py`.
 
-**Sign-in** (phase 2, docs/spec/v2/login.md). `/login/` signs a person in with their `@phiz.com` e-mail: one message with a link and a 6-digit code. The session lives in the browser (`localStorage`
+**Sign-in** (phase 2, docs/spec/v2/login.md). `/login/` signs a person in with their `@phizchat.com` e-mail: one message with a link and a 6-digit code. The session lives in the browser (`localStorage`
 `phiz-auth`) and `assets/auth.js` — loaded first on every page — wraps `fetch` so every request to Supabase carries the token; with a session the account (and *Sign out*) is in the menu, and the name
 written on changes is the account's. Whether pages **require** sign-in is the switch `auth.required` of `site.config.json` (false today: nothing changes for anyone until the database is locked — slice 2 —
 and the switch turned on together, slice 3). Before that, open `/login/` to try it; `localStorage["phiz-auth-required"] = "1"` makes only your own browser strict. Needs custom SMTP and the redirect URLs

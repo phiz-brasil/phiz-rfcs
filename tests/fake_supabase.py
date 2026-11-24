@@ -191,7 +191,7 @@ class FakeSupabase(ThemesMixin):
         email = next((e for t, e in self.tokens.items() if who and who.startswith(t)), None)
         if not who or email is None:
             return 401
-        return 200 if re.fullmatch(r"[^@]+@phiz\.com", email, re.I) else 403
+        return 200 if re.fullmatch(r"[^@]+@phizchat\.com", email, re.I) else 403
 
     def handle(self, route):
         req = route.request
@@ -209,7 +209,7 @@ class FakeSupabase(ThemesMixin):
                 if code != 200:
                     self.lock_refused.append((code, path))
                     return route.fulfill(status=code, headers={**CORS, "Content-Type": "application/json"},
-                                         body=json.dumps({"code": f"PT{code}", "message": "sign in with a @phiz.com account" if code == 401 else "only @phiz.com accounts have access"}))
+                                         body=json.dumps({"code": f"PT{code}", "message": "sign in with a @phizchat.com account" if code == 401 else "only @phizchat.com accounts have access"}))
         if "/auth/v1/" in path:
             return self.auth_handle(route, req, path, q)
         if "/storage/v1/object/" in path:

@@ -36,7 +36,7 @@ company.
 | Versions | Keep the versions of the RFC document; add an attachments hub. |
 | RFCs | Published RFCs become project themes; their status maps to a V4 stage and the old status picker goes away. Repository drafts move into the app. |
 | Jira | Links only: paste the issue address, click to open Jira. No token, no sync, no settings. |
-| Users | Only `@phiz.com`; everyone is a member (can edit); reader mode hides the controls for people who only read. Microsoft sign-in waits for a tenant administrator (see `platform.md`). |
+| Users | Only `@phizchat.com`; everyone is a member (can edit); reader mode hides the controls for people who only read. Microsoft sign-in waits for a tenant administrator (see `platform.md`). |
 | Hosting | Vercel (company Pro/Team account) for the app; Supabase stays as database, auth and file storage. |
 | Stack | Node.js ecosystem: TypeScript, Next.js. |
 
@@ -58,7 +58,7 @@ Each phase is one pull request (or a short series), reviewable and testable on i
 |---|---|---|
 | 0 | These specs; the compatibility contract | none |
 | 1 | Next.js app on Vercel with the same pages and behavior; GitHub Pages turned off (no redirect) | new address only |
-| 2 | Access only for `@phiz.com` (e-mail sign-in link first, Microsoft later), database closed to anonymous access | sign-in |
+| 2 | Access only for `@phizchat.com` (e-mail sign-in link first, Microsoft later), database closed to anonymous access | sign-in |
 | 3 | Fronts, themes, execution items, dependencies and tags, Jira links; the RFCs and repository drafts become themes; seed of Outros; content translation | theme pages, front lists |
 | 4 | Weekly updates, blockers and decisions, executive view, reader mode | the panel |
 | 5 | The B2B board (V4 stages, configurable columns, gate checklists) and the project kanban | kanban |
@@ -138,7 +138,7 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   for PHZ-0001. Images are now read on demand (visible language, near the viewport) and remembered by the browser; nothing is stored or migrated differently. The Storage/CDN move and a paid plan
   are the next levers if the usage page still shows more than 3 GB a month.
 
-- **Phase 2, slice 1 (this branch)**: `docs/spec/v2/login.md`. `/login/` (e-mail link and 6-digit code, `@phiz.com` only), the session in `localStorage`, `assets/auth.js` wrapping `fetch` so every request
+- **Phase 2, slice 1 (this branch)**: `docs/spec/v2/login.md`. `/login/` (e-mail link and 6-digit code, `@phizchat.com` only), the session in `localStorage`, `assets/auth.js` wrapping `fetch` so every request
   carries the token (old and React pages), the account in the menu with *Sign out*, the account name on writes, and the guard behind `auth.required` (false). Nothing changes for visitors until slices 2 (database lock,
   migration written and applied only when the owner says) and 3 (go-live). Prerequisites for the owner: custom SMTP and the Auth URL settings.
 
@@ -149,4 +149,4 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)
    and add the file to the review, or share it with view access for anyone with the link.
-2. **(2, last phase) Microsoft sign-in.** Needs the administrator of the company's Microsoft tenant; until then, sign-in by e-mail link to `@phiz.com`.
+2. **(2, last phase) Microsoft sign-in.** Needs the administrator of the company's Microsoft tenant; until then, sign-in by e-mail link to `@phizchat.com`.
