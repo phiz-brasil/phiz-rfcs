@@ -129,3 +129,13 @@ Found in production on 2026-11-24 (Vercel runtime log: `site.config.json not fou
 - `apps/web/server/site/html.ts` imports `site.config.json` as a module (the bundler inlines it); finding the repository root no longer throws when there is none (`REPO_ROOT` falls back to the working directory and is only used by the build-time generators).
 - **Rule:** nothing a dynamic route imports may read a file of the repository at load time.
 - **Check:** `tests/test_runtime.py` starts the built site from a directory that holds only the build (`.next`, `package.json`, `node_modules`), with no `site.config.json` above it, as the function does, and requests `/themes/PHZ-0001/`, `/themes/` and `/slides/`: all must answer 200.
+
+## The name of the application: PhizChat Command Center (decided 2026-11-24)
+
+The owner: the application is called **PhizChat Command Center** (it was "PHIZ RFCs" while it was only the RFC site). Where the name shows:
+- the **title of every page** (the tab of the browser): `<page> · PhizChat Command Center` (`apps/web/app/*/page.tsx`), and the pages written by the generators (`site.config.json` → `title`, used by `pages.ts`);
+- the **sign-in e-mail** (decided and applied earlier the same day, `login.md`) and the README.
+
+Not renamed: the repository and the address (`phiz-rfcs`, `phiz-rfcs.vercel.app`), the RFC documents themselves (they are still "PHIZ RFCs": the type of document), the file name of the slides export (`PHIZ-slides-<date>.pptx`, which the tests and the habit of the team depend on) and the `phiz-rfc` skill. A change of address is a separate decision (Vercel domain, Supabase redirect URLs, the allowlist of the sign-in).
+
+**Check** (`tests/test_runtime.py`, `RenamedTest`): every page of the application has a title that ends with the new name and none contains the old one; the pages written by the generators too.
