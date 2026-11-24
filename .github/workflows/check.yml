@@ -5,6 +5,19 @@ on:
 permissions:
   contents: read
 jobs:
+  # the three rules of docs/spec/v2/guardrail.md (spec, tests, no regression); the text of the PR is read for `Guardrail-Skip:` lines
+  guardrail:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python3 tools/guardrail.py --base "origin/$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
   check:
     runs-on: ubuntu-latest
     steps:
