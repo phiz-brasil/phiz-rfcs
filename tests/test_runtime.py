@@ -64,3 +64,27 @@ class RuntimeWithoutRepositoryTest(unittest.TestCase):
     def test_the_other_routes_answer_too(self):
         for path in ("/themes/", "/slides/", "/overview/", "/board/"):
             self.assertEqual(self.status(path), 200, path)
+
+
+class RenamedTest(unittest.TestCase):
+    """docs/spec/v2/platform.md, "The name of the application": the title of every page says PhizChat Command Center, never PHIZ RFCs."""
+
+    NAME = "PhizChat Command Center"
+    PAGES = ("/themes/", "/themes/PHZ-0001/", "/board/", "/slides/", "/overview/", "/metrics/", "/roadmap/", "/executive/", "/attachments/", "/login/", "/nova/")
+
+    def title(self, path):
+        import re
+        with urllib.request.urlopen(_Site.start() + path, timeout=20) as r:
+            html = r.read().decode("utf-8")
+        m = re.search(r"<title[^>]*>(.*?)</title>", html, re.S)
+        return m.group(1) if m else ""
+
+    def test_every_page_title_ends_with_the_new_name(self):
+        for path in self.PAGES:
+            t = self.title(path)
+            self.assertTrue(t.endswith(self.NAME) or self.NAME in t, f"{path}: {t!r}")
+            self.assertNotIn("PHIZ RFCs", t, path)
+
+    def test_the_config_title_is_the_new_name(self):
+        import json
+        self.assertEqual(json.loads((ROOT / "site.config.json").read_text(encoding="utf-8"))["title"], self.NAME)

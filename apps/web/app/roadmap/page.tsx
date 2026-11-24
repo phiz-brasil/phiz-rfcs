@@ -2,7 +2,7 @@ import { Shell } from "../../components/Shell";
 import { RoadmapPage } from "../../components/RoadmapPage";
 import { liveConfig } from "../../server/site/html.ts";
 
-export const metadata = { title: "Roadmap · PHIZ RFCs" };
+export const metadata = { title: "Roadmap · PhizChat Command Center" };
 
 export default function Page() {
   const c = liveConfig().comments as { supabaseUrl: string; supabaseKey: string };
