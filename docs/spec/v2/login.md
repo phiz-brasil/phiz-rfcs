@@ -136,3 +136,12 @@ The owner's mailbox is `…@phizchat.com`; the first code was asked for an addre
 - Migration `20261201000000_member_lock.sql` was already applied with `phiz.com` and is not edited (an applied migration is never edited). The new migration **`20261202000000_member_domain.sql`** recreates `is_member()` with `^[^@]+@phizchat\.com$`, and replaces the check of `app_admins.email`. `check_request()` and the policies call `is_member()`, so they need no change.
 - `memberEmail` (Edge Function `suggest-summary`), `assets/auth.js` (the page's refusal and the end of a session of another domain) and the texts of the sign-in page use the same domain.
 - Applying the new migration is part of the same go-live: until it runs, the database still admits only `phiz.com`; the function is redeployed at the same time.
+
+## Decision 2026-11-24: the e-mail carries only the code (no link)
+
+Found on the day of the go-live (owner's real sign-in): the company's Microsoft 365 *Safe Links* opens every link of an incoming message, and the link and the 6-digit code are the **same one-time token**; the scanner spent it before the person typed it (Supabase log: `403: Email link is invalid or has expired` and a `Login` nobody asked for, then `otp_expired` on the person's attempt).
+
+- The templates *Magic link or OTP* and *Confirm sign up* contain **only `{{ .Token }}`**: no `{{ .ConfirmationURL }}`. A new person is created by the first request, so both templates are used (the first message is the *Confirm sign up* one).
+- Supabase **Email OTP length is 6** (it is 8 by default; the page accepts 6 digits). It is a dashboard setting and part of the prerequisites.
+- The page says "code", not "link and code": *Enviar código*, *Enviamos um código para…*. The code in the address of the page (`#access_token=…`, the old link flow) stays supported: it costs nothing and nobody is sent that link any more.
+- A person asks for **one** code at a time: every new request invalidates the earlier code (the message says it in the form).
