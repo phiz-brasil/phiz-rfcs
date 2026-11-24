@@ -125,6 +125,12 @@
       if (!r.ok) throw new Error("verify " + r.status);
       return finish(fromResponse(await r.json()));
     },
+    /* Microsoft sign-in (docs/spec/v2/login.md, slice 4): the address of the Azure provider of Supabase; it comes back to /login/ with the tokens in the address, which fromAddress() reads.
+       Where the person was going waits in sessionStorage (the return address cannot carry it). Nothing secret is here: the secret of the application lives in Supabase. */
+    microsoftUrl(next) {
+      try { if (next) sessionStorage.setItem("phiz-auth-next", next); } catch (e) { /* private mode: the person lands on the overview */ }
+      return URL_ + "/auth/v1/authorize?provider=azure&scopes=email&redirect_to=" + encodeURIComponent(location.origin + "/login/");
+    },
     /* the link: the tokens come back in the address (#access_token=…); returns the session, or null when the address has none */
     async fromAddress() {
       const h = new URLSearchParams(location.hash.replace(/^#/, ""));

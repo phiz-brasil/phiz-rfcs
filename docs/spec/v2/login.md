@@ -178,7 +178,7 @@ Status: this section only. The owner has access to the company's Microsoft tenan
 
 ### What changes in the code
 
-- `/login/`: a primary button *Entrar com Microsoft* (pt-BR, en, zh-Hans: *Sign in with Microsoft*, *使用 Microsoft 登录*) above the e-mail form, with an "or" separator. It goes to the authorize address above with `redirect_to` the page itself (and `next` kept as today).
+- `/login/`: a primary button *Entrar com Microsoft* (pt-BR, en, zh-Hans: *Sign in with Microsoft*, *使用 Microsoft 登录*) above the e-mail form, with an "or" separator. It goes to the authorize address above with `redirect_to` the page itself (`/login/`, with no query: the return address of Supabase must be one of the allowed ones). Where the person was going (`?next=`) waits in `sessionStorage` (`phiz-auth-next`, only a path of this site, used once) because the return address cannot carry it.
 - `assets/auth.js`: `PHIZ_AUTH.microsoftUrl(next)` returns the authorize address (built from the Supabase URL it already has); the return through the address is the existing path. A session whose e-mail is not of the domain is ended with the existing message.
 - The Supabase URL configuration already lists `https://phiz-rfcs.vercel.app/login/` (slice 3); nothing to add there.
 - No migration: the lock already admits any `authenticated` JWT with an e-mail of the domain, whatever the provider.
