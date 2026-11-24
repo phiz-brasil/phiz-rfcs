@@ -261,6 +261,8 @@ A new RFC starts as `draft`; the status is changed from the badge in the header 
 
 ## Pull requests and deploys
 
+Every change follows three rules — **spec first (SDD), tests, no regression** — written in [`CLAUDE.md`](CLAUDE.md) and [`docs/spec/v2/guardrail.md`](docs/spec/v2/guardrail.md) and checked by `python3 tools/guardrail.py --base origin/main` (CI job `guardrail`, and a hook of Claude Code before `git push` / `gh pr create`).
+
 Every pull request runs the build, the type check and the smoke tests (`.github/workflows/check.yml`) and gets a Vercel preview; `main` is
 deployed by Vercel.
 
