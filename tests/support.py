@@ -120,8 +120,8 @@ class SiteCase(unittest.TestCase):
                 "user": {"email": email, "user_metadata": {"name": name} if name else {}}}
         if fake_refresh:
             self.db.refreshable["ref-" + who] = email
-        # seeded once per tab: after "Sign out" the next page must not get the session back
-        self.context.add_init_script("try { if (!sessionStorage.getItem('phiz-seeded')) { sessionStorage.setItem('phiz-seeded', '1'); localStorage.setItem('phiz-auth', %s) } } catch (e) {}"
+        # seeded once per browser: after "Sign out" (or in a second tab) the next page must not get the old session back
+        self.context.add_init_script("try { if (!localStorage.getItem('phiz-test-seeded')) { localStorage.setItem('phiz-test-seeded', '1'); localStorage.setItem('phiz-auth', %s) } } catch (e) {}"
                                      % _json.dumps(_json.dumps(sess)))
         return sess
 
