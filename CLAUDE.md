@@ -12,7 +12,8 @@ Read `docs/spec/v2/README.md` (the plan and the decisions) and `docs/spec/v2/gua
 3. **No regression.** Before opening or updating a pull request, run **the whole suite**, not only the new tests, and the type check:
 
    ```bash
-   PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests     # Chrome installed locally; CI uses Playwright's Chromium
+   PW_CHANNEL=chrome .venv/bin/python tools/run_tests.py                 # the whole suite in parallel (~1 min); same tests as the line below
+   PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests     # one by one (~3 min), or add a module/test name to run just that; CI uses Playwright's Chromium
    npm run typecheck -w apps/web                                        # from the repository root
    ```
 

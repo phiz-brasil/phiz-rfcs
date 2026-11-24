@@ -217,7 +217,8 @@ The page scripts have smoke tests that run in a real browser against the built s
 
 ```bash
 .venv/bin/pip install -r requirements-dev.txt
-PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests -v   # uses your Chrome; CI installs Playwright's Chromium
+PW_CHANNEL=chrome .venv/bin/python tools/run_tests.py                       # the whole suite in parallel (builds once; --workers N)
+PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests -v   # the same tests one by one; uses your Chrome, CI installs Playwright's Chromium
 SITE_URL=https://phiz-rfcs.vercel.app PW_CHANNEL=chrome .venv/bin/python -m unittest discover -s tests   # against a deployment (or a preview)
 ```
 
