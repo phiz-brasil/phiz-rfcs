@@ -7,7 +7,7 @@ export type SlideTheme = { id: string; kind: string; front: string; title: Texts
   problem: Texts; solution: Texts; success: Texts; answers?: Record<string, { state: string; missing?: string }> | null };
 export type SlideJira = { theme_id: string; url: string; issue_key: string | null; label: string | null };
 export type SlideFront = { key: string; name: Texts };
-export type Slide = { id: string; title: string; meta: { label: string; value: string }[]; jira: { key: string; url: string }[];
+export type Slide = { id: string; title: string; status: string; front: string; due: string; meta: { label: string; value: string }[]; jira: { key: string; url: string }[];
   answers: { question: string; text: string; missing: boolean; unconfirmed: boolean; note: string }[]; footer: string };
 
 export const QUESTIONS: Record<Lang, [string, string, string]> = {
@@ -53,6 +53,9 @@ export function slideOf(theme: SlideTheme, jira: SlideJira[], fronts: SlideFront
   return {
     id: theme.id,
     title: said(theme.title, lang) || theme.id,
+    status: theme.status,
+    front,
+    due: theme.due_date ? theme.due_date.slice(0, 10) : L.none,
     meta: [
       { label: L.front, value: front },
       { label: L.owner, value: theme.owner || L.none },
@@ -63,4 +66,41 @@ export function slideOf(theme: SlideTheme, jira: SlideJira[], fronts: SlideFront
     answers,
     footer: theme.id,
   };
+}
+
+/* The words of the slides that are not a theme (cover, overview, the number, what is missing), docs/spec/v2/slides.md */
+export const DECK: Record<Lang, Record<string, string>> = {
+  pt: { cover: "PORTFÓLIO", coverTitle: "Acompanhamento de temas", themes: "temas", overview: "Onde estamos", risky: "em risco ou bloqueados", gaps: "O que falta",
+    gapsNone: "Todas as respostas estão explicadas e confirmadas.", theme: "Tema", answers: "Respostas", asOf: "Em", problem: "problema", solution: "solução", success: "sucesso",
+    missing: "não explicado", unconfirmed: "não confirmado" },
+  en: { cover: "PORTFOLIO", coverTitle: "Theme tracking", themes: "themes", overview: "Where we are", risky: "at risk or blocked", gaps: "What is missing",
+    gapsNone: "Every answer is explained and confirmed.", theme: "Theme", answers: "Answers", asOf: "As of", problem: "problem", solution: "solution", success: "success",
+    missing: "not explained", unconfirmed: "not confirmed" },
+  zh: { cover: "项目组合", coverTitle: "主题跟踪", themes: "个主题", overview: "当前进展", risky: "有风险或受阻", gaps: "还缺什么",
+    gapsNone: "所有回答都已说明并确认。", theme: "主题", answers: "回答", asOf: "截至", problem: "问题", solution: "方案", success: "成功标准",
+    missing: "尚未说明", unconfirmed: "尚未确认" },
+};
+const FIELDS = ["problem", "solution", "success"] as const;
+const STATUS_ORDER = ["not_started", "on_track", "at_risk", "blocked", "paused", "done", "cancelled"];
+
+export type Summary = {
+  total: number; risky: number; byStatus: { status: string; label: string; count: number }[];
+  rows: { id: string; title: string; front: string; status: string; statusLabel: string; due: string; answers: string }[];
+  gaps: { id: string; title: string; missing: string[]; unconfirmed: string[] }[]; labels: Record<string, string>;
+};
+
+/* The overview, the big number and "what is missing" of a set of slides (the answers count only when they are explained AND confirmed). Pure. */
+export function summaryOf(slides: Slide[], lang: Lang): Summary {
+  const D = DECK[lang];
+  const byStatus = STATUS_ORDER.map(k => ({ status: k, label: STATUS[lang][k], count: slides.filter(s => s.status === k).length })).filter(b => b.count > 0);
+  const rows = slides.map(s => ({
+    id: s.id, title: s.title, front: s.front, status: s.status, statusLabel: STATUS[lang][s.status] ?? s.status, due: s.due,
+    answers: `${s.answers.filter(a => !a.missing && !a.unconfirmed).length}/${s.answers.length}`,
+  }));
+  const gaps = slides.map(s => ({
+    id: s.id, title: s.title,
+    missing: s.answers.map((a, i) => (a.missing ? D[FIELDS[i]] : "")).filter(Boolean),
+    unconfirmed: s.answers.map((a, i) => (a.unconfirmed ? D[FIELDS[i]] : "")).filter(Boolean),
+  })).filter(g => g.missing.length || g.unconfirmed.length);
+  return { total: slides.length, risky: slides.filter(s => s.status === "at_risk" || s.status === "blocked").length, byStatus, rows, gaps, labels: { ...D, ...LABELS[lang] } };
 }
