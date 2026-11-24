@@ -1,6 +1,6 @@
 # Spec v2: sign-in (phase 2)
 
-Status: decided 2026-11-24 (owner: "Sim, login"). Replaces what `platform.md` says about `@supabase/ssr` cookies and a middleware (see *Decisions*). Built in three slices so that
+Status: slice 1 built on 2026-11-24 (`assets/auth.js`, `/login/`, the account in the menu, the guard; `auth.required` false); slices 2 and 3 pending. Decided 2026-11-24 (owner: "Sim, login"). Replaces what `platform.md` says about `@supabase/ssr` cookies and a middleware (see *Decisions*). Built in three slices so that
 nothing changes for anyone until the owner flips the switch.
 
 ## Goal
