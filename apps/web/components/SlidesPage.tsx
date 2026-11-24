@@ -16,6 +16,7 @@ export function SlidesPage() {
   const [failed, setFailed] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [slideLang, setSlideLang] = useState<Lang | "">("");
+  const [deck, setDeck] = useState(false);
   const [f, setF] = useState({ kind: "", front: "", status: "" });
   const [note, setNote] = useState("");
   const load = useCallback(async () => {
@@ -41,7 +42,7 @@ export function SlidesPage() {
       const d = await db.themeSlideData(ids);
       const order = new Map(data.themes.map((x, i) => [x.id, i]));
       const slides = d.themes.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(x => slideOf(x, d.jira, d.fronts, out));
-      await buildPptx(slides, out, `PHIZ-slides-${new Date().toISOString().slice(0, 10)}.pptx`);
+      await buildPptx(slides, out, `PHIZ-slides-${new Date().toISOString().slice(0, 10)}.pptx`, { deck });
       setNote(T.slidesReady[lang]);
     } catch (e) { setNote(message(e, lang)); }
   };
@@ -57,6 +58,8 @@ export function SlidesPage() {
               <option value="">{lang === "pt" ? "PT-BR" : lang === "en" ? "EN-US" : "中文"}</option>
               {(["pt", "en", "zh"] as const).filter(l => l !== lang).map(l => <option key={l} value={l}>{l === "pt" ? "PT-BR" : l === "en" ? "EN-US" : "中文"}</option>)}
             </select></label>
+          <label className="field"><span>{T.slidesDeck[lang]}</span>
+            <input type="checkbox" checked={deck} onChange={e => setDeck(e.target.checked)} /></label>
           <label className="field"><span>{T.kind[lang]}</span>
             <select value={f.kind} onChange={e => setF({ ...f, kind: e.target.value })}><option value="">{T.all[lang]}</option><option value="project">{t("project", lang)}</option><option value="task">{t("task", lang)}</option></select></label>
           <label className="field"><span>{T.front[lang]}</span>

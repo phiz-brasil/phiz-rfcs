@@ -283,7 +283,7 @@ if __name__ == "__main__":
         self.slides()
         self.pick("PHZ-0001")
         self.page.get_by_label("Idioma do slide").select_option(label="EN-US")
-        self.page.get_by_label("Include cover and overview" if False else "Incluir capa e visão geral").check()
+        self.page.get_by_label("Incluir capa e visão geral").check()
         with tempfile.TemporaryDirectory() as d:
             slides, _ = read_pptx(self.export(d))
         self.assertIn("PORTFOLIO", slides[0])

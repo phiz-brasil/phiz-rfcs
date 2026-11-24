@@ -358,6 +358,7 @@ export const T: Dict = {
   slides: { pt: "Slides", en: "Slides", zh: "幻灯片" },
   slidesLead: { pt: "Escolha os temas e baixe um .pptx com um slide por tema: o problema, a solução e o sucesso, mais responsável, status, previsão e links do Jira.", en: "Pick the themes and download a .pptx with one slide per theme: the problem, the solution and success, plus owner, status, estimate and Jira links.", zh: "选择主题并下载 .pptx：每个主题一页，包含问题、方案与成功标准，以及负责人、状态、预计时间和 Jira 链接。" },
   slideLang: { pt: "Idioma do slide", en: "Slide language", zh: "幻灯片语言" },
+  slidesDeck: { pt: "Incluir capa e visão geral", en: "Include cover and overview", zh: "包含封面和概览" },
   exportPptx: { pt: "Exportar .pptx", en: "Export .pptx", zh: "导出 .pptx" },
   pickThemes: { pt: "Escolha ao menos um tema.", en: "Pick at least one theme.", zh: "请至少选择一个主题。" },
   selectAll: { pt: "Selecionar todos os exibidos", en: "Select all shown", zh: "全选当前显示" },
