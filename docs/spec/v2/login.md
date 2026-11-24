@@ -1,6 +1,6 @@
 # Spec v2: sign-in (phase 2)
 
-Status: slice 1 built on 2026-11-24 (`assets/auth.js`, `/login/`, the account in the menu, the guard; `auth.required` false); slices 2 and 3 pending. Decided 2026-11-24 (owner: "Sim, login"). Replaces what `platform.md` says about `@supabase/ssr` cookies and a middleware (see *Decisions*). Built in three slices so that
+Status: slice 1 built on 2026-11-24 (`assets/auth.js`, `/login/`, the account in the menu, the guard; `auth.required` false); slices 2 and 3 done (go-live 2026-11-24, see *Slice 3 in detail*). Decided 2026-11-24 (owner: "Sim, login"). Replaces what `platform.md` says about `@supabase/ssr` cookies and a middleware (see *Decisions*). Built in three slices so that
 nothing changes for anyone until the owner flips the switch.
 
 ## Goal
@@ -128,3 +128,5 @@ Checked against production at go-live:
 - **Admins:** `app_admins` stays empty, so every member is admin until the owner names some.
 - **Acceptance against production** (after the migration): without a session `…/rest/v1/rfc_comments?select=id` answers 401; with the token of a `@phiz.com` account it answers 200; with another domain 403; `rpc/ping` answers 200 to anyone; the attachment bucket refuses an anonymous signed URL; `suggest-summary` refuses without a token.
 - **Undo**, in this order: run the comment at the end of the migration in the SQL editor (the gate goes off); then set `auth.required` back to false.
+
+**Go-live done 2026-11-24:** `auth.required` true (PR #49), secret `REQUIRE_MEMBER=1` and `suggest-summary` redeployed, migration `20261201000000_member_lock.sql` applied in production. Checked against production as an anonymous caller: REST reads of `rfc_comments` and `themes` answer 401 (`PT401`), `rpc/ping` 200, `suggest-summary` 401. Not yet checked: a real `@phiz.com` session reading data (200) and another domain (403) — the owner signs in with a company address to confirm.
