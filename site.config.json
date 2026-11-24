@@ -12,6 +12,6 @@
     "supabaseKey": "sb_publishable__WWietglvfRva2dv3Xrr7Q_9v2aa6lL"
   },
   "auth": {
-    "required": false
+    "required": true
   }
 }

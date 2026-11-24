@@ -228,3 +228,18 @@ class LockedFakeTest(SiteCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GoLiveSwitchTest(unittest.TestCase):
+    """Slice 3 (docs/spec/v2/login.md): the switch is on in the file, and the tests can still turn it off."""
+
+    def test_the_switch_is_on_in_the_config_file(self):
+        import json
+        cfg = json.loads((ROOT / "site.config.json").read_text(encoding="utf-8"))
+        self.assertIs(cfg["auth"]["required"], True)
+
+    def test_an_environment_variable_overrides_the_file(self):
+        src = (ROOT / "apps" / "web" / "server" / "site" / "auth.ts").read_text(encoding="utf-8")
+        self.assertIn("PHIZ_AUTH_REQUIRED", src)
+        support = (ROOT / "tests" / "support.py").read_text(encoding="utf-8")
+        self.assertIn('"PHIZ_AUTH_REQUIRED"', support)                                           # the suite builds and serves with the switch off
