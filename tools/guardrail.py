@@ -23,7 +23,8 @@ MIN_REASON = 10
 SKIP_LINE = re.compile(r"^[ \t>*-]*Guardrail-Skip:[ \t]*(\S+?)[ \t]*(?:[—–-]+[ \t]*(.*?))?[ \t]*$", re.M | re.I)
 # a skip that only says "this environment may lack node / the SQL parser" is how the suite is already written: not a skipped test
 ENV_SKIP = re.compile(r"skipUnless\((shutil\.which|pglast)")
-SKIP_USE = re.compile(r"(\bskipTest\b|\bexpectedFailure\b|\bskipIf\b|\bskipUnless\b|\bunittest\.skip\b|\bself\.skip\b|@pytest\.mark\.skip)")
+# a real use at the start of a line: a decorator, or a skip statement (not the word inside a string or a comment)
+SKIP_USE = re.compile(r"^\s*(@(unittest\.)?(skip|skipIf|skipUnless|expectedFailure)\b|@pytest\.mark\.(skip|xfail)\b|self\.skipTest\(|raise unittest\.SkipTest)")
 
 
 @dataclass

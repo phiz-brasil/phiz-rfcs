@@ -111,6 +111,28 @@ def write(repo, path, text):
     p.write_text(text, encoding="utf8")
 
 
+class SkipDetectionTest(unittest.TestCase):
+    """Only real uses of skip count (docs/spec/v2/guardrail.md)."""
+    def skips(self, line):
+        return bool(G.SKIP_USE.search(line) and not G.ENV_SKIP.search(line))
+
+    def test_decorators_and_skip_statements_count(self):
+        for line in ("    @unittest.skip('later')", "@unittest.skipIf(True, 'x')", "    @unittest.expectedFailure", "        self.skipTest('no')",
+                     "    raise unittest.SkipTest('x')", "@pytest.mark.skip", "@pytest.mark.xfail"):
+            with self.subTest(line):
+                self.assertTrue(self.skips(line))
+
+    def test_the_word_inside_a_string_or_a_comment_does_not(self):
+        for line in ("    r = G.evaluate(info(['tests/test_x.py'], skips=['+    @unittest.skip(\\'later\\')']))", "    # we never use skipTest here", '    "a test that is skipped does not protect"'):
+            with self.subTest(line):
+                self.assertFalse(self.skips(line))
+
+    def test_skipping_only_where_a_tool_is_missing_does_not_count(self):
+        for line in ('@unittest.skipUnless(shutil.which("node"), "node is not installed")', "@unittest.skipUnless(pglast, 'pglast is not installed')"):
+            with self.subTest(line):
+                self.assertFalse(self.skips(line))
+
+
 class GitTest(unittest.TestCase):
     """The checker on a real repository: a main branch with one test, then a feature branch."""
     def setUp(self):
