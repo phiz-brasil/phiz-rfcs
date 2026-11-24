@@ -16,6 +16,10 @@ jobs:
         run: |
           url=$(jq -r .comments.supabaseUrl site.config.json)
           key=$(jq -r .comments.supabaseKey site.config.json)
-          code=$(curl -s -o /dev/null -w "%{http_code}" "$url/rest/v1/rfc_comments?select=id&limit=1" -H "apikey: $key")
+          # after the member lock (docs/spec/v2/login.md) anonymous reads are refused; ping() answers anyone. Before the lock is applied ping does not exist yet: the old read is the fallback.
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$url/rest/v1/rpc/ping" -H "apikey: $key" -H "Content-Type: application/json" -d '{}')
+          if [ "$code" != 200 ]; then
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url/rest/v1/rfc_comments?select=id&limit=1" -H "apikey: $key")
+          fi
           echo "Supabase answered HTTP $code"
           test "$code" = 200

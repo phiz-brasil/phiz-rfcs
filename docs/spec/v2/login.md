@@ -52,6 +52,28 @@ Signing in should be rare: the person signs in once and stays in for as long as 
 | 2 | the database lock: `is_member()`, policies and grants moved from `anon` to members, membership checked inside every function and Storage policy, a `ping()` for the keep-alive job, the Edge Function `suggest-summary` checking the token | a migration written and tested, **applied only when the owner says**, after the prerequisites below |
 | 3 | go-live: `auth.required` true, the migration applied, the checks of the acceptance run against production | one planned moment, with the owner |
 
+## Slice 2 in detail: the database lock (migration `20261201000000_member_lock.sql`)
+
+Written and tested now, **applied only at go-live** (slice 3), because it closes the door on anonymous visitors at once. It keeps what already works for members and changes nothing else.
+
+1. **Who is a member** — `public.is_member()`: the request's JWT has role `authenticated` and an e-mail that matches `^[^@]+@phiz\.com$` (case-insensitive). `public.is_admin()`: a member whose e-mail is in `public.app_admins`;
+   **while that table is empty every member is an admin** (so naming admins is optional and nobody is locked out by forgetting it).
+2. **One gate for the whole REST API** — `public.check_request()` is set as PostgREST's `db_pre_request` (`alter role authenticator set pgrst.db_pre_request`), so it runs before **every** request,
+   whatever table, view or function is asked for: `service_role` passes (Edge Functions, webhooks, migrations); `/rpc/ping` passes for everyone; role `anon` is refused with **401**; an `authenticated` account that is not a member with **403**.
+   This is why the 44 functions of 11 migrations are not edited one by one.
+3. **Defence in depth** — anonymous access is taken away from the database itself: `revoke all … from anon` on every table, view, function and sequence of `public` (and the default privileges for new ones), keeping only `ping`,
+   `check_request` and `is_member` executable; and every table with row security gets a **restrictive** policy `members_only` (for `authenticated`, `is_member()`), which ANDs with the permissive ones already there.
+4. **Storage** — the policies of the `attachments` bucket (`attachments read`, `attachments upload`) are recreated for `authenticated` members only; a restrictive policy keeps non-members out of that bucket.
+5. **Admins** — `save_board_column` and `delete_board_column` are recreated with one added first line, `is_admin()` or an error: nothing else in them changes (a test compares the bodies).
+6. **Keep-alive** — `public.ping()` returns `true` to anyone; the weekly job calls it, with the old read as a fallback.
+7. **`suggest-summary`** — when the secret `REQUIRE_MEMBER` is `1`, the Edge Function reads the bearer token, asks Supabase Auth who it is and refuses (401/403) anything but a `@phiz.com` member. Without the secret it behaves as today.
+8. **The last statement** of the migration turns the gate on; its undo, in case something goes wrong, is the comment at the end of the file
+   (`alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`) and it is run in the SQL editor, which does not go through the REST API, so the owner can always reach it.
+9. **Not in this slice**: the Supabase hook that refuses other domains at sign-up (a dashboard setting, owner), moderation limited to admins (comments stay open to members), per-person permissions.
+
+**Go-live order (slice 3):** SMTP and URLs ready → merge the switch (`auth.required` true) so people start signing in → set `REQUIRE_MEMBER=1` and deploy `suggest-summary` → apply the migration (the lock) → run the acceptance
+checks against production → if anything is wrong, run the undo.
+
 ## Prerequisites (owner, outside the code)
 
 1. **Custom SMTP.** Supabase's built-in mailer only writes to members of the Supabase organization and at 2 messages an hour, so colleagues would not receive the link. A provider (Resend, SendGrid, the company's) and the sender's domain records (SPF/DKIM) are needed.
@@ -85,6 +107,14 @@ Signing in should be rare: the person signs in once and stays in for as long as 
 - Two tabs that need a new token at the same moment make **one** call to Supabase.
 
 ## Acceptance (slices 2 and 3)
+
+Tested before the migration is ever applied (there is no Postgres in the test environment, so the SQL is checked structurally and the behaviour through the fake):
+- the migration parses; it creates `is_member`, `is_admin`, `ping`, `check_request`, `app_admins`; it revokes everything from `anon`; it adds the restrictive policy; it recreates the storage policies for members; the gate is its last statement;
+- the two board functions differ from their old versions by the added admin line only;
+- with the lock on (the fake does what the gate does): a member reads and writes through the pages (REST, RPC, Storage); a request without a session gets 401 and the pages fail gracefully; a non-member gets 403; `ping` answers anyone;
+- `suggest-summary` accepts only members when `REQUIRE_MEMBER` is `1`; the keep-alive job uses `ping`.
+
+Checked against production at go-live:
 
 - A request with the publishable key alone (no session) reads nothing from any table and cannot call any function except `ping()`; a non-`@phiz.com` account reads nothing and cannot write; a member can do everything they could before;
   a member who is not admin cannot change board columns; a non-`@phiz.com` address cannot be created.

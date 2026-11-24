@@ -37,6 +37,9 @@ class FakeSupabase(ThemesMixin):
         self.assets = []                  # rfc_assets rows
         self.auth_calls = []              # (endpoint, body) of every call to /auth/v1: otp, verify, token, user, logout
         self.rest_auth = []               # the Authorization header of every call to the REST API, Storage or Edge Functions (None when absent)
+        self.lock = False                 # the member lock of docs/spec/v2/login.md: anon 401, another domain 403, members and /rpc/ping pass
+        self.lock_refused = []            # (status, path) of every request the lock refused
+        self.tokens = {}                  # access token prefix -> e-mail, for the lock (tests/support.py sign_in_as fills it)
         self.token_status = None          # when set (500, 429…), the refresh answers with that status instead of a session
         self.valid_codes = {"123456"}     # the 6-digit codes the fake Auth accepts
         self.refreshable = {}             # refresh_token -> email: what the fake Auth can refresh
@@ -180,6 +183,16 @@ class FakeSupabase(ThemesMixin):
         return route.fulfill(status=404, headers=H, body="{}")
 
     # -- Playwright route -----------------------------------------------
+    def gate(self, token, path):
+        """What check_request() answers for a request with this bearer token: 200, 401 (no session) or 403 (not a member)."""
+        if path.endswith("/rpc/ping"):
+            return 200
+        who = (token or "").replace("Bearer ", "")
+        email = next((e for t, e in self.tokens.items() if who and who.startswith(t)), None)
+        if not who or email is None:
+            return 401
+        return 200 if re.fullmatch(r"[^@]+@phiz\.com", email, re.I) else 403
+
     def handle(self, route):
         req = route.request
         url = urlparse(req.url)
@@ -189,6 +202,14 @@ class FakeSupabase(ThemesMixin):
         path = url.path
         if any(x in path for x in ("/rest/v1/", "/storage/v1/", "/functions/v1/")):
             self.rest_auth.append(req.headers.get("authorization"))
+            if path.endswith("/rest/v1/rpc/ping"):
+                return route.fulfill(status=200, headers={**CORS, "Content-Type": "application/json"}, body="true")
+            if self.lock:
+                code = self.gate(req.headers.get("authorization"), path)
+                if code != 200:
+                    self.lock_refused.append((code, path))
+                    return route.fulfill(status=code, headers={**CORS, "Content-Type": "application/json"},
+                                         body=json.dumps({"code": f"PT{code}", "message": "sign in with a @phiz.com account" if code == 401 else "only @phiz.com accounts have access"}))
         if "/auth/v1/" in path:
             return self.auth_handle(route, req, path, q)
         if "/storage/v1/object/" in path:

@@ -4,9 +4,10 @@
 //
 // Called from the browser with the public key:  POST {"theme": "PHZ-0001", "by": "Ana"}  (deploy with "Verify JWT" off: the key is not a JWT).
 // Secrets: CF_ACCOUNT_ID, CF_API_TOKEN (permission "Workers AI"), optional CF_SUGGEST_MODEL. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided.
+// With the secret REQUIRE_MEMBER=1 it refuses anyone who is not signed in with a @phiz.com account (401/403).
 // Limits: 3 runs an hour per theme and 40 an hour in all (counted in theme_events as 'ai_suggest').
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { buildPrompt, buildSources, parseModelJson, type Raw, validate } from "./suggest.ts";
+import { buildPrompt, buildSources, memberEmail, parseModelJson, type Raw, validate } from "./suggest.ts";
 
 const ACCOUNT = Deno.env.get("CF_ACCOUNT_ID") ?? "";
 const TOKEN = Deno.env.get("CF_API_TOKEN") ?? "";
@@ -56,6 +57,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
   if (!ACCOUNT || !TOKEN) return json({ error: "CF_ACCOUNT_ID / CF_API_TOKEN are not set" }, 500);
+  // With the secret REQUIRE_MEMBER=1 (the go-live of the sign-in, docs/spec/v2/login.md) only a @phiz.com member may ask: the page sends the session's token as the bearer.
+  if (Deno.env.get("REQUIRE_MEMBER") === "1") {
+    const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data } = token ? await db.auth.getUser(token) : { data: { user: null } };
+    if (!data.user) return json({ error: "sign in" }, 401);
+    if (!memberEmail(data.user.email)) return json({ error: "only @phiz.com accounts" }, 403);
+  }
   const body = await req.json().catch(() => ({}));
   const theme = String(body.theme ?? ""), by = String(body.by ?? "").trim();
   if (!/^PHZ-\d{4}$/.test(theme)) return json({ error: "invalid theme" }, 400);

@@ -118,6 +118,7 @@ class SiteCase(unittest.TestCase):
         who = email.split("@")[0]
         sess = {"access_token": "tok-" + who, "refresh_token": "ref-" + who, "expires_at": int(__import__("time").time()) + expires_in,
                 "user": {"email": email, "user_metadata": {"name": name} if name else {}}}
+        self.db.tokens["tok-" + who] = email                  # who the fake lock says this access token belongs to
         if fake_refresh:
             self.db.refreshable["ref-" + who] = email
         # seeded once per browser: after "Sign out" (or in a second tab) the next page must not get the old session back
