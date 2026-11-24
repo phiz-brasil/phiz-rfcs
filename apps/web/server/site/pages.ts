@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { COMMENTS_CSS, INDEX_COUNTS_JS, INDEX_CSS, INDEX_JS, T_COMMENTS, T_NEW } from "./constants.ts";
 import { CFG, REPO_ROOT, esc, liveConfig, pyJson, spans, type Tri } from "./html.ts";
+import { authScriptTag } from "./auth.ts";
 
 
 /* The top bar of the management pages (apps/web/components/Shell.tsx), as HTML for the pages that came from the old site: the same three menus
@@ -22,7 +23,7 @@ export function appBar(right: string, here: "docs" | "" = "docs", extraClass = "
       ["/board/", M("Quadro B2B", "B2B board", "B2B 看板")], ["/roadmap/", "Roadmap"], ["/metrics/", M("Métricas", "Metrics", "指标")]]) +
     menu(M("Portfólio", "Portfolio", "组合"), [["/themes/", M("Temas", "Themes", "主题")], ["/slides/", "Slides"]]) +
     menu(M("Documentos", "Documents", "文档"), [["/", "RFCs"], ["/attachments/", M("Anexos", "Attachments", "附件")], ["/comments/", M("Comentários", "Comments", "评论")]], here === "docs") +
-    `</nav><div class="tools">${right}</div></div></header>
+    `</nav><div class="tools"><span data-auth-slot></span>${right}</div></div></header>
 <script>document.addEventListener("click",function(e){document.querySelectorAll("header.appbar details.menu[open]").forEach(function(d){if(!d.contains(e.target))d.removeAttribute("open")})});document.addEventListener("keydown",function(e){if(e.key==="Escape")document.querySelectorAll("header.appbar details.menu[open]").forEach(function(d){d.removeAttribute("open")})});</script>`;
 }
 
@@ -32,7 +33,7 @@ export function indexPage(): string {
 <title>${esc(CFG.title)}</title><meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
-<style>${INDEX_CSS}</style><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
+${authScriptTag()}<style>${INDEX_CSS}</style><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
 ${appBar(`<a class="navc" href="comments/">💬 ${spans(T_COMMENTS)}<span class="ccount" hidden></span><span class="cnewb" hidden></span></a><a class="navc newrfc" href="nova/">＋ ${spans(T_NEW)}</a>${LANG_BUTTONS}`)}
 <main class="wrap"><h1>RFCs</h1>
 <p class="lead">${spans({"pt": "Propostas técnicas da plataforma, com status e comentários por seção.", "en": "Platform technical proposals, with status and per-section comments.", "zh": "平台技术提案，含状态与分节评论。"})}</p>
@@ -53,7 +54,7 @@ export function commentsPage(): string {
 <title>${esc(T_COMMENTS.pt)} · ${esc(CFG.title)}</title><meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
-<style>${INDEX_CSS}${COMMENTS_CSS}</style><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
+${authScriptTag()}<style>${INDEX_CSS}${COMMENTS_CSS}</style><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
 ${appBar(LANG_BUTTONS)}
 <main class="wrap"><h1>${spans(T_COMMENTS)}</h1><p class="lead">${spans(lead)}</p><div id="cmt-root"></div></main>
 <script>window.PHIZ_COMMENTS=${data};${INDEX_JS}</script>
@@ -80,6 +81,7 @@ export function viewerPage(): string {
   page = wrapFragment(page);
   page = page.replace('<span class="rfcno">', '<a class="back" href="../">← RFCs</a><span class="rfcno">');
   page = page.replace("</title>", '</title>\n<link rel="stylesheet" href="../assets/rfc-site.css">');
+  page = page.replace("<head>", () => `<head>\n${authScriptTag()}`);
   page = page.replace("</head>", `<link rel="preconnect" href="https://fonts.googleapis.com">${NEWFONT_LINK}<link rel="stylesheet" href="/assets/theme-v2.css">\n</head>`);
   page = page.replace("<body>", `<body class="legacy viewer">\n${appBar("", "docs", "static")}`);
   const inject = `<script>window.PHIZ_SITE=${pyJson(liveConfig())};</script>\n<script src="../assets/mermaid.min.js"></script>\n` +
@@ -94,7 +96,7 @@ export function newRfcPage(): string {
 <title>${esc(CFG.title)} · Nova RFC</title><meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
-<style>${INDEX_CSS}</style><link rel="stylesheet" href="../assets/nova.css"><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
+${authScriptTag()}<style>${INDEX_CSS}</style><link rel="stylesheet" href="../assets/nova.css"><link rel="stylesheet" href="/assets/theme-v2.css"></head><body class="legacy">
 ${appBar(LANG_BUTTONS)}
 <main class="wrap nova">
 <h1 id="nova-title"><span class="only-new">${S("Nova RFC", "New RFC", "新建 RFC")}</span><span class="only-edit" hidden>${S("Nova versão de", "New version of", "新版本：")} <span id="edit-id"></span></span></h1>

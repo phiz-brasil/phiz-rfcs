@@ -138,6 +138,10 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   for PHZ-0001. Images are now read on demand (visible language, near the viewport) and remembered by the browser; nothing is stored or migrated differently. The Storage/CDN move and a paid plan
   are the next levers if the usage page still shows more than 3 GB a month.
 
+- **Phase 2, slice 1 (this branch)**: `docs/spec/v2/login.md`. `/login/` (e-mail link and 6-digit code, `@phiz.com` only), the session in `localStorage`, `assets/auth.js` wrapping `fetch` so every request
+  carries the token (old and React pages), the account in the menu with *Sign out*, the account name on writes, and the guard behind `auth.required` (false). Nothing changes for visitors until slices 2 (database lock,
+  migration written and applied only when the owner says) and 3 (go-live). Prerequisites for the owner: custom SMTP and the Auth URL settings.
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)

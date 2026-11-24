@@ -11,7 +11,8 @@ import uuid
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
-CORS = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS"}
+CORS = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization,apikey,content-type,x-upsert,prefer,x-client-info,range,accept-profile,content-profile",
+        "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS"}
 
 
 def now():
@@ -34,6 +35,10 @@ class FakeSupabase(ThemesMixin):
         self.rate_limited = False         # make create_rfc / add_rfc_revision answer 429
         self.staging = {}                 # token -> {name: row}: images waiting for their RFC
         self.assets = []                  # rfc_assets rows
+        self.auth_calls = []              # (endpoint, body) of every call to /auth/v1: otp, verify, token, user, logout
+        self.rest_auth = []               # the Authorization header of every call to the REST API, Storage or Edge Functions (None when absent)
+        self.valid_codes = {"123456"}     # the 6-digit codes the fake Auth accepts
+        self.refreshable = {}             # refresh_token -> email: what the fake Auth can refresh
         self.asset_reads = []             # (rfc, name, rev) of every read that carried the bytes (select includes `data`): what costs egress
         self._init_themes()               # fronts, themes, items, links, Jira links, events (fake_themes.py)
 
@@ -134,6 +139,43 @@ class FakeSupabase(ThemesMixin):
     def _empty(self):
         return {"__empty__": True}
 
+    # -- the fake Auth (GoTrue): /auth/v1/otp, /verify, /token, /user, /logout --------------------------
+    @staticmethod
+    def session_for(email, name=None):
+        tok = "tok-" + email.split("@")[0]
+        return {"access_token": tok, "refresh_token": "ref-" + email.split("@")[0], "expires_in": 3600, "token_type": "bearer",
+                "user": {"id": "u-" + email.split("@")[0], "email": email, "user_metadata": {"name": name} if name else {}}}
+
+    def auth_handle(self, route, req, path, q):
+        H = {**CORS, "Content-Type": "application/json"}
+        body = json.loads(req.post_data) if req.post_data else {}
+        endpoint = path.split("/auth/v1/", 1)[1].strip("/")
+        self.auth_calls.append((endpoint, {**body, **({"_q": q} if q else {}), "_auth": req.headers.get("authorization")}))
+        if endpoint == "otp":
+            return route.fulfill(status=200, headers=H, body="{}")
+        if endpoint == "verify":
+            if body.get("token") in self.valid_codes and body.get("type") == "email" and body.get("email"):
+                sess = self.session_for(body["email"])
+                self.refreshable[sess["refresh_token"]] = body["email"]
+                return route.fulfill(status=200, headers=H, body=json.dumps(sess))
+            return route.fulfill(status=403, headers=H, body=json.dumps({"code": 403, "error_code": "otp_expired", "msg": "Token has expired or is invalid"}))
+        if endpoint == "token" and q.get("grant_type") == "refresh_token":
+            email = self.refreshable.get(body.get("refresh_token"))
+            if not email:
+                return route.fulfill(status=400, headers=H, body=json.dumps({"error": "invalid_grant", "error_description": "Invalid Refresh Token"}))
+            sess = self.session_for(email)
+            sess["access_token"] += "-r"                                     # a new access token
+            return route.fulfill(status=200, headers=H, body=json.dumps(sess))
+        if endpoint == "user":
+            tok = (req.headers.get("authorization") or "").replace("Bearer ", "")
+            email = next((e for r, e in self.refreshable.items() if tok.startswith("tok-" + e.split("@")[0])), None)
+            if not email:
+                return route.fulfill(status=401, headers=H, body=json.dumps({"msg": "invalid JWT"}))
+            return route.fulfill(status=200, headers=H, body=json.dumps(self.session_for(email)["user"]))
+        if endpoint == "logout":
+            return route.fulfill(status=204, headers=CORS, body="")
+        return route.fulfill(status=404, headers=H, body="{}")
+
     # -- Playwright route -----------------------------------------------
     def handle(self, route):
         req = route.request
@@ -142,11 +184,14 @@ class FakeSupabase(ThemesMixin):
             return route.fulfill(status=204, headers=CORS)
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
         path = url.path
+        if any(x in path for x in ("/rest/v1/", "/storage/v1/", "/functions/v1/")):
+            self.rest_auth.append(req.headers.get("authorization"))
+        if "/auth/v1/" in path:
+            return self.auth_handle(route, req, path, q)
         if "/storage/v1/object/" in path:
             return self.storage_handle(route, req, url)
         if path.endswith("/functions/v1/suggest-summary"):
-            return self.suggest_function(route, json.loads(req.post_data) if req.post_data else {}, {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*",
-                                                                                                    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"})
+            return self.suggest_function(route, json.loads(req.post_data) if req.post_data else {}, CORS)
         body = json.loads(req.post_data) if req.post_data else None
 
         def ok(data, status=200):

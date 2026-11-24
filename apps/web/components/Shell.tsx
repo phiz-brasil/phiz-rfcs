@@ -6,6 +6,8 @@ import { LANGS, T, useLang, type Lang } from "../lib/i18n";
 import { client, type Db, type Supabase } from "../lib/db";
 
 type Ctx = { lang: Lang; db: Db; name: string; setName: (n: string) => void; reader: boolean };
+type Auth = { account(): { email: string; name: string | null } | null; signOut(): Promise<void> };
+const auth = () => (typeof window !== "undefined" ? (window as unknown as { PHIZ_AUTH?: Auth }).PHIZ_AUTH : undefined);
 const Context = createContext<Ctx | null>(null);
 export const useApp = () => {
   const c = useContext(Context);
@@ -21,8 +23,10 @@ export function Shell({ supabase, children }: { supabase: Supabase; children: Re
   const [name, setNameState] = useState("");
   const [db] = useState(() => client(supabase));
   const [reader, setReaderState] = useState(false);
+  const [account, setAccount] = useState<{ email: string; name: string | null } | null>(null);     // the signed-in person (assets/auth.js); null before sign-in is required
   useEffect(() => {
     try { setNameState(localStorage.getItem(NAME_KEY) ?? ""); } catch { /* blocked */ }
+    setAccount(auth()?.account() ?? null);
     const asked = new URLSearchParams(location.search).get("mode");
     if (asked === "reader" || asked === "edit") { setReaderState(asked === "reader"); return; }
     try { setReaderState(localStorage.getItem(READER_KEY) === "1"); } catch { /* blocked */ }
@@ -54,7 +58,12 @@ export function Shell({ supabase, children }: { supabase: Supabase; children: Re
           </nav>
           <Menu label={name.trim() || T.yourName[lang]} className="user" right aria={T.userMenu[lang]}>
             <div className="user-pop">
-              {!reader ? <label className="who"><span>{T.yourName[lang]}</span><input value={name} maxLength={60} autoComplete="name" placeholder={T.yourName[lang]} onChange={e => setName(e.target.value)} /></label> : null}
+              {account ? (
+                <div className="acct" data-account>
+                  <span className="who-email">{account.email}</span>
+                  <button type="button" className="toggle" onClick={async () => { await auth()?.signOut(); location.href = "/login/"; }}>{T.signOut[lang]}</button>
+                </div>
+              ) : !reader ? <label className="who"><span>{T.yourName[lang]}</span><input value={name} maxLength={60} autoComplete="name" placeholder={T.yourName[lang]} onChange={e => setName(e.target.value)} /></label> : null}
               <button type="button" className="toggle" aria-pressed={reader} onClick={() => setReader(!reader)}>{reader ? T.editor[lang] : T.reader[lang]}</button>
               <div className="langs" role="group" aria-label="Language">
                 {LANGS.map(l => (
