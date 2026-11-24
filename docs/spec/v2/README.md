@@ -149,4 +149,4 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)
    and add the file to the review, or share it with view access for anyone with the link.
-2. **(2, last phase) Microsoft sign-in.** Needs the administrator of the company's Microsoft tenant; until then, sign-in by e-mail link to `@phizchat.com`.
+2. **(2, last phase) Microsoft sign-in.** The owner can register applications in the company's Entra ID, so it goes ahead: specified in `login.md` (*Microsoft sign-in (SSO), slice 4*, 2026-11-24); until it is built, sign-in by e-mail code to `@phizchat.com`.

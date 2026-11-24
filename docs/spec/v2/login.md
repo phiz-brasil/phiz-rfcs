@@ -155,3 +155,47 @@ Found on the day of the go-live (owner's real sign-in): the company's Microsoft 
 ## Decision 2026-11-24: the application is called "PhizChat Command Center"
 
 The owner: the name of the application is now **PhizChat Command Center**. In the sign-in e-mail it replaces "PHIZ RFCs" in three places, all settings of the Supabase dashboard (not in the repository): the **sender name** of the custom SMTP (*Authentication → Emails → SMTP Settings → Sender name*), the **subject** and the **heading** of both templates (*Magic link or OTP* and *Confirm sign up*): subject `Seu código de acesso ao PhizChat Command Center`, heading `Seu acesso ao PhizChat Command Center`. The rest of the template is unchanged (the code only, no link). Applied 2026-11-24 and checked with a real message. The name on the site itself (page titles, `site.config.json` → `title`) is a separate change that waits for the owner's word.
+
+## Microsoft sign-in (SSO), slice 4 (decided 2026-11-24, owner: "Primeiro a spec")
+
+Status: this section only. The owner has access to the company's Microsoft tenant (Entra ID, directory *PHIZ*, `phizchat.com`) and can register applications there, so the item that waited for "a tenant administrator" (`README.md` open question 2, `platform.md`) can go ahead.
+
+### Decisions
+
+1. **Supabase Auth, provider *Azure*** (OAuth with the company's Entra ID). The page does not implement OAuth: it sends the person to `GET <supabase>/auth/v1/authorize?provider=azure&redirect_to=<…/login/>&scopes=email` and gets the session back in the address (`#access_token=…&refresh_token=…`), which `assets/auth.js` already reads (`fromAddress`) for the old link flow. No new token code.
+2. **Single tenant.** The Entra application accepts only accounts of the *PHIZ* directory ("accounts in this organizational directory only"): another company's account and personal Microsoft accounts cannot even reach the consent screen. The Supabase side uses the tenant URL `https://login.microsoftonline.com/<tenant-id>`.
+3. **The domain check stays where it is.** Whoever signs in with Microsoft is a member only if the e-mail of the account ends in `@phizchat.com`, by the same rule as the code: `is_member()` in the database (`20261202000000_member_domain.sql`) and the page's `DOMAIN` check. Microsoft does not widen who is a member.
+4. **The e-mail claim.** Supabase needs the `email` of the account. In Entra it is an *optional claim* of the application (`email`; if the directory leaves it empty, `preferred_username`, which is the sign-in name, `…@phizchat.com`). The first real sign-in is the check: an account that arrives without an e-mail in the session is refused with the message of a non-member.
+5. **The code by e-mail stays** as the second way in (and as the way out when Microsoft is down). The page offers both: the button *Entrar com Microsoft* first, the e-mail field below.
+6. **Nobody is created by Microsoft who is not already of the domain**: the directory is the company's, so every account in it is `@phizchat.com`; guests (B2B) of other domains are refused by rule 3.
+7. **A person who signed in by code and later by Microsoft is the same person** when the e-mail is the same (Supabase links identities by e-mail; the account name and the author of comments do not change).
+
+### What the owner does (outside the code)
+
+- **In Entra** (done with the owner, in their browser): register the application *PhizChat Command Center*, single tenant; Web redirect URI `https://zuwbjcwfqzucjmxrehad.supabase.co/auth/v1/callback`; the optional claim `email`; a **client secret** (the value is shown once).
+- **In Supabase** (*Authentication → Sign In / Providers → Azure*): enable it with the application (client) ID, the **client secret** and the tenant URL. **The secret is pasted by the owner**; it is never typed by the assistant nor written in the repository or in this document.
+- **A real sign-in** with the owner's account to see it work (and, if the tenant asks for it, the administrator's consent for the application).
+
+### What changes in the code
+
+- `/login/`: a primary button *Entrar com Microsoft* (pt-BR, en, zh-Hans: *Sign in with Microsoft*, *使用 Microsoft 登录*) above the e-mail form, with an "or" separator. It goes to the authorize address above with `redirect_to` the page itself (and `next` kept as today).
+- `assets/auth.js`: `PHIZ_AUTH.microsoftUrl(next)` returns the authorize address (built from the Supabase URL it already has); the return through the address is the existing path. A session whose e-mail is not of the domain is ended with the existing message.
+- The Supabase URL configuration already lists `https://phiz-rfcs.vercel.app/login/` (slice 3); nothing to add there.
+- No migration: the lock already admits any `authenticated` JWT with an e-mail of the domain, whatever the provider.
+
+### Checks (tests/test_login.py)
+
+With the fake Supabase of the tests (no Microsoft involved):
+- the page shows the *Entrar com Microsoft* button in the three languages and it navigates to `…/auth/v1/authorize?provider=azure&redirect_to=…/login/…&scopes=email` (the test reads the address it goes to);
+- coming back with `#access_token=…&refresh_token=…` of an address of the domain signs the person in and goes to `next` (the old link flow, now also the Microsoft return);
+- coming back with a token of another domain ends the session with the message and sends nothing else;
+- the e-mail form keeps working next to the button (the existing tests stay as they are);
+- the button never carries a token or a secret (nothing of the owner's credentials is in the repository: a test reads the sources for `client_secret`).
+
+### Order
+
+1. This spec (merged). 2. The tests, red. 3. The button and `microsoftUrl`. 4. In Entra and Supabase, with the owner. 5. The real sign-in, and the go/no-go for telling the team. 6. Update `README.md` (question 2 answered) and `platform.md`.
+
+### Undo
+
+Disable the provider in Supabase (*Azure* off): the button then leads to an error page of Supabase and nothing else changes; the next release removes the button. The e-mail code never stopped working.
