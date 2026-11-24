@@ -26,15 +26,15 @@ class LoginPageTest(SiteCase):
     def test_an_address_outside_the_domain_is_refused_without_any_request(self):
         self.login()
         self.page.get_by_label("E-mail").fill("pessoa@gmail.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
+        self.page.get_by_role("button", name="Enviar código").click()
         expect(self.page.locator("main [role=alert]")).to_contain_text("@phizchat.com")
         self.assertEqual(self.db.auth_calls, [])
 
-    def test_a_company_address_asks_for_a_link_and_a_code_and_shows_the_code_field(self):
+    def test_a_company_address_asks_for_a_code_and_shows_the_code_field(self):
         self.login()
         self.page.get_by_label("E-mail").fill("Ana.Souza@PHIZCHAT.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
-        expect(self.page.get_by_text("Enviamos um link e um código para ana.souza@phizchat.com")).to_be_visible()
+        self.page.get_by_role("button", name="Enviar código").click()
+        expect(self.page.get_by_text("Enviamos um código para ana.souza@phizchat.com")).to_be_visible()
         (otp,) = self.calls("otp")
         self.assertEqual((otp["email"], otp["create_user"]), ("ana.souza@phizchat.com", True))
         self.assertTrue(otp["_q"]["redirect_to"].endswith("/login/"))
@@ -44,7 +44,7 @@ class LoginPageTest(SiteCase):
     def test_the_right_code_makes_a_session_and_leads_to_the_overview(self):
         self.login()
         self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
+        self.page.get_by_role("button", name="Enviar código").click()
         self.page.get_by_label("Código de 6 dígitos").fill("123456")
         self.page.get_by_role("button", name="Entrar").click()
         self.page.wait_for_url(re.compile(r"/overview/$"))
@@ -57,7 +57,7 @@ class LoginPageTest(SiteCase):
     def test_a_wrong_code_shows_an_error_and_keeps_the_form(self):
         self.login()
         self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
-        self.page.get_by_role("button", name="Enviar link e código").click()
+        self.page.get_by_role("button", name="Enviar código").click()
         self.page.get_by_label("Código de 6 dígitos").fill("000000")
         self.page.get_by_role("button", name="Entrar").click()
         expect(self.page.locator("main [role=alert]")).to_contain_text("inválido ou expirou")
@@ -91,7 +91,7 @@ class LoginPageTest(SiteCase):
         self.page.goto(self.base + "/login/")
         self.page.get_by_role("button", name="EN-US").click()
         expect(self.page.get_by_label("E-mail")).to_be_visible()
-        expect(self.page.get_by_role("button", name="Send link and code")).to_be_visible()
+        expect(self.page.get_by_role("button", name="Send code")).to_be_visible()
 
 
 class SessionTest(SiteCase):
@@ -333,3 +333,20 @@ class LongWindowTest(SiteCase):
         expect(other.locator("tr.theme-row").first).to_be_visible()
         self.assertEqual(len(self.tokens()), 1)
         self.assertTrue(all(a == "Bearer tok-ana.souza-r" for a in self.db.rest_auth), set(self.db.rest_auth))
+
+
+class CodeOnlyTextsTest(SiteCase):
+    """docs/spec/v2/login.md, "Decision 2026-11-24": the message carries only the code, so the page never promises a link."""
+
+    def test_the_page_speaks_of_a_code_and_never_of_a_link(self):
+        self.page.goto(self.base + "/login/")
+        main = self.page.locator("main")
+        expect(main).to_contain_text("código de 6 dígitos")
+        expect(main).not_to_contain_text("link")
+        expect(self.page.get_by_role("button", name="Enviar código")).to_be_visible()
+
+    def test_the_form_tells_that_each_request_replaces_the_previous_code(self):
+        self.page.goto(self.base + "/login/")
+        self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
+        self.page.get_by_role("button", name="Enviar código").click()
+        expect(self.page.locator("main")).to_contain_text("o último substitui os anteriores")
