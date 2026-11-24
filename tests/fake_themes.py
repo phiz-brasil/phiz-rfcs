@@ -501,7 +501,7 @@ class ThemesMixin:
     def storage_handle(self, route, req, url):
         """The private bucket: upload (the policy checks the path), signed addresses and the signed download."""
         from urllib.parse import unquote
-        H = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS"}
+        from fake_supabase import CORS as H
         path = unquote(url.path.split("/storage/v1/object/", 1)[1])
         self.storage_calls.append((req.method, path))
         if path.startswith("sign/attachments/"):

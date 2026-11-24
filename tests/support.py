@@ -112,6 +112,21 @@ class SiteCase(unittest.TestCase):
         self.errors = []
         self.page.on("pageerror", lambda e: self.errors.append(str(e)))
 
+    def sign_in_as(self, email="ana.souza@phiz.com", name=None, expires_in=3600, fake_refresh=True):
+        """Start every page of this browser with a session, as if the person had signed in (the fake Auth can refresh it)."""
+        import json as _json
+        who = email.split("@")[0]
+        sess = {"access_token": "tok-" + who, "refresh_token": "ref-" + who, "expires_at": int(__import__("time").time()) + expires_in,
+                "user": {"email": email, "user_metadata": {"name": name} if name else {}}}
+        if fake_refresh:
+            self.db.refreshable["ref-" + who] = email
+        self.context.add_init_script("try { localStorage.setItem('phiz-auth', %s) } catch (e) {}" % _json.dumps(_json.dumps(sess)))
+        return sess
+
+    def require_sign_in(self):
+        """Make this browser strict, like `auth.required` does for everybody (docs/spec/v2/login.md)."""
+        self.context.add_init_script("try { localStorage.setItem('phiz-auth-required', '1') } catch (e) {}")
+
     def prefs(self):
         """Open the menu of the top bar that holds the name, reader mode and language (it is closed after every page load)."""
         button = self.page.locator(".menu.user > button")
