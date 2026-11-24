@@ -1,26 +1,28 @@
 /* Small helpers shared by the page generators: the repository root, the site config, escaping and the three-language spans. */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
+import siteConfig from "../../../../site.config.json" with { type: "json" };    // inlined by the bundler: a page rendered on demand runs where the repository is not on disk (docs/spec/v2/platform.md)
 
 export const LANGS = ["pt", "en", "zh"] as const;
 export type Lang = (typeof LANGS)[number];
 export type Tri = Record<Lang, string>;
 
-function findRoot(from: string): string {
+function findRoot(from: string): string | null {
   let dir = from;
   while (!existsSync(join(dir, "site.config.json"))) {
     const up = dirname(dir);
-    if (up === dir) throw new Error(`site.config.json not found above ${from}`);
+    if (up === dir) return null;
     dir = up;
   }
   return dir;
 }
 
-/* The repository root: templates/, skills/, assets/ and site.config.json live there, shared with the tools. */
-export const REPO_ROOT = findRoot(process.cwd());
+/* The repository root: templates/, skills/, assets/ and site.config.json live there, shared with the tools. It is found at build time; on a server that has only the
+   bundle there is none, and that is fine for the routes rendered on demand (they never read it): so it does not throw. */
+export const REPO_ROOT = findRoot(process.cwd()) ?? process.cwd();
 
 type Config = { title: string; repo: string; giscus: Record<string, string>; comments?: Record<string, string> };
-export const CFG: Config = JSON.parse(readFileSync(join(REPO_ROOT, "site.config.json"), "utf-8"));
+export const CFG: Config = siteConfig as Config;
 
 export const liveConfig = () => ({ repo: CFG.repo, giscus: CFG.giscus, comments: CFG.comments ?? {} });
 

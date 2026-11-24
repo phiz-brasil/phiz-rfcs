@@ -61,6 +61,15 @@ class _Site:
     url = None
     proc = None
 
+    built = False
+
+    @classmethod
+    def build(cls):
+        """`npm run build` once per process (SKIP_BUILD=1 reuses the last build)."""
+        if not cls.built and not os.environ.get("SKIP_BUILD"):
+            subprocess.run(["npm", "run", "build"], cwd=ROOT, check=True, capture_output=True, env={**os.environ, "PHIZ_AUTH_REQUIRED": "0"})
+        cls.built = True
+
     @classmethod
     def start(cls):
         if cls.url:
@@ -68,8 +77,7 @@ class _Site:
         if os.environ.get("SITE_URL"):
             cls.url = os.environ["SITE_URL"].rstrip("/")
         else:
-            if not os.environ.get("SKIP_BUILD"):
-                subprocess.run(["npm", "run", "build"], cwd=ROOT, check=True, capture_output=True, env={**os.environ, "PHIZ_AUTH_REQUIRED": "0"})
+            cls.build()
             with socket.socket() as s:
                 s.bind(("127.0.0.1", 0))
                 port = s.getsockname()[1]
