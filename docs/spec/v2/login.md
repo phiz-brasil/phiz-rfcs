@@ -1,6 +1,6 @@
 # Spec v2: sign-in (phase 2)
 
-Status: slice 1 built on 2026-11-24 (`assets/auth.js`, `/login/`, the account in the menu, the guard; `auth.required` false); slices 2 and 3 pending. Decided 2026-11-24 (owner: "Sim, login"). Replaces what `platform.md` says about `@supabase/ssr` cookies and a middleware (see *Decisions*). Built in three slices so that
+Status: slice 1 built on 2026-11-24 (`assets/auth.js`, `/login/`, the account in the menu, the guard; `auth.required` false); slices 2 and 3 done (go-live 2026-11-24, see *Slice 3 in detail*). Decided 2026-11-24 (owner: "Sim, login"). Replaces what `platform.md` says about `@supabase/ssr` cookies and a middleware (see *Decisions*). Built in three slices so that
 nothing changes for anyone until the owner flips the switch.
 
 ## Goal
@@ -145,3 +145,5 @@ Found on the day of the go-live (owner's real sign-in): the company's Microsoft 
 - Supabase **Email OTP length is 6** (it is 8 by default; the page accepts 6 digits). It is a dashboard setting and part of the prerequisites.
 - The page says "code", not "link and code": *Enviar código*, *Enviamos um código para…*. The code in the address of the page (`#access_token=…`, the old link flow) stays supported: it costs nothing and nobody is sent that link any more.
 - A person asks for **one** code at a time: every new request invalidates the earlier code (the message says it in the form).
+
+**Go-live done and confirmed 2026-11-24:** `auth.required` true (PR #49), secret `REQUIRE_MEMBER=1`, `suggest-summary` redeployed and the migrations `20261201000000_member_lock.sql` and `20261202000000_member_domain.sql` applied in production. Checked as an anonymous caller: REST reads of `rfc_comments` and `themes` answer 401 (`PT401`), `rpc/ping` 200, `suggest-summary` 401. The owner then signed in with a `@phizchat.com` address and it worked.
