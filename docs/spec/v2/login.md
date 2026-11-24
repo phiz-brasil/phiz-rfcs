@@ -151,3 +151,7 @@ Found on the day of the go-live (owner's real sign-in): the company's Microsoft 
 ## Decision 2026-11-24: the gate's messages name the right domain
 
 `check_request()` still said "sign in with a @phiz.com account" / "only @phiz.com accounts have access" after the domain moved to `phizchat.com`. The new migration **`20261203000000_gate_messages.sql`** recreates `check_request()` with the two messages naming `@phizchat.com`; the logic (who passes, the order of the checks, the `PT401`/`PT403` codes) is **identical**, and the test compares the new body with the one of `20261201000000_member_lock.sql` line by line, so only the two texts differ. The migration that already ran is not edited.
+
+## Decision 2026-11-24: the application is called "PhizChat Command Center"
+
+The owner: the name of the application is now **PhizChat Command Center**. In the sign-in e-mail it replaces "PHIZ RFCs" in three places, all settings of the Supabase dashboard (not in the repository): the **sender name** of the custom SMTP (*Authentication → Emails → SMTP Settings → Sender name*), the **subject** and the **heading** of both templates (*Magic link or OTP* and *Confirm sign up*): subject `Seu código de acesso ao PhizChat Command Center`, heading `Seu acesso ao PhizChat Command Center`. The rest of the template is unchanged (the code only, no link). Applied 2026-11-24 and checked with a real message. The name on the site itself (page titles, `site.config.json` → `title`) is a separate change that waits for the owner's word.
