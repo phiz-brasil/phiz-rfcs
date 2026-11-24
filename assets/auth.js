@@ -51,30 +51,48 @@
   const realFetch = window.fetch.bind(window);
   const authFetch = (path, opts) => realFetch(URL_ + "/auth/v1/" + path, Object.assign({}, opts, { headers: Object.assign({ apikey: KEY, "Content-Type": "application/json" }, (opts && opts.headers) || {}) }));
 
+  /* Renewing is the heart of a long window of sign-in (docs/spec/v2/login.md): the access token is short, the refresh token is what lasts. The session ends ONLY when
+     Supabase says the refresh token is invalid (400, 401, 403); a network error, 429 or 5xx keeps it and the next try renews it. Tabs renew one at a time (Web Locks): the one
+     that waited reads what the other saved instead of spending the refresh token again. */
+  const FINAL = new Set([400, 401, 403]);
+  const SOON = 60000;                                           // a request that finds less than a minute left renews first
+  const EARLY = 5 * 60000;                                      // the background renewal starts with less than 5 minutes left
   let refreshing = null;
-  function refresh() {
+  async function renew(limit) {
+    let s = session();
+    if (!s) return null;
+    if (s.expires_at * 1000 - Date.now() > limit) return s;     // another tab renewed it while this one waited
+    try {
+      const r = await authFetch("token?grant_type=refresh_token", { method: "POST", body: JSON.stringify({ refresh_token: s.refresh_token }) });
+      if (FINAL.has(r.status)) { leave(); return null; }
+      if (!r.ok) return session();                              // 429, 5xx: not final, try again later
+      const next = fromResponse(await r.json());
+      if (!next.user) next.user = s.user;
+      remember(next);
+      return next;
+    } catch (e) { return session(); }                           // offline: keep what there is
+  }
+  function refresh(limit) {
     if (!refreshing) {
-      refreshing = (async () => {
-        const s = session();
-        if (!s) return null;
-        try {
-          const r = await authFetch("token?grant_type=refresh_token", { method: "POST", body: JSON.stringify({ refresh_token: s.refresh_token }) });
-          if (!r.ok) { leave(); return null; }
-          const next = fromResponse(await r.json());
-          if (!next.user) next.user = s.user;
-          remember(next);
-          return next;
-        } catch (e) { return session(); }                       // offline: keep what there is, the request will fail on its own
-      })().finally(() => { refreshing = null; });
+      const run = () => renew(limit || SOON);
+      refreshing = (navigator.locks ? navigator.locks.request("phiz-auth-refresh", run) : run()).finally(() => { refreshing = null; });
     }
     return refreshing;
   }
   async function accessToken() {
     let s = session();
     if (!s) return null;
-    if (s.expires_at * 1000 - Date.now() < 60000) s = await refresh();
+    if (s.expires_at * 1000 - Date.now() < SOON) s = await refresh();
     return s ? s.access_token : null;
   }
+  /* renewed before it is needed: when the tab comes back, when the network comes back, and every 4 minutes in a tab that stays open, whenever less than 5 minutes are left */
+  function keepFresh() {
+    const s = session();
+    if (s && s.expires_at * 1000 - Date.now() < EARLY) void refresh(EARLY);
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepFresh(); });
+  window.addEventListener("online", keepFresh);
+  setInterval(keepFresh, 4 * 60000);
 
   if (URL_) {
     window.fetch = async function (input, init) {
