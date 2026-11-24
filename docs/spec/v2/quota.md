@@ -27,6 +27,12 @@ What the reader sees does not change: the same `<img>`, the same click to open f
 
 Expected effect: a first visit to PHZ-0001 that reads the first screens goes from ≈ 32 MB to a few MB; a return visit to ≈ 0. With the measured use, a month stays well under 5 GB.
 
+## Result (measured on the real data, 2026-11-24)
+
+Opening PHZ-0001 reads **no image bytes** on the first screens (the first picture is far below), and still none at 25 % of the page; before, the same visit read 144 images
+(≈ 32.5 MB). Reading the whole page in one language reads at most its 48 pictures (≈ 11 MB), the other two languages only when chosen; a return visit reads nothing.
+(The scroll through the whole page could not be timed in the headless pane, so the "whole page" figure is computed from the sizes of the rows, not observed.)
+
 ## Next levers (not done now; each is its own spec when needed)
 
 - Images in a **public Storage bucket** with a long `Cache-Control` (the CDN absorbs the traffic as *cached egress*, a separate 5 GB pool, and images stop being base64 in the database); needs a data move and a change of the publish flow.

@@ -2,7 +2,7 @@
    single-file RFC into the same page the build produces for repository RFCs (assets/js/render/, no raw HTML, sanitized) and then
    starts the usual page scripts: comments, reactions, status, versions. */
 import { base64ToBlob } from "./images.js";
-import { LiveError, enabled, getAsset, getLatestRevision, getRevision, getTheme, listArchived, listRevisions } from "./live-api.js";
+import { LiveError, enabled, getAssetRow, getLatestRevision, getRevision, getTheme, listArchived, listAssets, listRevisions } from "./live-api.js";
 import { parseBundle } from "./render/bundle.js";
 import { renderBody } from "./render/markdown.js";
 import { BCP, LANGS, STATUS, heroHtml, pageBody } from "./render/page.js";
@@ -74,22 +74,65 @@ function versionsHtml(revs, shown, rfcId, archived = []) {
     `<p class="vnote-wrap"><a href="../nova/?edit=${esc(rfcId)}">${spans(T.newVersion)}</a></p></div></details>`;
 }
 
-/* The images of the RFC: `![alt](asset:name)` renders as <img data-asset="name">; each is read from the database (the newest of that
-   name up to this version) and shown from a local blob. A click opens it full size. */
+/* The images of the RFC: `![alt](asset:name)` renders as <img data-asset="name">. Reading an image is what costs egress (its bytes travel as base64), so
+   (docs/spec/v2/quota.md) an image is read only when it is about to be seen — its language is on screen and it is near the viewport — and once read it is kept in
+   the browser under the row that answered (`<rfc>/<name>@<rev>`; a row never changes, a new revision is a new row), so a reload, another language or another
+   version that uses the same row reads nothing. The list of rows (names and revisions, no bytes) is read once to know which row answers for a version.
+   A click opens the image full size. */
+const ASSET_CACHE = "phiz-rfc-assets-v1";
+async function openAssetCache() {
+  try { return await caches.open(ASSET_CACHE); } catch (e) { return null; }          // private mode, an old browser, or blocked: the page works, without the memory
+}
+
 async function hydrateAssets(root, rfcId, rev) {
-  const urls = new Map();
-  const imgs = [...root.querySelectorAll("img[data-asset]")];
-  await Promise.all(imgs.map(async img => {
-    const name = img.dataset.asset;
-    if (!urls.has(name)) {
-      urls.set(name, getAsset(rfcId, name, rev).then(a => (a ? URL.createObjectURL(base64ToBlob(a.data, a.mime)) : null)).catch(() => null));
+  let index = [];
+  try { index = await listAssets(rfcId); } catch (e) { /* every image is then shown as missing */ }
+  const cache = await openAssetCache();
+  const urls = new Map();                                                           // "<name>@<row rev>" -> Promise<blob address | null>
+  const rowFor = name => index.filter(r => r.name === name && r.rev <= rev).sort((a, b) => b.rev - a.rev)[0] || null;
+  const key = (name, row) => new Request(`${location.origin}/__rfc-asset/${rfcId}/${encodeURIComponent(name)}@${row.rev}`);
+
+  async function addressOf(name) {
+    const row = rowFor(name);
+    if (!row) return null;
+    const k = `${name}@${row.rev}`;
+    if (!urls.has(k)) {
+      urls.set(k, (async () => {
+        try {
+          const hit = cache ? await cache.match(key(name, row)).catch(() => null) : null;
+          if (hit) return URL.createObjectURL(await hit.blob());
+          const a = await getAssetRow(rfcId, name, row.rev);
+          if (!a) return null;
+          const blob = base64ToBlob(a.data, a.mime);
+          if (cache) cache.put(key(name, row), new Response(blob, { headers: { "Content-Type": a.mime } })).catch(() => { /* quota or blocked: not remembered */ });
+          return URL.createObjectURL(blob);
+        } catch (e) { return null; }
+      })());
     }
-    const url = await urls.get(name);
+    return urls.get(k);
+  }
+
+  async function show(img) {
+    const url = await addressOf(img.dataset.asset);
     if (!url) { img.classList.add("missing"); return; }
     img.src = url;
     img.classList.add("zoomable");
     img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
+  }
+
+  const imgs = [...root.querySelectorAll("img[data-asset]")];
+  if (typeof IntersectionObserver === "undefined") { imgs.forEach(show); return; }
+  // a printout needs every image of the language on screen, seen or not
+  window.addEventListener("beforeprint", () => imgs.filter(i => i.closest(".lang.active") && !i.classList.contains("missing")).forEach(i => {
+    watcher.unobserve(i);
+    i.loading = "eager";                                                          // the page's own `loading=lazy` would still hold the picture back
+    if (!i.getAttribute("src")) void show(i);
   }));
+  // an image in a hidden language has no box, so it is not "intersecting" until that language is chosen
+  const watcher = new IntersectionObserver(entries => entries.forEach(e => {
+    if (e.isIntersecting) { watcher.unobserve(e.target); void show(e.target); }
+  }), { rootMargin: "600px 0px" });
+  imgs.forEach(img => watcher.observe(img));
 }
 
 /* Versions that exist only as archived pages, older than what the database holds: attachments of the theme (phase 8). Each leads to the attachments of the theme. */
