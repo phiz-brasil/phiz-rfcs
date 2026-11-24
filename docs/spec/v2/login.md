@@ -147,3 +147,7 @@ Found on the day of the go-live (owner's real sign-in): the company's Microsoft 
 - A person asks for **one** code at a time: every new request invalidates the earlier code (the message says it in the form).
 
 **Go-live done and confirmed 2026-11-24:** `auth.required` true (PR #49), secret `REQUIRE_MEMBER=1`, `suggest-summary` redeployed and the migrations `20261201000000_member_lock.sql` and `20261202000000_member_domain.sql` applied in production. Checked as an anonymous caller: REST reads of `rfc_comments` and `themes` answer 401 (`PT401`), `rpc/ping` 200, `suggest-summary` 401. The owner then signed in with a `@phizchat.com` address and it worked.
+
+## Decision 2026-11-24: the gate's messages name the right domain
+
+`check_request()` still said "sign in with a @phiz.com account" / "only @phiz.com accounts have access" after the domain moved to `phizchat.com`. The new migration **`20261203000000_gate_messages.sql`** recreates `check_request()` with the two messages naming `@phizchat.com`; the logic (who passes, the order of the checks, the `PT401`/`PT403` codes) is **identical**, and the test compares the new body with the one of `20261201000000_member_lock.sql` line by line, so only the two texts differ. The migration that already ran is not edited.
