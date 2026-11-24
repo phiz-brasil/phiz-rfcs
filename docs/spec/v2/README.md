@@ -134,6 +134,10 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
   Decision taken without asking: the model is a Workers AI model because its secrets already exist for the translation; switching to another model is the
   `CF_SUGGEST_MODEL` variable, or a different `ask()` in the function.
 
+- **Phase 10, first measure (this branch)**: `docs/spec/v2/quota.md`. The previous cycle went over **Egress**: every visit to an RFC read all of its images (base64 in `rfc_assets`, three languages): ≈ 32 MB
+  for PHZ-0001. Images are now read on demand (visible language, near the viewport) and remembered by the browser; nothing is stored or migrated differently. The Storage/CDN move and a paid plan
+  are the next levers if the usage page still shows more than 3 GB a month.
+
 ## Pending
 
 1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)

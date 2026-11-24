@@ -207,7 +207,7 @@ class ImagesTest(SiteCase):
         rid = self.db.seed_rfc(with_image("gone.png"), META)            # the text cites an image that was never stored
         self.page.goto(self.base + f"/rfc/?id={rid}")
         self.page.wait_for_selector("img.missing")
-        self.assertEqual(self.page.locator("img.missing").count(), 3)
+        self.assertEqual(self.page.locator(".lang.active img.missing").count(), 1)          # the language on screen; the others are read when chosen (docs/spec/v2/quota.md)
 
     def test_clicking_an_image_opens_it_full_size(self):
         rid = self.db.seed_rfc(with_image(), META, images={"diagram.png": png_bytes(4, 4)})

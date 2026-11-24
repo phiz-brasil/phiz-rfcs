@@ -34,6 +34,7 @@ class FakeSupabase(ThemesMixin):
         self.rate_limited = False         # make create_rfc / add_rfc_revision answer 429
         self.staging = {}                 # token -> {name: row}: images waiting for their RFC
         self.assets = []                  # rfc_assets rows
+        self.asset_reads = []             # (rfc, name, rev) of every read that carried the bytes (select includes `data`): what costs egress
         self._init_themes()               # fronts, themes, items, links, Jira links, events (fake_themes.py)
 
     # -- test helpers ---------------------------------------------------
@@ -229,9 +230,13 @@ class FakeSupabase(ThemesMixin):
             rows = [a for a in self.assets if a["rfc_id"] == eq("rfc_id") and (eq("name") is None or a["name"] == eq("name"))]
             if q.get("rev", "").startswith("lte."):
                 rows = [a for a in rows if a["rev"] <= int(q["rev"][4:])]
+            if q.get("rev", "").startswith("eq."):
+                rows = [a for a in rows if a["rev"] == int(q["rev"][3:])]
             rows = sorted(rows, key=lambda a: a["rev"], reverse=True)
             if "limit" in q:
                 rows = rows[:int(q["limit"])]
             cols = q.get("select", "*").split(",")
+            if "data" in cols or cols == ["*"]:
+                self.asset_reads += [(a["rfc_id"], a["name"], a["rev"]) for a in rows]
             return ok([a if cols == ["*"] else {k: a[k] for k in cols} for a in rows])
         route.fulfill(status=404, headers=CORS, body="not found")
