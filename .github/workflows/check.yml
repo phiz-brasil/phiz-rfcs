@@ -38,5 +38,6 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: npm ci
       - run: python -m playwright install --with-deps chromium
-      # against the Next.js app (tests/support.py builds it and runs `next start`)
-      - run: python -m unittest discover -s tests -v
+      # against the Next.js app: tools/run_tests.py builds it once, runs one `next start` and spreads the test files over the CPUs of the runner
+      # (docs/spec/v2/guardrail.md, "A faster suite"); `python -m unittest discover -s tests` runs the same tests one by one
+      - run: python tools/run_tests.py

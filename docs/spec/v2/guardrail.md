@@ -9,7 +9,7 @@ Every change that touches **code** (`apps/web/`, `assets/`, `supabase/`, `templa
 1. **Spec first (SDD).** Change or add a spec under `docs/spec/` (or the design notes in it) that says what the change does and how it will be checked. The
    spec commit comes before the code commit in the branch; the checker warns when the order is reversed. A bug fix names the rule it restores in the spec.
 2. **Tests.** Add at least one test (`def test_…` in `tests/`) that fails without the change. The tests are written against the spec, not against the code.
-3. **No regression.** The whole suite (`python -m unittest discover -s tests`, the compatibility suite of `docs/spec/v2/compatibility.md`) passes, the
+3. **No regression.** The whole suite (`python -m unittest discover -s tests`, or the same tests in parallel with `python tools/run_tests.py`, the compatibility suite of `docs/spec/v2/compatibility.md`) passes, the
    number of tests does not go down, and no test is skipped to make it pass. Removing or skipping a test needs an explicit reason (below).
 
 Changes that touch only `docs/`, `tests/`, `.github/`, `.claude/` or `CLAUDE.md` are not code: rule 2 and 3 still apply to a change of tests (no test lost,
@@ -53,3 +53,13 @@ A skip is visible in the history and in the pull request; a reviewer decides whe
 - The word `skip` inside a string or comment is not a skip; `@unittest.skip(...)` and `self.skipTest(...)` are.
 - A skip line with a short reason, an unknown rule, or `all` is refused.
 - The hook refuses `git push` and `gh pr create` when the checker fails and lets every other command through.
+
+## A faster suite, the same coverage (decided 2026-11-24)
+
+The suite had grown to 403 tests and 188 s in CI, all of it in one process. Goal: faster pull requests **without** losing any test or any confidence.
+
+- **`python tools/run_tests.py`** runs the same tests as `python -m unittest discover -s tests`, in parallel: it builds the site **once**, starts **one** `next start`, and runs the test **files** in `--workers` processes (default: the number of CPUs, at most 4) against that server (`SITE_URL`). Each file runs whole in one process, so the order and the isolation inside a file are the same as before. The fake Supabase and the browser are per test, so nothing is shared between workers.
+- **Coverage is guaranteed by a test, not by trust:** the files given to the workers are exactly the `tests/test_*.py` files, each in exactly one shard (a file that is in no shard would silently not run), and the count of tests the runner executes equals the count that `unittest discover` finds. A failing shard fails the run and its output is printed.
+- **Balance:** shards are built from the measured time of each file (`tools/run_tests.py`, table `WEIGHT`, a file without a weight counts as 3 s), longest first, to the lightest shard. Weights only change how fast the run ends, never what runs.
+- **Still valid:** `python -m unittest discover -s tests` (what `CLAUDE.md` and the hook describe) runs the same tests one by one; it is the reference and the way to run one test. CI uses the runner (`--workers 4`).
+- **Not changed:** no test is deleted, skipped or weakened; the rules above (spec first, a new test, whole suite) are the same.
