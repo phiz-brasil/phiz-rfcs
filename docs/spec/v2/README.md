@@ -48,6 +48,7 @@ company.
 | [`domain.md`](domain.md) | Fronts, themes, execution items, weekly updates, blockers and decisions, Jira links, attachments, executive summary, languages, views |
 | [`flow-and-metrics.md`](flow-and-metrics.md) | Stages, routes, gates, the B2B board and the project kanban, and the exact definition of each metric |
 | [`compatibility.md`](compatibility.md) | What must keep working (addresses, data, behaviors) and the tests that prove it |
+| [`guardrail.md`](guardrail.md) | The three rules of every change (spec first, tests, no regression), the checker `tools/guardrail.py`, the CI job and the hook of Claude Code, and the only way to skip a rule |
 
 ## Phases
 
