@@ -121,3 +121,11 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
   specified on the new host; the Pages workflow is removed and Pages is turned off.
 - Phase 2: a request without a session reads nothing from the API (tested with the publishable key directly); a non-`@phizchat.com` account
   cannot be created; a member who is not admin cannot change board columns; the compatibility suite passes when signed in.
+
+## Runtime config: the server of a dynamic page has no repository (decided 2026-11-24)
+
+Found in production on 2026-11-24 (Vercel runtime log: `site.config.json not found above /var/task/apps/web`): **every theme page (`/themes/PHZ-xxxx/`) answered 500**. The pages generated at build time read `site.config.json`, `templates/` and `assets/` from the repository; a page rendered **on demand** runs in a function that has only the bundle, so a module that looks for the repository when it is loaded throws before the page is built.
+
+- `apps/web/server/site/html.ts` imports `site.config.json` as a module (the bundler inlines it); finding the repository root no longer throws when there is none (`REPO_ROOT` falls back to the working directory and is only used by the build-time generators).
+- **Rule:** nothing a dynamic route imports may read a file of the repository at load time.
+- **Check:** `tests/test_runtime.py` starts the built site from a directory that holds only the build (`.next`, `package.json`, `node_modules`), with no `site.config.json` above it, as the function does, and requests `/themes/PHZ-0001/`, `/themes/` and `/slides/`: all must answer 200.
