@@ -1,5 +1,5 @@
 "use client";
-/* The sign-in page (docs/spec/v2/login.md): the e-mail of the company, a 6-digit code in one message. The work is done by assets/auth.js (window.PHIZ_AUTH). */
+/* The sign-in page (docs/spec/v2/login.md): the button of Microsoft, and the e-mail of the company with a 6-digit code in one message. The work is done by assets/auth.js (window.PHIZ_AUTH). */
 import { useEffect, useRef, useState } from "react";
 import { LANGS, T, useLang } from "../lib/i18n";
 
@@ -8,6 +8,7 @@ type Auth = {
   sendLink(email: string): Promise<void>;
   verify(email: string, code: string): Promise<unknown>;
   fromAddress(): Promise<unknown | null>;
+  microsoftUrl(next: string | null): string;
   nextPath(raw: string | null): string;
 };
 const auth = () => (window as unknown as { PHIZ_AUTH?: Auth }).PHIZ_AUTH;
@@ -21,7 +22,16 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [wait, setWait] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const next = () => auth()?.nextPath(new URLSearchParams(location.search).get("next")) ?? "/overview/";
+  // where the person was going: the address, or what waited in sessionStorage during the trip to Microsoft (used once)
+  const next = () => {
+    let raw = new URLSearchParams(location.search).get("next");
+    try { if (!raw) raw = sessionStorage.getItem("phiz-auth-next"); sessionStorage.removeItem("phiz-auth-next"); } catch { /* private mode */ }
+    return auth()?.nextPath(raw) ?? "/overview/";
+  };
+  const microsoft = () => {
+    const q = new URLSearchParams(location.search).get("next");
+    location.href = auth()!.microsoftUrl(q ? auth()!.nextPath(q) : null);
+  };
 
   // the link of the message brings the tokens back in the address
   useEffect(() => {
@@ -70,6 +80,9 @@ export function LoginPage() {
         <p className="eyebrow">PHIZCHAT</p>
         <h1>{T.loginTitle[lang]}</h1>
         <p className="lead">{T.loginLead[lang]}</p>
+        {!sentTo ? (
+          <p><button type="button" className="btn primary" disabled={busy} onClick={microsoft}>{T.loginMicrosoft[lang]}</button></p>
+        ) : null}
         <form className="panel" onSubmit={e => { e.preventDefault(); void (sentTo ? enter() : send()); }} aria-label={T.loginTitle[lang]}>
           <label className="field"><span>{T.loginEmail[lang]}</span>
             <input type="email" autoComplete="email" value={email} disabled={!!sentTo} onChange={e => setEmail(e.target.value)} /></label>

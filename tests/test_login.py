@@ -382,7 +382,8 @@ class MicrosoftSignInTest(SiteCase):
         expect(self.page.get_by_role("button", name="使用 Microsoft 登录")).to_be_visible()
 
     def test_where_the_person_was_going_survives_the_trip_to_microsoft(self):
-        self.go("?next=%2Fthemes%2F")
+        self.go("?next=%2Fthemes%2F")                                                                  # the page is now at Microsoft's (here: the fake); sessionStorage is per site
+        self.page.goto(self.base + "/overview/")                                                       # back on our site, the same tab: what waited is still there
         self.assertEqual(self.page.evaluate("sessionStorage.getItem('phiz-auth-next')"), "/themes/")
         self.db.refreshable["ref-bo"] = "bo@phizchat.com"
         self.page.goto(self.base + "/login/#access_token=tok-bo&refresh_token=ref-bo&expires_in=3600&token_type=bearer")        # the return has no ?next=
@@ -392,6 +393,7 @@ class MicrosoftSignInTest(SiteCase):
     def test_the_trip_cannot_carry_the_person_to_another_site(self):
         self.login()
         self.page.evaluate("sessionStorage.setItem('phiz-auth-next', 'https://evil.example/x')")
+        self.page.goto(self.base + "/overview/")                                                       # a real navigation: the same address with only a new #hash would not reload the page
         self.db.refreshable["ref-bo"] = "bo@phizchat.com"
         self.page.goto(self.base + "/login/#access_token=tok-bo&refresh_token=ref-bo&expires_in=3600&token_type=bearer")
         self.page.wait_for_url(re.compile(r"/overview/$"))
