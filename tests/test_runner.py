@@ -56,3 +56,13 @@ class RunShardsTest(unittest.TestCase):
         self.assertIn("shard failed: test_b", report)
         self.assertIn("boom", report)
         self.assertIn("shard ok: test_a", report)
+
+
+class ServerPerWorkerTest(unittest.TestCase):
+    """docs/spec/v2/guardrail.md: the runner builds once and does not hand one shared server (SITE_URL) to the workers: each one starts its own."""
+
+    def test_the_runner_builds_once_and_gives_the_workers_no_shared_site_url(self):
+        src = (Path(__file__).resolve().parent.parent / "tools" / "run_tests.py").read_text(encoding="utf-8")
+        self.assertIn("_Site.build()", src)
+        self.assertIn('env["SKIP_BUILD"] = "1"', src)
+        self.assertNotIn('env["SITE_URL"] = _Site.start()', src)
