@@ -192,9 +192,12 @@ class AttachmentsTest(SiteCase):
         b = self.db.seed_attachment("PHZ-0001", "v2.pdf", content_type="application/pdf", replaces=a["id"], created_at="2026-11-02T00:00:00+00:00")
         self.db.seed_attachment("PHZ-0001", "v3.pdf", content_type="application/pdf", replaces=b["id"], created_at="2026-11-03T00:00:00+00:00")
         self.theme()
-        self.assertEqual(self.box().locator("tr[data-attachment]").evaluate_all("els => els.map(e => e.dataset.name)"), ["v3.pdf"])
+        rows = self.box().locator("tr[data-attachment]")
+        expect(rows).to_have_count(1)                                       # wait for the table: reading the list right after the page opens raced with the render
+        self.assertEqual(rows.evaluate_all("els => els.map(e => e.dataset.name)"), ["v3.pdf"])
         self.row("v3.pdf").get_by_role("button", name="2 edições anteriores").click()
-        self.assertEqual(self.box().locator("tr[data-attachment]").evaluate_all("els => els.map(e => e.dataset.name)"), ["v3.pdf", "v2.pdf", "v1.pdf"])
+        expect(rows).to_have_count(3)                                       # and the same after the click that expands the older editions
+        self.assertEqual(rows.evaluate_all("els => els.map(e => e.dataset.name)"), ["v3.pdf", "v2.pdf", "v1.pdf"])
 
     def test_an_attachment_can_be_tied_to_a_stage_and_shows_in_the_gate_checklist(self):
         self.theme()
