@@ -120,3 +120,11 @@ Checked against production at go-live:
   a member who is not admin cannot change board columns; a non-`@phiz.com` address cannot be created.
 - The keep-alive workflow still succeeds (`ping()`); the Edge Function `suggest-summary` refuses a call without a member's token.
 - The compatibility suite passes against production while signed in.
+
+## Slice 3 in detail (go-live, decided 2026-11-24, owner: "Sim, faça a virada")
+
+- **The switch** is `site.config.json` → `auth.required: true`. The environment variable `PHIZ_AUTH_REQUIRED` overrides it (`0` or `1`) so the test suite, which opens every page without a session, builds and serves the site with `PHIZ_AUTH_REQUIRED=0`; production has no variable and follows the file.
+- **Owner prerequisites done 2026-11-24:** Site URL and redirect `/login/` set; sessions never expire (Supabase default, locked on the free plan); custom SMTP through a Gmail app password (sender `gleisonpc@gmail.com`, about 500 e-mails a day; moving to a company domain later is only a change of the SMTP fields); template *Magic link or OTP* with `{{ .Token }}` and `{{ .ConfirmationURL }}`; a test e-mail arrived.
+- **Admins:** `app_admins` stays empty, so every member is admin until the owner names some.
+- **Acceptance against production** (after the migration): without a session `…/rest/v1/rfc_comments?select=id` answers 401; with the token of a `@phiz.com` account it answers 200; with another domain 403; `rpc/ping` answers 200 to anyone; the attachment bucket refuses an anonymous signed URL; `suggest-summary` refuses without a token.
+- **Undo**, in this order: run the comment at the end of the migration in the SQL editor (the gate goes off); then set `auth.required` back to false.
