@@ -37,6 +37,10 @@ header.appbar .langs button{font:600 .72rem var(--f-mono);color:var(--top-muted)
 header.appbar .langs button[aria-pressed=true]{background:var(--top-ink);color:var(--top)}
 header.appbar .ccount{background:var(--top-line);color:var(--top-ink)}
 
+/* -- the account of the signed-in person */
+header.appbar [data-auth-slot]{display:inline-flex;align-items:center;gap:8px}
+header.appbar .acct{font:500 .78rem var(--f-mono);color:var(--top-muted);overflow:hidden;text-overflow:ellipsis;max-width:16rem}
+
 /* -- page head and lists ---------------------------------------------------------------------------------------------- */
 .legacy main h1,.legacy .nova h1{font:300 clamp(1.6rem,2.6vw,2.2rem)/1.12 var(--f-display);letter-spacing:-.02em;margin:26px 0 6px}
 .legacy main h1::before{content:"Documentos";display:block;font:500 .68rem var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}

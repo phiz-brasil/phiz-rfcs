@@ -191,6 +191,13 @@ a.kpi{text-decoration:none}
 .pairs.grid dt{margin-top:4px}
 .themes-table.compact .theme-row th .note{font-weight:400;margin-top:2px}
 
+/* -- sign-in and the account ------------------------------------------------------------------------------------------- */
+.login{max-width:560px}
+.login .panel{margin-top:6px}
+.acct{display:flex;align-items:center;gap:10px;color:var(--top-ink);font-size:.82rem}
+.acct .who-email,header.appbar .acct{font:500 .78rem var(--f-mono);color:var(--top-muted);overflow:hidden;text-overflow:ellipsis;max-width:16rem}
+[data-auth-slot]{display:inline-flex;align-items:center;gap:8px}
+
 /* -- status, flags, alerts ------------------------------------------------------------------------------------------------ */
 .badge{white-space:nowrap;font:600 .66rem var(--f-mono);text-transform:uppercase;letter-spacing:.07em;border-radius:999px;padding:3px 10px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
 .badge[data-s=on_track]{background:var(--green-soft);color:var(--green-ink);border-color:transparent}
