@@ -279,3 +279,36 @@ class MemberDomainMigrationTest(unittest.TestCase):
 
     def test_the_applied_migration_was_not_edited(self):
         self.assertIn("phiz\\.com", LOCK.read_text(encoding="utf-8"))                         # the file that already ran keeps its history
+
+
+GATE_MESSAGES = ROOT / "supabase" / "migrations" / "20261203000000_gate_messages.sql"
+
+
+@unittest.skipUnless(pglast, "pglast is not installed")
+class GateMessagesMigrationTest(unittest.TestCase):
+    """docs/spec/v2/login.md, "Decision 2026-11-24: the gate's messages": same logic as the first gate, only the two texts name phizchat.com."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.new_sql = GATE_MESSAGES.read_text(encoding="utf-8")
+        cls.old_sql = LOCK.read_text(encoding="utf-8")
+        pglast.parse_sql(cls.new_sql)                                                          # it parses
+
+    def test_the_messages_name_the_company_domain(self):
+        body = function_body(self.new_sql, "check_request")
+        self.assertIn("sign in with a @phizchat.com account", body)
+        self.assertIn("only @phizchat.com accounts have access", body)
+        self.assertNotIn("phiz.com", body.replace("phizchat.com", ""))
+
+    def test_only_the_two_texts_differ_from_the_first_gate(self):
+        old = function_body(self.old_sql, "check_request").replace("@phiz.com", "@phizchat.com")
+        self.assertEqual(function_body(self.new_sql, "check_request"), old)
+
+    def test_the_header_of_the_function_is_the_same(self):
+        head = lambda sql: re.search(r"create or replace function public\.check_request\(\)(.*?)as \$\$", sql, re.S).group(1)
+        self.assertEqual(head(self.new_sql), head(self.old_sql))
+
+    def test_it_only_replaces_the_function_and_touches_nothing_else(self):
+        code = "\n".join(l for l in self.new_sql.splitlines() if not l.strip().startswith("--"))
+        for word in ("revoke", "alter role", "drop ", "members_only", "create table"):
+            self.assertNotIn(word, code)
