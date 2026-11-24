@@ -69,12 +69,13 @@ class _Site:
             cls.url = os.environ["SITE_URL"].rstrip("/")
         else:
             if not os.environ.get("SKIP_BUILD"):
-                subprocess.run(["npm", "run", "build"], cwd=ROOT, check=True, capture_output=True)
+                subprocess.run(["npm", "run", "build"], cwd=ROOT, check=True, capture_output=True, env={**os.environ, "PHIZ_AUTH_REQUIRED": "0"})
             with socket.socket() as s:
                 s.bind(("127.0.0.1", 0))
                 port = s.getsockname()[1]
             cls.proc = subprocess.Popen([str(ROOT / "node_modules" / ".bin" / "next"), "start", "-p", str(port), "-H", "127.0.0.1"],
-                                        cwd=ROOT / "apps" / "web", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                                        cwd=ROOT / "apps" / "web", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+                                        env={**os.environ, "PHIZ_AUTH_REQUIRED": "0"})            # the suite opens pages without a session
             atexit.register(lambda: os.killpg(cls.proc.pid, signal.SIGTERM))
             cls.url = f"http://127.0.0.1:{port}"
             for _ in range(300):

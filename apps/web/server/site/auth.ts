@@ -5,7 +5,9 @@ type AuthCfg = { comments?: { supabaseUrl?: string; supabaseKey?: string }; auth
 
 export function authAttrs() {
   const c = CFG as AuthCfg;
-  return { url: c.comments?.supabaseUrl ?? "", key: c.comments?.supabaseKey ?? "", required: c.auth?.required ? "1" : "0" };
+  const override = process.env.PHIZ_AUTH_REQUIRED;                       // "0" or "1": the test suite turns the switch off; production follows the file
+  const required = override === "0" || override === "1" ? override === "1" : Boolean(c.auth?.required);
+  return { url: c.comments?.supabaseUrl ?? "", key: c.comments?.supabaseKey ?? "", required: required ? "1" : "0" };
 }
 
 /* the same tag as a string, for the pages that are plain HTML text (the old pages) */
