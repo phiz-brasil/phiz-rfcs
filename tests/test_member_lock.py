@@ -160,13 +160,13 @@ class LockedFakeTest(SiteCase):
         self.db.seed_theme("PHZ-0001", "api-platform", title={"pt": "Business API"}, owner="Ana", progress={"pt": "Contrato fechado"})
 
     def test_a_member_reads_the_pages_with_the_lock_on(self):
-        self.sign_in_as("ana.souza@phiz.com")
+        self.sign_in_as("ana.souza@phizchat.com")
         self.page.goto(self.base + "/themes/")
         expect(self.page.locator('tr[data-theme="PHZ-0001"]')).to_contain_text("Business API")
         self.assertEqual(self.db.lock_refused, [])
 
     def test_a_member_writes_through_rpc_with_the_lock_on(self):
-        self.sign_in_as("ana.souza@phiz.com")
+        self.sign_in_as("ana.souza@phizchat.com")
         self.page.goto(self.base + "/themes/PHZ-0001/")
         form = self.page.get_by_role("region", name="Atualização semanal")
         form.get_by_label("Andamento (uma frase)").fill("Piloto aprovado")
@@ -175,7 +175,7 @@ class LockedFakeTest(SiteCase):
         self.assertEqual(self.db.lock_refused, [])
 
     def test_a_member_uploads_and_opens_an_attachment_with_the_lock_on(self):
-        self.sign_in_as("ana.souza@phiz.com")
+        self.sign_in_as("ana.souza@phizchat.com")
         self.page.goto(self.base + "/themes/PHZ-0001/")
         form = self.page.get_by_role("form", name="Adicionar anexo")
         form.locator("input[type=file]").set_input_files(files=[{"name": "a.txt", "mimeType": "text/plain", "buffer": b"oi"}])
@@ -185,7 +185,7 @@ class LockedFakeTest(SiteCase):
 
     def test_the_old_pages_work_for_a_member_with_the_lock_on(self):
         import_rfc(self.db, "PHZ-0002")
-        self.sign_in_as("ana.souza@phiz.com")
+        self.sign_in_as("ana.souza@phizchat.com")
         self.page.goto(self.base + "/rfc/?id=PHZ-0002")
         self.page.wait_for_selector(".lang.active h2 .cmt-btn")
         self.assertEqual(self.db.lock_refused, [])
@@ -215,8 +215,8 @@ class LockedFakeTest(SiteCase):
     def test_the_whole_gate_in_one_table(self):
         cases = [(None, "/rest/v1/themes?select=id", 401), ("tok-ana.souza", "/rest/v1/themes?select=id", 200), ("tok-pessoa", "/rest/v1/themes?select=id", 403),
                  (None, "/rest/v1/rpc/ping", 200), (None, "/storage/v1/object/sign/attachments/x", 401), (None, "/functions/v1/suggest-summary", 401)]
-        self.db.refreshable["ref-ana.souza"] = "ana.souza@phiz.com"
-        self.db.tokens["tok-ana.souza"] = "ana.souza@phiz.com"
+        self.db.refreshable["ref-ana.souza"] = "ana.souza@phizchat.com"
+        self.db.tokens["tok-ana.souza"] = "ana.souza@phizchat.com"
         self.db.tokens["tok-pessoa"] = "pessoa@gmail.com"
         for token, path, want in cases:
             with self.subTest((token, path)):
@@ -243,3 +243,39 @@ class GoLiveSwitchTest(unittest.TestCase):
         self.assertIn("PHIZ_AUTH_REQUIRED", src)
         support = (ROOT / "tests" / "support.py").read_text(encoding="utf-8")
         self.assertIn('"PHIZ_AUTH_REQUIRED"', support)                                           # the suite builds and serves with the switch off
+
+
+NEW_DOMAIN = ROOT / "supabase" / "migrations" / "20261202000000_member_domain.sql"
+
+
+@unittest.skipUnless(pglast, "pglast is not installed")
+class MemberDomainMigrationTest(unittest.TestCase):
+    """docs/spec/v2/login.md, "Decision 2026-11-24": the member domain is phizchat.com, through a new migration (the applied one is never edited)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sql = NEW_DOMAIN.read_text(encoding="utf-8")
+        cls.stmts = pglast.parse_sql(cls.sql)
+
+    def test_it_parses_and_recreates_is_member_for_the_new_domain_only(self):
+        body = function_body(self.sql, "is_member")
+        self.assertIsNotNone(body)
+        self.assertIn("phizchat\\.com", body)
+        self.assertNotIn("phiz\\.com", body.replace("phizchat\\.com", ""))
+        self.assertIn("'authenticated'", body)
+        self.assertIn("auth.jwt()", body)
+
+    def test_the_admin_table_accepts_only_the_new_domain(self):
+        self.assertIn("alter table public.app_admins drop constraint if exists app_admins_email_check", self.sql)
+        self.assertRegex(self.sql, r"add constraint app_admins_email_check check \(email = lower\(email\) and email ~ '\^\[\^@\]\+@phizchat\\\.com\$'\)")
+
+    def test_it_does_not_touch_the_gate_or_the_policies(self):
+        code = "\n".join(l for l in self.sql.splitlines() if not l.strip().startswith("--"))
+        for word in ("check_request", "members_only", "pgrst.db_pre_request", "revoke"):
+            self.assertNotIn(word, code)
+
+    def test_it_is_idempotent(self):
+        self.assertIn("create or replace function public.is_member()", self.sql)
+
+    def test_the_applied_migration_was_not_edited(self):
+        self.assertIn("phiz\\.com", LOCK.read_text(encoding="utf-8"))                         # the file that already ran keeps its history
