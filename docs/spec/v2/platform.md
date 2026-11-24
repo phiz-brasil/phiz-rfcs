@@ -28,7 +28,7 @@ That model reaches its limit with what is coming:
                     │
                     ▼
             Supabase: Postgres (row security, keyed to the signed-in user)
-                      Auth (Microsoft / Entra ID, @phiz.com only)
+                      Auth (Microsoft / Entra ID, @phizchat.com only)
                       Storage (attachments: private bucket, signed URLs)
                       Edge Function translate-comment (unchanged) + Cloudflare Workers AI
 ```
@@ -70,7 +70,7 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
 
 ## Access (phase 2)
 
-- **Only `@phiz.com`.** First with **sign-in by e-mail link** (Supabase Auth magic link): it needs no company IT and nothing but the domain
+- **Only `@phizchat.com`.** First with **sign-in by e-mail link** (Supabase Auth magic link): it needs no company IT and nothing but the domain
   check. **Microsoft sign-in** (Supabase Auth, Azure provider, single tenant) is added when the administrator of the company's Microsoft tenant
   registers the app (client id, secret, redirect URL `https://<project>.supabase.co/auth/v1/callback`); both lead to the same account, keyed by
   e-mail (decision of 2026-11-23: Microsoft is secondary for now).
@@ -86,7 +86,7 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
 
 ### Roles and reader mode
 
-- Everyone with `@phiz.com` is a **member** and can do everything: read, comment, create and edit themes, items, updates and RFCs, attach files,
+- Everyone with `@phizchat.com` is a **member** and can do everything: read, comment, create and edit themes, items, updates and RFCs, attach files,
   move cards (decision of 2026-11-23). An **admin** flag (by e-mail list) adds board configuration, moderation and role changes.
 - **Reader mode** is a switch, not a role: it hides every create, edit and update control on the executive view, theme pages and roadmap, for
   people who only read (`domain.md`, Views).
@@ -119,5 +119,5 @@ RFCs, `tests/fixtures/syntax.md`, the template), generated once from the current
 
 - Phase 1: the compatibility suite passes against the production deployment; every address listed in `compatibility.md` answers as
   specified on the new host; the Pages workflow is removed and Pages is turned off.
-- Phase 2: a request without a session reads nothing from the API (tested with the publishable key directly); a non-`@phiz.com` account
+- Phase 2: a request without a session reads nothing from the API (tested with the publishable key directly); a non-`@phizchat.com` account
   cannot be created; a member who is not admin cannot change board columns; the compatibility suite passes when signed in.
