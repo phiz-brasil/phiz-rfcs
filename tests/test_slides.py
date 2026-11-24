@@ -87,6 +87,55 @@ def read_pptx(path):
     return out, links
 
 
+def summary(slides, lang):
+    code = ("import * as M from './apps/web/lib/slide-model.ts'; const [s, l] = JSON.parse(process.argv[1]); console.log(JSON.stringify(M.summaryOf(s, l)));")
+    out = subprocess.run(["node", "--input-type=module", "-e", code, json.dumps([slides, lang])], cwd=ROOT, capture_output=True, text=True, check=True)
+    return json.loads(out.stdout)
+
+
+@unittest.skipUnless(shutil.which("node"), "node is not installed")
+class SummaryTest(unittest.TestCase):
+    """docs/spec/v2/slides.md: the overview, the big number and "what is missing" are computed from the slides (pure, Node-tested)."""
+
+    def slides(self, lang="pt"):
+        full = {"pt": "Texto"}
+        ok = model(theme(id="PHZ-0001", title={"pt": "A"}, status="on_track", problem=full, solution=full, success=full,
+                         answers={k: {"state": "confirmed"} for k in ("problem", "solution", "success")}), [], FRONTS, lang)
+        risk = model(theme(id="PHZ-0002", title={"pt": "B"}, status="at_risk", problem=full, solution={}, success=full,
+                           answers={"problem": {"state": "confirmed"}, "success": {"state": "confirmed"}}), [], FRONTS, lang)
+        blocked = model(theme(id="PHZ-0003", title={"pt": "C"}, status="blocked", problem=full, solution=full, success=full,
+                              answers={"problem": {"state": "confirmed"}, "solution": {"state": "confirmed"}, "success": {"state": "suggested"}}), [], FRONTS, lang)
+        return [ok, risk, blocked]
+
+    def test_it_counts_the_themes_by_status_and_the_ones_at_risk_or_blocked(self):
+        r = summary(self.slides(), "pt")
+        self.assertEqual((r["total"], r["risky"]), (3, 2))
+        self.assertEqual([(b["status"], b["count"]) for b in r["byStatus"]], [("on_track", 1), ("at_risk", 1), ("blocked", 1)])
+        self.assertEqual([b["label"] for b in r["byStatus"]], ["No prazo", "Em risco", "Bloqueado"])
+
+    def test_the_rows_carry_what_the_overview_table_shows(self):
+        r = summary(self.slides(), "pt")
+        self.assertEqual([x["id"] for x in r["rows"]], ["PHZ-0001", "PHZ-0002", "PHZ-0003"])
+        self.assertEqual(r["rows"][1], {"id": "PHZ-0002", "title": "B", "front": "Pagamentos", "status": "at_risk", "statusLabel": "Em risco", "due": "2026-12-15", "answers": "2/3"})
+        self.assertEqual(r["rows"][2]["answers"], "2/3")                                   # a suggestion nobody confirmed is not counted as an answer
+
+    def test_what_is_missing_lists_missing_and_unconfirmed_and_skips_the_complete_theme(self):
+        r = summary(self.slides(), "pt")
+        self.assertEqual([g["id"] for g in r["gaps"]], ["PHZ-0002", "PHZ-0003"])
+        self.assertEqual((r["gaps"][0]["missing"], r["gaps"][0]["unconfirmed"]), (["solução"], []))
+        self.assertEqual((r["gaps"][1]["missing"], r["gaps"][1]["unconfirmed"]), ([], ["sucesso"]))
+
+    def test_the_labels_exist_in_the_three_languages(self):
+        for lang, word in (("pt", "O que falta"), ("en", "What is missing"), ("zh", "还缺什么")):
+            r = summary(self.slides(lang), lang)
+            self.assertEqual(r["labels"]["gaps"], word)
+            self.assertTrue(all(r["labels"][k] for k in ("cover", "coverTitle", "overview", "risky", "gapsNone", "theme", "answers", "asOf", "themes")), lang)
+
+    def test_nothing_missing_gives_no_gaps(self):
+        r = summary(self.slides()[:1], "en")
+        self.assertEqual((r["gaps"], r["risky"]), ([], 0))
+
+
 class SlidesPageTest(SiteCase):
     def setUp(self):
         super().setUp()
@@ -198,3 +247,55 @@ class SlidesPageTest(SiteCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_the_deck_with_cover_has_cover_overview_number_the_themes_and_what_is_missing(self):
+        import tempfile
+        self.slides()
+        self.pick("PHZ-0010", "PHZ-0002", "PHZ-0001")
+        self.page.get_by_label("Incluir capa e visão geral").check()
+        with tempfile.TemporaryDirectory() as d:
+            slides, links = read_pptx(self.export(d))
+        self.assertEqual(len(slides), 3 + 3 + 1)                                            # cover, overview, the number, the themes, what is missing
+        self.assertIn("PORTFÓLIO", slides[0])
+        self.assertIn("Acompanhamento de temas", slides[0])
+        self.assertIn("Onde estamos", slides[1])
+        self.assertIn("Migração CredPay", slides[1])
+        self.assertIn("3", slides[2])
+        self.assertIn("temas", slides[2])
+        self.assertIn("Game Center", slides[3])                                             # the themes keep the order of the list
+        self.assertIn("Migração CredPay", slides[4])
+        self.assertIn("Business Messaging API", slides[5])
+        self.assertIn("O que falta", slides[6])
+        self.assertIn("PHZ-0002", slides[6])
+        self.assertEqual(links, ["https://jira.example.com/browse/PHZ-77"])
+
+    def test_the_plain_export_has_no_cover_unless_asked(self):
+        import tempfile
+        self.slides()
+        self.pick("PHZ-0001", "PHZ-0002")
+        with tempfile.TemporaryDirectory() as d:
+            slides, _ = read_pptx(self.export(d))
+        self.assertEqual(len(slides), 2)
+        self.assertFalse(any("PORTFÓLIO" in x or "O que falta" in x for x in slides))
+
+    def test_the_deck_is_written_in_the_chosen_language(self):
+        import tempfile
+        self.slides()
+        self.pick("PHZ-0001")
+        self.page.get_by_label("Idioma do slide").select_option(label="EN-US")
+        self.page.get_by_label("Include cover and overview" if False else "Incluir capa e visão geral").check()
+        with tempfile.TemporaryDirectory() as d:
+            slides, _ = read_pptx(self.export(d))
+        self.assertIn("PORTFOLIO", slides[0])
+        self.assertIn("What is missing", slides[-1])
+
+
+class PaletteTest(unittest.TestCase):
+    """docs/spec/v2/slides.md: no colour outside the table of the spec."""
+
+    def test_every_colour_of_the_builder_is_in_the_spec_table(self):
+        spec = (ROOT / "docs" / "spec" / "v2" / "slides.md").read_text(encoding="utf-8")
+        allowed = set(re.findall(r"`([0-9A-F]{6})`", spec)) | {"FFFFFF"}
+        used = set(re.findall(r'"([0-9A-F]{6})"', (ROOT / "apps" / "web" / "lib" / "slides.ts").read_text(encoding="utf-8")))
+        self.assertTrue(used, "no colour found in slides.ts")
+        self.assertEqual(sorted(used - allowed), [])
