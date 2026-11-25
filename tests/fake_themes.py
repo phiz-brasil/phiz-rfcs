@@ -393,7 +393,8 @@ class ThemesMixin:
                 continue
             notes = [("Decidido: " + x["text"]) if x["type"] == "decision" else x["text"] for x in f["log"] if x["theme"] == tid and x["type"] in ("note", "decision")]
             nexts = [x["text"] + (f" (até {x['due'][8:10]}/{x['due'][5:7]})" if x.get("due") else "") for x in f["log"] if x["theme"] == tid and x["type"] == "action"]
-            p = {"progress": {"pt": f"Tratado no FUP de {d}/{m}/{y}."}}
+            day = f"{d}/{m}/{y}"
+            p = {"progress": {"pt": f"Tratado no FUP de {day}.", "en": f"Discussed in the FUP of {day}.", "zh": f"已在 {day} 的 FUP 会议上讨论。"}}
             if notes:
                 p["advanced"] = {"pt": "\n".join(notes)[:2000]}
             if nexts:
