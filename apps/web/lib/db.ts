@@ -43,6 +43,15 @@ export type Link = { theme_id: string; to_theme: string; kind: string };
 export type Jira = { id: string; theme_id: string; item_id: string | null; url: string; label: string | null; issue_key: string | null };
 export type EventRow = { id: string; theme_id: string; item_id: string | null; at: string; edited_by: string; field: string; old_value: unknown; new_value: unknown };
 
+/* The FUP (docs/spec/v2/fup.md): the meeting keeps only its agenda, the records made in it and, once closed, the snapshot */
+export type FupKind = "inform" | "discuss" | "decide";
+export type FupAgenda = { theme: string; kind: FupKind; on: boolean; star: boolean };
+export type FupRecord = { theme: string; type: "note" | "decision" | "action"; text: string; progress: "todo" | "doing" | "done"; due?: string | null; ref?: string | null };
+export type Fup = {
+  id: string; title: string; held_on: string; agenda: FupAgenda[]; log: FupRecord[]; closed_at: string | null;
+  snapshot: { agenda: FupAgenda[]; log: FupRecord[]; statuses: Record<string, string>; closed_by: string } | null; created_by: string; created_at: string; updated_at: string;
+};
+
 export class DbError extends Error {
   constructor(message: string, readonly code: "rate" | "invalid" | "network" | "http") { super(message); }
 }
@@ -159,6 +168,11 @@ export function client({ url, key }: Supabase) {
       rpc("add_theme_jira", { p_theme: theme, p_item: item, p_url: url, p_label: label || null, p_by: by }),
     removeJira: (id: string, by: string) => rpc("remove_theme_jira", { p_id: id, p_by: by }),
     setLink: (theme: string, to: string, kind: string, on: boolean, by: string) => rpc("set_theme_link", { p_theme: theme, p_to: to, p_kind: kind, p_on: on, p_by: by }),
+    // the FUP
+    fups: () => request<Fup[]>("fup_meetings?select=*&order=held_on.desc,created_at.desc&limit=200"),
+    fup: async (id: string) => (await request<Fup[]>(`fup_meetings?select=*&id=eq.${q(id)}`))[0] ?? null,
+    saveFup: (id: string | null, p: Record<string, unknown>, by: string) => rpc<{ id: string }>("save_fup", { p_id: id, p, p_by: by }),
+    closeFup: (id: string, by: string) => rpc<{ id: string; updates: number }>("close_fup", { p_id: id, p_by: by }),
   };
 }
 export type Db = ReturnType<typeof client>;
