@@ -12,6 +12,7 @@ only in a new format. The numbered, idempotent files of `supabase/migrations/` s
 - A manual run (`workflow_dispatch`) with the input `baseline`: it marks every migration up to that version as **already applied** without running it.
   It is used once, because the 19 migrations up to `20261204000000` were applied by hand and the history table does not know them.
   `tools/migration_versions.py --through <version>` prints the versions to mark (the workflow does not compute them in shell).
+- Every CLI command that touches the database carries `--linked` (the CLI defaults to a local stack; found on the first run, 2026-11-25).
 - Runs are serialised (`concurrency`), never cancelled in the middle.
 
 ## Secrets (GitHub → Settings → Secrets and variables → Actions; the owner creates them, never in the repository)
@@ -33,6 +34,7 @@ only in a new format. The numbered, idempotent files of `supabase/migrations/` s
 ## How it is checked (`tests/test_migrate_workflow.py`)
 
 - the workflow runs on push to `main` for `supabase/migrations/**` and on `workflow_dispatch` with `baseline`; uses the three secrets, none written in the file;
+- every `supabase` command on the database (`migration repair`, `migration list`, `db push`) carries `--linked`;
 - it runs `supabase db push`, has a `concurrency` group without `cancel-in-progress`, and `permissions: contents: read`;
 - `supabase/config.toml` has a `project_id`;
 - `tools/migration_versions.py` lists the versions up to a limit (inclusive), in order, and refuses a limit that is not a version of a file;
