@@ -22,19 +22,24 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      POOLER_HOST: aws-1-us-west-2.pooler.supabase.com      # session pooler (IPv4); public, it is in the dashboard without the password
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with: { version: latest }
-      - run: supabase link --project-ref "$PROJECT_REF"
+      - name: Connection (session pooler)
+        run: |
+          url=$(python3 tools/db_url.py)
+          echo "::add-mask::$url"
+          echo "DB_URL=$url" >> "$GITHUB_ENV"
       - name: Baseline (only when asked)
         if: github.event_name == 'workflow_dispatch' && inputs.baseline != ''
         run: |
-          python3 tools/migration_versions.py --through "$BASELINE" | xargs supabase migration repair --status applied --remote --debug
+          python3 tools/migration_versions.py --through "$BASELINE" | xargs supabase migration repair --status applied --db-url "$DB_URL"
         env:
           BASELINE: ${{ inputs.baseline }}
       - name: Show what is pending
-        run: supabase migration list --remote
+        run: supabase migration list --db-url "$DB_URL"
       - name: Apply
         if: github.event_name == 'push' || inputs.baseline == ''
-        run: supabase db push --remote
+        run: supabase db push --db-url "$DB_URL"
