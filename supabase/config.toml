@@ -1,0 +1,2 @@
+# Minimal: only so the Supabase CLI can link the project in CI (docs/spec/v2/migrations.md). The project is hosted; nothing here runs locally.
+project_id = "phiz-rfcs"

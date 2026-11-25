@@ -145,6 +145,8 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
 - **Phase 2, long window (this branch)**: the session ends only on an invalid refresh token (400/401/403); the token is renewed silently before it is needed and one tab at a time (Web Locks);
   a session unused for a month renews on the first request. Supabase settings for the owner are in `login.md` (no short time-box or inactivity timeout).
 
+- **Migrations by the CI (2026-11-25)**: `docs/spec/v2/migrations.md`. Merging into `main` runs `supabase db push`; no more SQL pasted by hand. Needs the three GitHub secrets and one `baseline` run (up to `20261204000000`).
+
 ## Pending
 
 Updated 2026-11-25 (the slide model and the Microsoft sign-in are done: `slides.md`, `login.md`).
