@@ -30,11 +30,11 @@ jobs:
       - name: Baseline (only when asked)
         if: github.event_name == 'workflow_dispatch' && inputs.baseline != ''
         run: |
-          python3 tools/migration_versions.py --through "$BASELINE" | xargs supabase migration repair --status applied
+          python3 tools/migration_versions.py --through "$BASELINE" | xargs supabase migration repair --status applied --linked
         env:
           BASELINE: ${{ inputs.baseline }}
       - name: Show what is pending
-        run: supabase migration list
+        run: supabase migration list --linked
       - name: Apply
         if: github.event_name == 'push' || inputs.baseline == ''
-        run: supabase db push
+        run: supabase db push --linked

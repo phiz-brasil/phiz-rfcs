@@ -24,6 +24,10 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("supabase link --project-ref", WORKFLOW)
         self.assertIn("migration_versions.py --through", WORKFLOW)
 
+    def test_every_database_command_targets_the_linked_project(self):
+        for cmd in ("migration repair --status applied --linked", "migration list --linked", "db push --linked"):
+            self.assertIn("supabase " + cmd, WORKFLOW)
+
     def test_secrets_come_from_github_and_none_is_written_in_the_file(self):
         for name in ("SUPABASE_ACCESS_TOKEN", "SUPABASE_DB_PASSWORD", "SUPABASE_PROJECT_REF"):
             self.assertIn("${{ secrets.%s }}" % name, WORKFLOW)
