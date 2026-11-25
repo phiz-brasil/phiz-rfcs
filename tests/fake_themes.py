@@ -46,7 +46,7 @@ class ThemesMixin:
         self.attachments = []
         self.storage_calls, self.downloads = [], []
         self.storage = {}                                 # path -> {"size", "mimetype", "data"}: the private bucket 'attachments'
-        self.fups = []                                    # supabase/migrations/20261204000000_fup.sql
+        self.fups = []                                    # supabase/migrations/20261205000000_fup.sql
 
     # -- test helpers -----------------------------------------------------------
     def seed_theme(self, tid, front="payments", kind="project", title=None, **extra):
@@ -329,7 +329,7 @@ class ThemesMixin:
         d.update(state=state, decision=decision or {}, decided_at=now(), decided_by=by.strip())
         self.event(d["theme_id"], by.strip(), f"decision_{state}", d["what"], decision, d["item_id"])
 
-    # -- the FUP (supabase/migrations/20261204000000_fup.sql) -------------------------------------------------------
+    # -- the FUP (supabase/migrations/20261205000000_fup.sql) -------------------------------------------------------
     @staticmethod
     def _fup_agenda(a):
         if not isinstance(a, list) or len(a) > 300:

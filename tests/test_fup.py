@@ -1,4 +1,4 @@
-"""The FUP's data (docs/spec/v2/fup.md, supabase/migrations/20261204000000_fup.sql), against the mirror in tests/fake_themes.py."""
+"""The FUP's data (docs/spec/v2/fup.md, supabase/migrations/20261205000000_fup.sql), against the mirror in tests/fake_themes.py."""
 import sys
 import unittest
 from pathlib import Path
@@ -8,7 +8,7 @@ from fake_supabase import FakeSupabase  # noqa: E402
 from fake_themes import Invalid  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-MIGRATION = ROOT / "supabase" / "migrations" / "20261204000000_fup.sql"
+MIGRATION = ROOT / "supabase" / "migrations" / "20261205000000_fup.sql"
 
 
 def agenda(*themes, on=True):

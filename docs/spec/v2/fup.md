@@ -49,7 +49,7 @@ Owners are typed inside the text of the record (decision of 2026-11-24): there i
 
 ## Data
 
-Migration `supabase/migrations/20261204000000_fup.sql`:
+Migration `supabase/migrations/20261205000000_fup.sql`:
 
 - `fup_meetings`: `id uuid`, `title text` (1–120), `held_on date`, `agenda jsonb` (array of `{theme, kind: inform|discuss|decide, on, star}`),
   `log jsonb` (array of `{theme, type: note|decision|action, text, progress: todo|doing|done, due, ref}` where `ref` is the id of the row it
