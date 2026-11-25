@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
-        with: { version: latest }
+        with: { version: 3.4.0 }
       - name: Connection (session pooler)
         run: |
           url=$(python3 tools/db_url.py)
@@ -35,11 +35,11 @@ jobs:
       - name: Baseline (only when asked)
         if: github.event_name == 'workflow_dispatch' && inputs.baseline != ''
         run: |
-          python3 tools/migration_versions.py --through "$BASELINE" | xargs supabase migration repair --status applied --db-url "$DB_URL"
+          python3 tools/migration_versions.py --through "$BASELINE" | xargs supabase migration repair --status applied --db-url "$DB_URL" --yes
         env:
           BASELINE: ${{ inputs.baseline }}
       - name: Show what is pending
         run: supabase migration list --db-url "$DB_URL"
       - name: Apply
         if: github.event_name == 'push' || inputs.baseline == ''
-        run: supabase db push --db-url "$DB_URL"
+        run: supabase db push --db-url "$DB_URL" --yes

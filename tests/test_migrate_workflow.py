@@ -30,6 +30,12 @@ class WorkflowTest(unittest.TestCase):
         for cmd in ("migration repair --status applied --db-url \"$DB_URL\"", "migration list --db-url \"$DB_URL\"", "db push --db-url \"$DB_URL\""):
             self.assertIn("supabase " + cmd, WORKFLOW)
 
+    def test_the_cli_is_pinned_and_confirms_by_itself(self):
+        self.assertIn("version: 3.4.0", WORKFLOW)
+        self.assertNotIn("version: latest", WORKFLOW)
+        for cmd in ("migration repair --status applied", "db push"):
+            self.assertRegex(WORKFLOW, r"supabase %s --db-url \"\$DB_URL\" --yes" % cmd)
+
     def test_secrets_come_from_github_and_none_is_written_in_the_file(self):
         for name in ("SUPABASE_ACCESS_TOKEN", "SUPABASE_DB_PASSWORD", "SUPABASE_PROJECT_REF"):
             self.assertIn("${{ secrets.%s }}" % name, WORKFLOW)
