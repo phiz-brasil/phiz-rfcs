@@ -12,14 +12,18 @@ only in a new format. The numbered, idempotent files of `supabase/migrations/` s
 - A manual run (`workflow_dispatch`) with the input `baseline`: it marks every migration up to that version as **already applied** without running it.
   It is used once, because the 19 migrations up to `20261204000000` were applied by hand and the history table does not know them.
   `tools/migration_versions.py --through <version>` prints the versions to mark (the workflow does not compute them in shell).
-- Every CLI command that touches the database carries `--remote` (the CLI defaults to a local stack; found on the first run, 2026-11-25).
+- **Connection (decided 2026-11-25, after two failed runs):** the GitHub runner has no IPv6, and the direct database host is IPv6-only on this plan; the token
+  cannot read the pooler settings, so `supabase link` does not find the IPv4 route. The workflow therefore connects by the **session pooler**
+  (`aws-1-us-west-2.pooler.supabase.com:5432`, user `postgres.<ref>`) with `--db-url`, built by `tools/db_url.py` from the project ref and the password
+  (percent-encoded, so any character works). No `supabase link`, no access token needed for the push itself (the secret stays, for later uses).
+  The URL is masked in the log. The pooler host is public information (it is in the dashboard, without the password), so it is written in the workflow.
 - Runs are serialised (`concurrency`), never cancelled in the middle.
 
 ## Secrets (GitHub → Settings → Secrets and variables → Actions; the owner creates them, never in the repository)
 
 | Secret | Where to read it |
 |---|---|
-| `SUPABASE_ACCESS_TOKEN` | Supabase → Account → Access Tokens → Generate new token |
+| `SUPABASE_ACCESS_TOKEN` | Supabase → Account → Access Tokens → Generate new token (kept; not used by the push any more) |
 | `SUPABASE_DB_PASSWORD` | Supabase → Project Settings → Database → Database password (reset if lost) |
 | `SUPABASE_PROJECT_REF` | the id in the project URL: `zuwbjcwfqzucjmxrehad` |
 
