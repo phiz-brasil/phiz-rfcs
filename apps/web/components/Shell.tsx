@@ -39,9 +39,10 @@ export function Shell({ supabase, children }: { supabase: Supabase; children: Re
         <div className="wrap topbar">
           <a className="brand" href="/overview/" aria-label="PhizChat"><span className="mark">PHIZCHAT</span></a>
           <nav className="mainnav" aria-label={T.navMain[lang]}>
-            <Menu label={T.eyebrowTrack[lang]} paths={["/overview/", "/executive/", "/board/", "/roadmap/", "/metrics/"]}>
+            <Menu label={T.eyebrowTrack[lang]} paths={["/overview/", "/executive/", "/fup/", "/board/", "/roadmap/", "/metrics/"]}>
               <NavLink href="/overview/">{T.overview[lang]}</NavLink>
               <NavLink href="/executive/">{T.executive[lang]}</NavLink>
+              <NavLink href="/fup/">{T.fup[lang]}</NavLink>
               <NavLink href="/board/">{T.board[lang]}</NavLink>
               <NavLink href="/roadmap/">{T.roadmap[lang]}</NavLink>
               <NavLink href="/metrics/">{T.metrics[lang]}</NavLink>

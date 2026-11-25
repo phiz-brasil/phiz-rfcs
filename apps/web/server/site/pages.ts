@@ -20,6 +20,7 @@ export function appBar(right: string, here: "docs" | "" = "docs", extraClass = "
   return `<header class="appbar${extraClass ? " " + extraClass : ""}"><div class="wrap topbar"><a class="brand" href="/overview/" aria-label="PhizChat"><span class="mark">PHIZCHAT</span></a>
 <nav class="mainnav" aria-label="${esc("Navegação principal")}">` +
     menu(M("Acompanhamento", "Tracking", "跟进"), [["/overview/", M("Visão geral", "Overview", "总览")], ["/executive/", M("Visão executiva", "Executive view", "管理层视图")],
+      ["/fup/", M("FUP", "FUP", "跟进会")],
       ["/board/", M("Quadro B2B", "B2B board", "B2B 看板")], ["/roadmap/", "Roadmap"], ["/metrics/", M("Métricas", "Metrics", "指标")]]) +
     menu(M("Portfólio", "Portfolio", "组合"), [["/themes/", M("Temas", "Themes", "主题")], ["/slides/", "Slides"]]) +
     menu(M("Documentos", "Documents", "文档"), [["/", "RFCs"], ["/attachments/", M("Anexos", "Attachments", "附件")], ["/comments/", M("Comentários", "Comments", "评论")]], here === "docs") +

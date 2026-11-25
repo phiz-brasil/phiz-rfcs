@@ -21,7 +21,8 @@ site so a FUP reads the themes and writes back to them, with no copy.
    kind, status, the *what it is* sentence, the last update (progress, what moved, next step), the open points to validate as checkboxes,
    and the theme's attachments and links. A side panel records: the theme status (*On track*, *At risk*, *Blocked*), and a record of type
    *Note*, *Decision* or *Action*, with *To do / Doing / Done* and, for an action, a due date. Records of this theme in this FUP are listed
-   under it; the progress chip of each one cycles on click and a record can be deleted.
+   under it; the progress chip of each one cycles on click (and moves the execution item it created). A note can be deleted; decisions and
+   actions are already in the theme and are changed there.
 3. **Minutes.** Generated from the FUP: per theme its status and records, then all decisions, all actions with progress and due date, the
    points still open and the favourites. A *Copy minutes* button.
 
