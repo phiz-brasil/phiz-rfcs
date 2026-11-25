@@ -312,3 +312,54 @@ class GateMessagesMigrationTest(unittest.TestCase):
         code = "\n".join(l for l in self.new_sql.splitlines() if not l.strip().startswith("--"))
         for word in ("revoke", "alter role", "drop ", "members_only", "create table"):
             self.assertNotIn(word, code)
+
+
+HOOK = ROOT / "supabase" / "migrations" / "20261204000000_signup_domain_hook.sql"
+
+
+@unittest.skipUnless(pglast, "pglast is not installed")
+class SignupHookMigrationTest(unittest.TestCase):
+    """docs/spec/v2/login.md, "Sign-up of other domains": the Auth hook that refuses the creation of a user of another domain (checked by structure, as the lock)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sql = HOOK.read_text(encoding="utf-8")
+        cls.code = "\n".join(l for l in cls.sql.splitlines() if not l.strip().startswith("--"))
+        pglast.parse_sql(cls.sql)                                                              # it parses
+
+    def body(self):
+        m = re.search(r"create or replace function public\.hook_before_user_created\(event jsonb\)(.*?)as \$\$(.*?)\$\$;", self.sql, re.S)
+        self.assertIsNotNone(m, "function not found")
+        return m.group(1), m.group(2)
+
+    def test_the_function_allows_with_an_empty_object_and_refuses_with_403_and_the_domain(self):
+        head, body = self.body()
+        self.assertIn("returns jsonb", head)
+        self.assertIn("set search_path = ''", head)
+        self.assertIn("'{}'::jsonb", body)
+        self.assertIn("'http_code', 403", body)
+        self.assertIn("@phizchat.com", body)
+
+    def test_the_email_is_read_from_the_event_and_compared_in_lower_case(self):
+        _, body = self.body()
+        self.assertIn("event -> 'user' ->> 'email'", body)
+        self.assertIn("lower(", body)
+
+    def test_the_pattern_is_the_same_literal_as_is_member(self):
+        pat = r"'^[^@]+@phizchat\.com$'"
+        _, body = self.body()
+        self.assertIn(pat, body)
+        self.assertIn(pat, NEW_DOMAIN.read_text(encoding="utf-8"))                              # the one of public.is_member()
+
+    def test_only_the_auth_admin_can_run_it(self):
+        self.assertRegex(self.code, r"grant execute on function public\.hook_before_user_created\(jsonb\) to supabase_auth_admin")
+        self.assertRegex(self.code, r"revoke execute on function public\.hook_before_user_created\(jsonb\) from (public|authenticated, anon, public|public, anon, authenticated)")
+        self.assertRegex(self.code, r"revoke execute on function public\.hook_before_user_created\(jsonb\) from [^;]*\banon\b")
+        self.assertRegex(self.code, r"revoke execute on function public\.hook_before_user_created\(jsonb\) from [^;]*\bauthenticated\b")
+
+    def test_it_only_creates_the_function(self):
+        for word in ("alter table", "create policy", "alter role", "drop ", "create table", "members_only", "pgrst"):
+            self.assertNotIn(word, self.code)
+
+    def test_it_is_idempotent(self):
+        self.assertIn("create or replace function", self.sql)
