@@ -147,6 +147,20 @@ Storage with signed URLs (phase 8 does it for attachments), or move the organiza
 
 ## Pending
 
-1. **(9) Slide model.** The visual model is a Google Slides deck that needs a sign-in to open. Export it (File → Download → PowerPoint or PDF)
-   and add the file to the review, or share it with view access for anyone with the link.
-2. **(2, last phase) Microsoft sign-in.** Done 2026-11-25 (`login.md`, *Microsoft sign-in (SSO), slice 4* and *done*): the button *Entrar com Microsoft* on `/login/`, Entra application of the company's directory, Supabase *Azure* provider; the e-mail code stays as the second way in. The client secret expires on 2028-11-24.
+Updated 2026-11-25 (the slide model and the Microsoft sign-in are done: `slides.md`, `login.md`).
+
+**Development**
+1. **Refuse sign-up of other domains in Supabase** (an Auth hook): today anyone can ask for a code and create an Auth user; the lock keeps them out, but the user exists. Specified in `login.md` ("Sign-up of other domains").
+2. **SQL tests on a real Postgres.** The lock is checked by its structure (pglast) and a fake; running it needs a Postgres in the test environment (the owner's word for installing `pgserver`).
+3. **Egress of the Supabase project.** Check on 2026-12-01 (scheduled) against the 5 GB of the plan; if it is still above ~3 GB a month, the next levers are a public Storage bucket with a long cache for the images (they are still base64 in the database) or a paid plan. Grace period until 2026-12-12 (`quota.md`).
+4. **Slides: the richer layouts of the company's deck** (roadmap, comparison tables, phone screens), only if wanted.
+
+**Decisions of the owner**
+5. The draft folder `rfcs/checkout-global` (PHZ-0006): does it become an RFC of the app?
+6. The list of admins (`app_admins` is empty: every member is admin).
+7. The sender of the e-mails (today a personal Gmail, about 500 a day) and the address of the site (`phiz-rfcs.vercel.app`): both need the company's DNS or Vercel/Supabase/Entra settings.
+
+**Content, not code**
+8. Themes PHZ-0009 to 0015 have no RFC (their slide answers say *not explained yet*); the status and the estimated completion of every theme are empty until the weekly updates are filled.
+
+**To watch**: the CI runs the tests with 2 workers (`guardrail.md`); if timeouts come back, go to 1. The Entra client secret expires on 2028-11-24 (`login.md`).
