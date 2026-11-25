@@ -199,3 +199,13 @@ With the fake Supabase of the tests (no Microsoft involved):
 ### Undo
 
 Disable the provider in Supabase (*Azure* off): the button then leads to an error page of Supabase and nothing else changes; the next release removes the button. The e-mail code never stopped working.
+
+## Microsoft sign-in: done 2026-11-25, and what a failed return looks like
+
+**Done and checked with the owner's real account (2026-11-25):** Entra application *PhizChat Command Center* (application/client ID `67658575-1824-4973-83d2-07a84ba296cb`, directory/tenant ID `d641a5db-de2d-442f-8713-6cbf28eaa47c`, single tenant, Web redirect `https://zuwbjcwfqzucjmxrehad.supabase.co/auth/v1/callback`); Supabase *Azure* provider on; the button on `/login/` leads to `/overview/` with the session of `gleison.silva@phizchat.com` (the account is linked to both providers, `email` and `azure`, as the same user). Both IDs are public identifiers; **the client secret is not written anywhere in the repository** (rule of the slice).
+
+**The client secret:** created in *Entra → App registrations → Certificates & secrets* with 24 months (expires **2028-11-24**). Entra shows its **Value** only right after creating it (and not after the page is reloaded); the value is what goes in Supabase's *Secret Value*, **not** the *Secret ID* (pasting the ID made the first attempt fail with "Unable to exchange external code"). When it nears the end: create a new one, paste its Value in Supabase, delete the old one. Until then nothing to do; if it expires, the button fails and the e-mail code keeps working.
+
+**A failed return is shown, not silent.** When Microsoft or Supabase send the person back to `/login/` with an error (`?error=…&error_description=…` or the same in the `#hash`), the page shows a message: *Não foi possível entrar com a Microsoft. Tente de novo ou use o código por e-mail.* (and in en / zh-Hans), removes the error from the address and keeps the e-mail form usable. The text of Supabase's description is not shown to the person (it can carry codes); it goes to the browser console only.
+
+Checks (`tests/test_login.py`, `MicrosoftErrorTest`): the message appears for the error in the query and in the hash, in the three languages, the address is cleaned, the e-mail form still works, and the description is not on the page.

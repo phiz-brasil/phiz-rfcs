@@ -21,6 +21,7 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [wait, setWait] = useState(0);
+  const [msFailed, setMsFailed] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   // where the person was going: the address, or what waited in sessionStorage during the trip to Microsoft (used once)
   const next = () => {
@@ -33,6 +34,16 @@ export function LoginPage() {
     location.href = auth()!.microsoftUrl(q ? auth()!.nextPath(q) : null);
   };
 
+  // Microsoft (or Supabase) sent the person back with an error in the address: say so, keep the description out of the page (it can carry codes), clean the address
+  useEffect(() => {
+    const q = new URLSearchParams(location.search), h = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const err = q.get("error") || h.get("error");
+    if (!err) return;
+    console.warn("sign-in error:", err, q.get("error_description") || h.get("error_description") || "");
+    setMsFailed(true);
+    q.delete("error"); q.delete("error_code"); q.delete("error_description");
+    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : ""));
+  }, []);
   // the link of the message brings the tokens back in the address
   useEffect(() => {
     if (!location.hash.includes("access_token")) return;
@@ -93,7 +104,7 @@ export function LoginPage() {
                 <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} /></label>
             </>
           ) : null}
-          {error ? <p className="state err" role="alert">{error}</p> : null}
+          {error || msFailed ? <p className="state err" role="alert">{error || T.loginMicrosoftFailed[lang]}</p> : null}
           <p>
             {sentTo ? (
               <>

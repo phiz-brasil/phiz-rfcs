@@ -416,3 +416,35 @@ class MicrosoftSignInTest(SiteCase):
             files = [p] if p.is_file() else [f for f in p.rglob("*") if f.is_file() and f.suffix in {".ts", ".tsx", ".js", ".json", ".sql", ".css"} and "node_modules" not in f.parts and ".next" not in f.parts]
             for f in files:
                 self.assertNotRegex(f.read_text(encoding="utf-8", errors="ignore"), r"(?i)client_secret|azure_secret|AZURE_CLIENT", str(f))
+
+
+class MicrosoftErrorTest(SiteCase):
+    """docs/spec/v2/login.md, "Microsoft sign-in: done": a failed return shows a message instead of a page that looks dead."""
+
+    DESCRIPTION = "Unable+to+exchange+external+code%3A+1.AVsecretlooking"
+
+    def test_an_error_in_the_query_shows_the_message_and_cleans_the_address(self):
+        self.page.goto(self.base + f"/login/?error=server_error&error_code=unexpected_failure&error_description={self.DESCRIPTION}")
+        expect(self.page.locator("main [role=alert]")).to_contain_text("Não foi possível entrar com a Microsoft")
+        expect(self.page.locator("main [role=alert]")).not_to_contain_text("exchange")                 # what Supabase says may carry codes: not shown
+        self.assertNotIn("error", self.page.url)
+
+    def test_an_error_in_the_hash_shows_the_message_too_and_the_form_still_works(self):
+        self.page.goto(self.base + f"/login/#error=access_denied&error_description={self.DESCRIPTION}")
+        expect(self.page.locator("main [role=alert]")).to_contain_text("use o código por e-mail")
+        self.page.get_by_label("E-mail").fill("ana.souza@phizchat.com")
+        self.page.get_by_role("button", name="Enviar código").click()
+        expect(self.page.get_by_label("Código de 6 dígitos")).to_be_visible()
+
+    def test_the_message_is_in_the_three_languages(self):
+        self.page.goto(self.base + "/login/?error=server_error")
+        self.page.get_by_role("button", name="EN-US").click()
+        expect(self.page.locator("main [role=alert]")).to_contain_text("Could not sign in with Microsoft")
+        self.page.get_by_role("button", name="中文").click()
+        expect(self.page.locator("main [role=alert]")).to_contain_text("Microsoft")
+        expect(self.page.locator("main [role=alert]")).to_contain_text("无法")
+
+    def test_without_an_error_there_is_no_alert(self):
+        self.page.goto(self.base + "/login/")
+        expect(self.page.get_by_label("E-mail")).to_be_visible()
+        self.assertEqual(self.page.locator("main [role=alert]").count(), 0)
