@@ -93,6 +93,7 @@ export const T: Dict = {
   loginCode: { pt: "Código de 6 dígitos", en: "6-digit code", zh: "6 位验证码" },
   loginOneAtATime: { pt: "Se pedir de novo, o último substitui os anteriores.", en: "If you ask again, the latest replaces the earlier ones.", zh: "重新获取后，最新的验证码会使之前的失效。" },
   loginMicrosoft: { pt: "Entrar com Microsoft", en: "Sign in with Microsoft", zh: "使用 Microsoft 登录" },
+  loginMicrosoftFailed: { pt: "Não foi possível entrar com a Microsoft. Tente de novo ou use o código por e-mail.", en: "Could not sign in with Microsoft. Try again or use the e-mail code.", zh: "无法使用 Microsoft 登录。请重试，或使用邮箱验证码。" },
   loginEnter: { pt: "Entrar", en: "Sign in", zh: "登录" },
   loginAgain: { pt: "Enviar de novo", en: "Send again", zh: "重新发送" },
   loginDomain: { pt: "Use o seu e-mail @phizchat.com.", en: "Use your @phizchat.com e-mail.", zh: "请使用你的 @phizchat.com 邮箱。" },
