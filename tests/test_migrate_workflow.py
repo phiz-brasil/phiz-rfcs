@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
+import db_url  # noqa: E402
 import migration_versions  # noqa: E402
 
 WORKFLOW = (ROOT / ".github" / "workflows" / "migrate.yml").read_text(encoding="utf-8")
@@ -21,8 +22,19 @@ class WorkflowTest(unittest.TestCase):
 
     def test_pushes_the_migrations_with_the_cli(self):
         self.assertIn("supabase db push", WORKFLOW)
-        self.assertIn("supabase link --project-ref", WORKFLOW)
+        self.assertIn("tools/db_url.py", WORKFLOW)
+        self.assertIn("::add-mask::", WORKFLOW)
         self.assertIn("migration_versions.py --through", WORKFLOW)
+
+    def test_every_database_command_targets_the_linked_project(self):
+        for cmd in ("migration repair --status applied --db-url \"$DB_URL\"", "migration list --db-url \"$DB_URL\"", "db push --db-url \"$DB_URL\""):
+            self.assertIn("supabase " + cmd, WORKFLOW)
+
+    def test_the_cli_is_pinned_and_confirms_by_itself(self):
+        self.assertIn("version: 3.4.0", WORKFLOW)
+        self.assertNotIn("version: latest", WORKFLOW)
+        for cmd in ("migration repair --status applied", "db push"):
+            self.assertRegex(WORKFLOW, r"supabase %s --db-url \"\$DB_URL\" --yes" % cmd)
 
     def test_secrets_come_from_github_and_none_is_written_in_the_file(self):
         for name in ("SUPABASE_ACCESS_TOKEN", "SUPABASE_DB_PASSWORD", "SUPABASE_PROJECT_REF"):
@@ -60,6 +72,19 @@ class VersionsTest(unittest.TestCase):
             (Path(d) / "fup.sql").write_text("select 1;")
             with self.assertRaises(SystemExit):
                 migration_versions.versions(d)
+
+
+class DbUrlTest(unittest.TestCase):
+    ENV = {"PROJECT_REF": "abc", "POOLER_HOST": "h.example.com", "SUPABASE_DB_PASSWORD": "p@ss/w:rd#1"}
+
+    def test_the_password_is_percent_encoded_and_the_user_names_the_project(self):
+        self.assertEqual(db_url.build(self.ENV), "postgresql://postgres.abc:p%40ss%2Fw%3Ard%231@h.example.com:5432/postgres")
+
+    def test_it_fails_without_any_of_the_three_values(self):
+        for k in self.ENV:
+            with self.subTest(k):
+                with self.assertRaises(SystemExit):
+                    db_url.build({a: b for a, b in self.ENV.items() if a != k})
 
 
 if __name__ == "__main__":
