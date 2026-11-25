@@ -72,6 +72,12 @@ PhizChat-green band with the title and the tabs, Space Grotesk for titles and In
 top. The colours are new tokens `--fup-*` at the top of `apps/web/app/themes/themes.css`, so the rule "no colour outside the tokens" still holds;
 the two fonts load only on `/fup/`.
 
+## Test data removed (2026-11-25)
+
+The two FUPs created to validate writing in production ("TESTE de validação (ignorar)" and "TESTE 2 de validação (ignorar)") are removed by the
+migration `20261207000000_fup_remove_tests.sql`, by id and only if the title still starts with `TESTE`. There is no screen to delete a FUP (out of scope
+below), so a migration is the way. The weekly updates they wrote on the test theme PHZ-0015 stay (the owner asked only for the FUPs).
+
 ## Out of scope (later)
 
 Recording and transcription; the reader/manager/PM lenses; editing the theme's other fields from the FUP; a FUP per executive with
