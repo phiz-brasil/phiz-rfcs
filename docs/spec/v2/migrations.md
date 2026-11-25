@@ -17,6 +17,7 @@ only in a new format. The numbered, idempotent files of `supabase/migrations/` s
   (`aws-1-us-west-2.pooler.supabase.com:5432`, user `postgres.<ref>`) with `--db-url`, built by `tools/db_url.py` from the project ref and the password
   (percent-encoded, so any character works). No `supabase link`, no access token needed for the push itself (the secret stays, for later uses).
   The URL is masked in the log. The pooler host is public information (it is in the dashboard, without the password), so it is written in the workflow.
+- The CLI is pinned to `3.4.0` (it warns that `--db-url` goes away in v4) and `migration repair` / `db push` carry `--yes`, because the runner has no terminal to confirm on.
 - Runs are serialised (`concurrency`), never cancelled in the middle.
 
 ## Secrets (GitHub → Settings → Secrets and variables → Actions; the owner creates them, never in the repository)
