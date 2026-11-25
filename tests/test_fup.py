@@ -108,5 +108,21 @@ class FupCloseMessageMigrationTest(unittest.TestCase):
         self.assertIn("revoke all on function public.close_fup(uuid, text) from public, anon", self.SQL)
 
 
+class FupRemoveTestsMigrationTest(unittest.TestCase):
+    """The two FUPs made to validate writing in production are removed by id, and only if still titled TESTE; nothing else is touched."""
+    SQL = (ROOT / "supabase" / "migrations" / "20261207000000_fup_remove_tests.sql").read_text(encoding="utf-8")
+
+    def test_it_deletes_exactly_two_fups_by_id_and_title(self):
+        self.assertEqual(self.SQL.count("delete from"), 1)
+        self.assertIn("delete from public.fup_meetings", self.SQL)
+        for fid in ("1b345f9f-cf92-4e6a-923a-41af26a4744a", "c00b76aa-cdae-4dd8-9a48-869977bb58d1"):
+            self.assertIn(fid, self.SQL)
+        self.assertIn("title like 'TESTE%'", self.SQL)
+
+    def test_it_touches_nothing_else(self):
+        for word in ("drop ", "truncate", "alter ", "theme_updates", "themes"):
+            self.assertNotIn(word, self.SQL.split("\n", 2)[2])
+
+
 if __name__ == "__main__":
     unittest.main()
