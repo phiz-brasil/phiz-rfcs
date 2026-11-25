@@ -11,7 +11,7 @@ COLS = ("todo", "doing", "blocked", "done")
 FRONTS = [("pop", "POP", 1, False), ("api-platform", "API Platform", 2, False), ("mini-apps", "Mini-Apps", 3, False),
           ("payments", "Payments", 4, False), ("product-center", "Product Center", 5, False), ("outros", "Outros", 99, True)]
 TABLES = ("fronts", "themes", "theme_items", "theme_links", "theme_jira", "theme_events", "theme_updates", "theme_blockers", "theme_decisions",
-          "stage_gates", "board_columns", "theme_gate_checks", "attachments")
+          "stage_gates", "board_columns", "theme_gate_checks", "attachments", "fup_meetings")
 ROUTE_STAGES = {"bug": [6, 7, 8, 9, 10], "p0": [7, 8, 9, 10]}
 STAGE_NAMES = {1: "01 Solicitação", 2: "02 Pesquisa", 3: "03 Decisão", 4: "04 PRD e início", 5: "05 Revisão da solução", 6: "06 Planejamento",
                7: "07 Desenvolvimento", 8: "08 Testes", 9: "09 Publicação", 10: "10 Lançamento"}
@@ -46,6 +46,7 @@ class ThemesMixin:
         self.attachments = []
         self.storage_calls, self.downloads = [], []
         self.storage = {}                                 # path -> {"size", "mimetype", "data"}: the private bucket 'attachments'
+        self.fups = []                                    # supabase/migrations/20261204000000_fup.sql
 
     # -- test helpers -----------------------------------------------------------
     def seed_theme(self, tid, front="payments", kind="project", title=None, **extra):
@@ -328,6 +329,82 @@ class ThemesMixin:
         d.update(state=state, decision=decision or {}, decided_at=now(), decided_by=by.strip())
         self.event(d["theme_id"], by.strip(), f"decision_{state}", d["what"], decision, d["item_id"])
 
+    # -- the FUP (supabase/migrations/20261204000000_fup.sql) -------------------------------------------------------
+    @staticmethod
+    def _fup_agenda(a):
+        if not isinstance(a, list) or len(a) > 300:
+            raise Invalid("invalid agenda")
+        for x in a:
+            if (not isinstance(x, dict) or not re.fullmatch(r"PHZ-\d{4}", str(x.get("theme", ""))) or x.get("kind") not in ("inform", "discuss", "decide")
+                    or not isinstance(x.get("on"), bool) or not isinstance(x.get("star"), bool)):
+                raise Invalid("invalid agenda")
+
+    @staticmethod
+    def _fup_log(lg):
+        if not isinstance(lg, list) or len(lg) > 500:
+            raise Invalid("invalid log")
+        for x in lg:
+            if (not isinstance(x, dict) or not re.fullmatch(r"PHZ-\d{4}", str(x.get("theme", ""))) or x.get("type") not in ("note", "decision", "action")
+                    or not 1 <= len(str(x.get("text") or "").strip()) <= 1200 or x.get("progress") not in ("todo", "doing", "done")
+                    or (x.get("due") is not None and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(x["due"])))
+                    or (x.get("ref") is not None and not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", str(x["ref"])))):
+                raise Invalid("invalid log")
+
+    def save_fup(self, fid, p, by):
+        self._name(by)
+        if "title" in p and not 1 <= len(str(p.get("title") or "").strip()) <= 120:
+            raise Invalid("invalid title")
+        if "held_on" in p and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(p.get("held_on") or "")):
+            raise Invalid("invalid date")
+        if "agenda" in p:
+            self._fup_agenda(p["agenda"])
+        if "log" in p:
+            self._fup_log(p["log"])
+        if fid is None:
+            if not str(p.get("title") or "").strip():
+                raise Invalid("invalid title")
+            row = {"id": str(uuid.uuid4()), "title": p["title"].strip(), "held_on": p.get("held_on") or now()[:10], "agenda": p.get("agenda") or [],
+                   "log": p.get("log") or [], "closed_at": None, "snapshot": None, "created_by": by.strip(), "created_at": now(), "updated_at": now()}
+            self.fups.append(row)
+            return {"id": row["id"]}
+        f = next((r for r in self.fups if r["id"] == fid), None)
+        if not f:
+            raise Invalid("unknown fup")
+        if f["closed_at"]:
+            raise Invalid("fup closed")
+        for k in ("title", "held_on", "agenda", "log"):
+            if k in p:
+                f[k] = p[k].strip() if k == "title" else p[k]
+        f["updated_at"] = now()
+        return {"id": fid}
+
+    def close_fup(self, fid, by):
+        self._name(by)
+        f = next((r for r in self.fups if r["id"] == fid), None)
+        if not f:
+            raise Invalid("unknown fup")
+        if f["closed_at"]:
+            raise Invalid("fup closed")
+        y, m, d = f["held_on"].split("-")
+        n = 0
+        for tid in dict.fromkeys(x["theme"] for x in f["log"]):
+            t = self.themes.get(tid)
+            if not t or t["hidden"]:
+                continue
+            notes = [("Decidido: " + x["text"]) if x["type"] == "decision" else x["text"] for x in f["log"] if x["theme"] == tid and x["type"] in ("note", "decision")]
+            nexts = [x["text"] + (f" (até {x['due'][8:10]}/{x['due'][5:7]})" if x.get("due") else "") for x in f["log"] if x["theme"] == tid and x["type"] == "action"]
+            p = {"progress": {"pt": f"Tratado no FUP de {d}/{m}/{y}."}}
+            if notes:
+                p["advanced"] = {"pt": "\n".join(notes)[:2000]}
+            if nexts:
+                p["next_step"] = {"pt": "\n".join(nexts)[:2000]}
+            self.post_theme_update(tid, p, by)
+            n += 1
+        on = [x["theme"] for x in f["agenda"] if x["on"]]
+        f["snapshot"] = {"agenda": f["agenda"], "log": f["log"], "statuses": {k: self.themes[k]["status"] for k in on if k in self.themes}, "closed_by": by.strip()}
+        f["closed_at"] = f["updated_at"] = now()
+        return {"id": fid, "updates": n}
+
     # -- the B2B board ------------------------------------------------------------
     def column_of_stage(self, stage):
         return next(c for c in sorted(self.columns, key=lambda c: (c["position"], c["created_at"])) if c["stage"] == stage)
@@ -598,7 +675,7 @@ class ThemesMixin:
         fn = path.rsplit("/", 1)[1]
         if "/rpc/" in path and fn in ("create_theme", "update_theme", "update_front", "save_theme_item", "add_theme_jira", "remove_theme_jira", "set_theme_link",
                                       "post_theme_update", "save_theme_blocker", "resolve_theme_blocker", "save_theme_decision", "decide_theme_decision",
-                                      "move_theme_card", "set_theme_gate", "save_board_column", "delete_board_column", "add_attachment", "hide_attachment", "suggest_theme_answers", "confirm_theme_answers"):
+                                      "move_theme_card", "set_theme_gate", "save_board_column", "delete_board_column", "add_attachment", "hide_attachment", "suggest_theme_answers", "confirm_theme_answers", "save_fup", "close_fup"):
             self.calls.append((fn, body))
             if self.rate_limited:
                 ok({"message": "rate limit"}, 429)
@@ -625,6 +702,8 @@ class ThemesMixin:
                     "hide_attachment": lambda: self.hide_attachment(body["p_id"], body["p_by"]),
                     "suggest_theme_answers": lambda: self.suggest_theme_answers(body["p_theme"], body["p"], body["p_by"]),
                     "confirm_theme_answers": lambda: self.confirm_theme_answers(body["p_theme"], body["p_fields"], body["p_by"]),
+                    "save_fup": lambda: self.save_fup(body["p_id"], body["p"], body["p_by"]),
+                    "close_fup": lambda: self.close_fup(body["p_id"], body["p_by"]),
                 }[fn]()
             except Invalid as e:
                 ok({"message": str(e)}, 400)
@@ -638,7 +717,7 @@ class ThemesMixin:
                 "theme_links": self.links, "theme_jira": self.jira, "theme_events": self.events, "theme_updates": self.updates,
                 "theme_blockers": self.blockers, "theme_decisions": self.decisions, "stage_gates": self.gates, "board_columns": self.columns,
                 "theme_gate_checks": self.gate_checks,
-                "attachments": [a for a in self.attachments if not a["hidden"]]}[table]
+                "attachments": [a for a in self.attachments if not a["hidden"]], "fup_meetings": self.fups}[table]
         for col, val in q.items():
             if col in ("select", "order", "limit", "offset"):
                 continue
