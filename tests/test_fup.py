@@ -57,7 +57,7 @@ class FupDataTest(unittest.TestCase):
         self.assertEqual(res["updates"], 2)
         ups = {u["theme_id"]: u for u in self.db.updates}
         self.assertEqual(set(ups), {"PHZ-0001", "PHZ-0004"})
-        self.assertEqual(ups["PHZ-0001"]["progress"], {"pt": "Tratado no FUP de 25/11/2026."})
+        self.assertEqual(ups["PHZ-0001"]["progress"], {"pt": "Tratado no FUP de 25/11/2026.", "en": "Discussed in the FUP of 25/11/2026.", "zh": "已在 25/11/2026 的 FUP 会议上讨论。"})
         self.assertEqual(ups["PHZ-0001"]["advanced"], {"pt": "Decidido: A troca para a nova API é transparente\nGleison apresenta o plano"})
         self.assertEqual(ups["PHZ-0001"]["next_step"], {"pt": "Definir a janela de 24h (até 27/11)"})
         self.assertEqual(ups["PHZ-0004"]["advanced"], {})
@@ -90,6 +90,22 @@ class FupMigrationTest(unittest.TestCase):
             with self.subTest(needle=needle):
                 self.assertIn(needle, sql)
         self.assertNotIn("to anon", sql.split("revoke all on function public.save_fup")[1])
+
+
+class FupCloseMessageMigrationTest(unittest.TestCase):
+    """The fixed sentence of the closing is written in the three languages by the function (the machine translation made it "Treaty on the FUP")."""
+    SQL = (ROOT / "supabase" / "migrations" / "20261206000000_fup_close_message.sql").read_text(encoding="utf-8")
+
+    def test_the_progress_sentence_carries_pt_en_and_zh(self):
+        self.assertIn("'pt', 'Tratado no FUP de ' || day", self.SQL)
+        self.assertIn("'en', 'Discussed in the FUP of ' || day", self.SQL)
+        self.assertIn("'zh', '已在 ' || day", self.SQL)
+
+    def test_it_only_recreates_close_fup_and_keeps_its_grants(self):
+        self.assertIn("create or replace function public.close_fup(p_id uuid, p_by text)", self.SQL)
+        self.assertNotIn("create table", self.SQL)
+        self.assertIn("grant execute on function public.close_fup(uuid, text) to authenticated", self.SQL)
+        self.assertIn("revoke all on function public.close_fup(uuid, text) from public, anon", self.SQL)
 
 
 if __name__ == "__main__":
