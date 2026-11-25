@@ -1,0 +1,40 @@
+name: Apply migrations
+# docs/spec/v2/migrations.md: a migration merged into main is applied to Supabase here, nobody pastes SQL in the editor.
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: "One-time: mark every migration up to this version (14 digits) as already applied, without running it"
+        required: false
+        default: ""
+permissions:
+  contents: read
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - run: supabase link --project-ref "$PROJECT_REF"
+      - name: Baseline (only when asked)
+        if: github.event_name == 'workflow_dispatch' && inputs.baseline != ''
+        run: |
+          python3 tools/migration_versions.py --through "$BASELINE" | xargs supabase migration repair --status applied
+        env:
+          BASELINE: ${{ inputs.baseline }}
+      - name: Show what is pending
+        run: supabase migration list
+      - name: Apply
+        if: github.event_name == 'push' || inputs.baseline == ''
+        run: supabase db push

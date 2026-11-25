@@ -34,8 +34,8 @@ Use it rarely and say why; never to avoid writing a test.
 ## Working conventions
 
 - Pull requests go to `main`; commits end with the Co-Authored-By line given by the environment. The owner writes in Portuguese: answer in Portuguese.
-- Database changes are numbered, idempotent files in `supabase/migrations/` (never edit one that was applied); `tests/test_sql.py` parses them. Applying a
-  migration, deploying an Edge Function and merging are done only when the owner asks.
+- Database changes are numbered, idempotent files in `supabase/migrations/` (never edit one that was applied); `tests/test_sql.py` parses them. Merging a pull request applies its migrations
+  (`.github/workflows/migrate.yml`, `docs/spec/v2/migrations.md`): never paste SQL in the Supabase editor. Deploying an Edge Function and merging are done only when the owner asks.
 - Texts of the interface exist in three languages (pt-BR, en, zh-Hans): `apps/web/lib/i18n.ts`.
 - The design tokens are at the top of `apps/web/app/themes/themes.css` (`docs/spec/v2/design.md`); do not hard-code colours elsewhere.
 - Do not commit secrets. Only the publishable Supabase key is in the repository.
