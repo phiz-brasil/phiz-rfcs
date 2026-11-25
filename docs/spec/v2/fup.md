@@ -57,6 +57,10 @@ Migration `supabase/migrations/20261205000000_fup.sql`:
 - `save_fup(p_id uuid, p jsonb, p_by text)`: creates or updates title, date, agenda and log while open; refuses a closed FUP.
 - `close_fup(p_id uuid, p_by text)`: sets `closed_at`, freezes `snapshot` (agenda, log, and each theme's status at closing) and writes the
   weekly updates above in the same transaction.
+  The fixed sentence of the progress line is written **in the three languages by the function itself** (decided 2026-11-25, after the machine translation
+  turned "Tratado no FUP" into "Treaty on the FUP"): pt `Tratado no FUP de DD/MM/YYYY.`, en `Discussed in the FUP of DD/MM/YYYY.`,
+  zh `已在 DD/MM/YYYY 的 FUP 会议上讨论。`. The texts people typed (notes, decisions, actions) stay Portuguese and are translated as before.
+  A new migration (`20261206000000_fup_close_message.sql`) recreates `close_fup`; the applied one is not edited.
 - Same access as the other theme tables: members read and write; RLS and grants as in `20261201000000_member_lock.sql`.
 - Mirrored in `tests/fake_themes.py`.
 
