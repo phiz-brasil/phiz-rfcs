@@ -211,7 +211,7 @@ class OverviewTest(SiteCase):
     def test_without_a_name_nothing_is_written(self):
         self.overview()
         self.page.locator('.pn-row[data-theme="PHZ-0003"]').get_by_label("Status").select_option("at_risk")
-        expect(self.page.get_by_role("alert")).to_be_visible()
+        expect(self.page.get_by_role("alert").filter(has_text="Informe seu nome para salvar.")).to_be_visible()
         self.assertEqual(self.db.calls, [])
 
     # -- the timeline --------------------------------------------------------------------------------------------------------------------------
@@ -220,7 +220,7 @@ class OverviewTest(SiteCase):
         self.overview()
         self.timeline()
         self.assertEqual(self.page.locator(".pn-q").all_inner_texts(), [q[0] for q in quarters()])
-        expect(self.page.locator(".pn-today")).to_have_text("Hoje")
+        expect(self.page.locator(".pn-today")).to_have_text("hoje")
         row = self.page.locator('.pn-tl-theme[data-theme="PHZ-0001"] > .pn-tl-row')
         expect(row.locator(".pn-bar")).to_have_text("Business Messaging API")
         expect(row.locator(".pn-diamond")).to_have_count(1)

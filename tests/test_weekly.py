@@ -204,17 +204,17 @@ class WeeklyTest(SiteCase):
         self.db.seed_blocker("PHZ-0003", {"pt": "Detalhe interno"})                              # not for the leadership
         self.db.seed_blocker("PHZ-0003", {"pt": "Já resolvido"}, leadership=True, state="resolved")
         self.overview()
-        items = self.page.get_by_role("region", name="Exige a liderança").locator("li")
+        items = self.page.get_by_role("region", name="Precisa de vocês").locator("li")
         self.assertEqual(items.count(), 2)
         expect(items.nth(0)).to_contain_text("Jurídico não aprovou")                             # earliest deadline first
-        expect(items.nth(0)).to_contain_text("PHZ-0002")
+        expect(items.nth(0)).to_have_attribute("data-theme", "PHZ-0002")
         expect(items.nth(1)).to_contain_text("Qual parceiro?")
         items.nth(0).get_by_role("link").click()
         self.page.wait_for_url(re.compile(r"/themes/PHZ-0002/$"))
 
     def test_the_overview_says_when_nothing_needs_the_leadership(self):
         self.overview()
-        expect(self.page.get_by_text("Nada exige a liderança agora.")).to_be_visible()
+        expect(self.page.get_by_text("Nada precisa de vocês agora.")).to_be_visible()
 
     def test_open_blockers_and_decisions_are_counted_on_each_theme(self):
         self.db.seed_blocker("PHZ-0002", {"pt": "A"})
