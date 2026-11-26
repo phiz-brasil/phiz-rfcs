@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { COLS, STAGES, STATUSES, T, t, text, type Lang } from "../lib/i18n";
 import type { Blocker, Decision, EventRow, Front, I18n, Item, Jira, Link, Theme, Update } from "../lib/db";
 import { useApp } from "./Shell";
@@ -8,12 +8,14 @@ import { Records, WeeklyUpdate } from "./Updates";
 import { Gates } from "./Gates";
 import { Attachments } from "./Attachments";
 import { Summary } from "./Summary";
+import { PhaseIcon } from "./OverviewPage";
+import { phaseOf } from "../lib/painel";
 
 type Data = { theme: Theme; fronts: Front[]; items: Item[]; links: Link[]; linksTo: Link[]; jira: Jira[]; events: EventRow[]; rfc: { rfc_id: string; version: string } | null;
   updates: Update[]; blockers: Blocker[]; decisions: Decision[] };
 
 export function ThemeDetail({ id }: { id: string }) {
-  const { lang, db, reader } = useApp();
+  const { lang, db, reader, name } = useApp();
   const [data, setData] = useState<Data | null>(null);
   const [state, setState] = useState<"loading" | "missing" | "failed" | "ok">("loading");
   const [saved, setSaved] = useState(false);           // the form is redrawn from the saved data, so the "Saved." note lives here
@@ -29,6 +31,14 @@ export function ThemeDetail({ id }: { id: string }) {
     } catch { setState("failed"); }
   }, [db, id]);
   useEffect(() => { void load(); }, [load]);
+
+  const [inlineNote, setInlineNote] = useState("");
+  const saveTheme = async (p: Record<string, unknown>): Promise<boolean> => {
+    if (!data) return false;
+    if (!name.trim()) { setInlineNote(T.needName[lang]); return false; }
+    try { await db.updateTheme(data.theme.id, p, name.trim()); setInlineNote(""); await load(); return true; }
+    catch (e) { setInlineNote(message(e, lang)); await load(); return false; }
+  };
 
   if (state === "loading") return <p className="state">{T.loading[lang]}</p>;
   if (state === "missing") return <><p><a href="/themes/">{T.back[lang]}</a></p><p className="state">{T.notFound[lang]}</p></>;
@@ -47,7 +57,14 @@ export function ThemeDetail({ id }: { id: string }) {
       <p className="back"><a href="/themes/">{T.back[lang]}</a></p>
       <header className="theme-hero">
         <p className="eyebrow"><span className="id">{theme.id}</span> · {t(theme.kind, lang)} · {front}</p>
-        <h1><Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></h1>
+        <div className="theme-titleline">
+          <PhaseIcon theme={theme} lang={lang} />
+          {reader ? <h1><Said value={theme.title} lang={lang} machine={theme.text_meta?.title} /></h1>
+            : <InlineText key={`t${theme.updated_at}${lang}`} tag="h1" field="title" value={text(theme.title, lang)} required onSave={v => saveTheme({ title: merge(theme.title, lang, v) })} />}
+        </div>
+        {reader ? (text(theme.what_it_is, lang) ? <p className="theme-what"><Said value={theme.what_it_is} lang={lang} machine={theme.text_meta?.what_it_is} /></p> : null)
+          : <InlineText key={`w${theme.updated_at}${lang}`} tag="p" field="what_it_is" className="theme-what" value={text(theme.what_it_is, lang)} placeholder={T.addWhatItIs[lang]} onSave={v => saveTheme({ what_it_is: merge(theme.what_it_is, lang, v) })} />}
+        {inlineNote ? <p className="state err" role="alert" data-note="inline">{inlineNote}</p> : null}
         <div className="facts" data-block="facts">
           <div><span className="kpi-label">{T.status[lang]}</span><StatusBadge status={theme.status} lang={lang} /></div>
           {theme.kind === "project" ? <div><span className="kpi-label">{T.stage[lang]}</span><strong>{theme.stage ? t(`stage.${theme.stage}`, lang) : "—"}</strong></div> : null}
@@ -63,6 +80,8 @@ export function ThemeDetail({ id }: { id: string }) {
       </header>
       <nav className="secnav" aria-label={T.sections[lang]}>{sections.map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</nav>
 
+      <div className="theme-layout">
+      <div className="theme-main">
       <div className="group" id="sec-summary">
         <h2 className="group-title" id="h-summary">{T.secSummary[lang]}</h2>
         {!reader && editing
@@ -88,20 +107,25 @@ export function ThemeDetail({ id }: { id: string }) {
           <Gates key={`g${theme.stage}${theme.route}${lang}`} theme={theme} />
         </div>
       ) : null}
-      <div className="group" id="sec-attachments">
-        <h2 className="group-title" id="h-attachments">{T.attachments[lang]}</h2>
-        <Attachments theme={theme} items={data.items} />
-      </div>
-      <div className="group" id="sec-links">
-        <h2 className="group-title" id="h-links">{T.secLinks[lang]}</h2>
-        <div className="two">
-          <JiraLinks data={data} onChanged={load} />
-          <Dependencies data={data} onChanged={load} />
-        </div>
-      </div>
       <div className="group" id="sec-history">
         <h2 className="group-title" id="h-history">{T.history[lang]}</h2>
         <History events={data.events} lang={lang} />
+      </div>
+      </div>
+      <aside className="theme-side">
+        <Properties key={`p${theme.updated_at}${lang}`} data={data} save={saveTheme} />
+        <div className="group" id="sec-links">
+          <h2 className="group-title" id="h-links">{T.secLinks[lang]}</h2>
+          <div className="stack">
+            <JiraLinks data={data} onChanged={load} />
+            <Dependencies data={data} onChanged={load} />
+          </div>
+        </div>
+        <div className="group" id="sec-attachments">
+          <h2 className="group-title" id="h-attachments">{T.attachments[lang]}</h2>
+          <Attachments theme={theme} items={data.items} />
+        </div>
+      </aside>
       </div>
     </>
   );
@@ -204,14 +228,24 @@ function Items({ data, onChanged }: { data: Data; onChanged: () => void }) {
   const [itemDue, setItemDue] = useState("");
   const [milestone, setMilestone] = useState(false);
   const [note, setNote] = useState("");
+  const [view, setView] = useState<"board" | "list">("board");
+  useEffect(() => { try { if (localStorage.getItem("phiz-theme-items-view") === "list") setView("list"); } catch { /* no storage */ } }, []);
+  const pick = (v: "board" | "list") => { setView(v); try { localStorage.setItem("phiz-theme-items-view", v); } catch { /* no storage */ } };
+  const save = (i: Item, p: Record<string, unknown>) => run(() => db.saveItem(data.theme.id, i.id, p, name.trim()));
   const run = async (fn: () => Promise<unknown>) => {
     if (!name.trim()) return setNote(T.needName[lang]);
     try { await fn(); setNote(""); onChanged(); } catch (e) { setNote(message(e, lang)); }
   };
   return (
     <section className="panel" aria-label={T.items[lang]}>
-      <h2>{T.items[lang]}</h2>
-      <div className="kanban">
+      <div className="items-head">
+        <h2>{T.items[lang]}</h2>
+        <div className="seg" role="group" aria-label={T.views[lang]}>
+          <button type="button" aria-pressed={view === "list"} onClick={() => pick("list")}>{T.viewList[lang]}</button>
+          <button type="button" aria-pressed={view === "board"} onClick={() => pick("board")}>{T.viewBoard[lang]}</button>
+        </div>
+      </div>
+      {view === "list" ? <ItemList items={data.items} save={save} /> : <div className="kanban">
         {COLS.map(c => (
           <div className="col" key={c} data-col={c}>
             <h3>{t(`col.${c}`, lang)}</h3>
@@ -230,7 +264,7 @@ function Items({ data, onChanged }: { data: Data; onChanged: () => void }) {
             </ul>
           </div>
         ))}
-      </div>
+      </div>}
       {!reader ? (
         <form className="inline" onSubmit={e => { e.preventDefault(); if (title.trim()) void run(async () => { await db.saveItem(data.theme.id, null, { title: title.trim(), due_date: itemDue || null, milestone }, name.trim()); setTitle(""); setItemDue(""); setMilestone(false); }); }}>
           <input aria-label={T.itemTitle[lang]} placeholder={T.itemTitle[lang]} value={title} maxLength={200} onChange={e => setTitle(e.target.value)} />
@@ -333,5 +367,108 @@ function History({ events, lang }: { events: EventRow[]; lang: Lang }) {
         {events.map(e => <li key={e.id}><time>{dateText(e.at)}</time> {show(e)} <span className="note">{T.by[lang]} {e.edited_by}</span></li>)}
       </ul>
     </section>
+  );
+}
+
+/* A text edited where it is shown: click, type, Enter (or leaving the field) saves, Escape gives the old text back. */
+function InlineText({ tag, field, value, className, placeholder, required, onSave }: {
+  tag: "h1" | "p"; field: string; value: string; className?: string; placeholder?: string; required?: boolean; onSave: (v: string) => Promise<boolean>;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  const Tag = tag as "h1";
+  const done = () => {
+    const el = ref.current;
+    if (!el) return;
+    const v = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (v === value.trim() || (required && !v)) { el.textContent = value; return; }
+    void onSave(v).then(ok => { if (!ok && ref.current) ref.current.textContent = value; });
+  };
+  return (
+    <Tag ref={ref as React.Ref<HTMLHeadingElement>} className={`${className ?? ""} editable`.trim()} data-edit={field} contentEditable suppressContentEditableWarning spellCheck
+      data-placeholder={placeholder} title={placeholder}
+      onBlur={done}
+      onKeyDown={e => {
+        if (e.key === "Enter") { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); }
+        if (e.key === "Escape") { e.preventDefault(); (e.currentTarget as HTMLElement).textContent = value; (e.currentTarget as HTMLElement).blur(); }
+      }}>{value}</Tag>
+  );
+}
+
+/* The right column: the theme's properties, each changed where it is shown (read-only for readers). */
+function Properties({ data, save }: { data: Data; save: (p: Record<string, unknown>) => Promise<boolean> }) {
+  const { lang, reader } = useApp();
+  const { theme, fronts } = data;
+  const [owner, setOwner] = useState(theme.owner ?? "");
+  const ph = phaseOf(theme.kind === "project" ? theme.stage : null);
+  const row = (k: string, label: string, view: React.ReactNode, edit: React.ReactNode) => (
+    <div data-prop={k}><dt>{label}</dt><dd>{reader ? view : edit}</dd></div>
+  );
+  const date = (k: "start_date" | "due_date", label: string) => row(k, label, dateText(theme[k]),
+    <input type="date" aria-label={label} value={theme[k]?.slice(0, 10) ?? ""} onChange={e => void save({ [k]: e.target.value || null })} />);
+  return (
+    <section className="panel props" aria-label={T.properties[lang]} data-block="properties">
+      <h2>{T.properties[lang]}</h2>
+      <dl className="props-list">
+        {row("status", T.status[lang], <StatusBadge status={theme.status} lang={lang} />,
+          <select aria-label={T.status[lang]} value={theme.status} onChange={e => void save({ status: e.target.value })}>
+            {STATUSES.map(x => <option key={x} value={x}>{t(`status.${x}`, lang)}</option>)}
+          </select>)}
+        {theme.kind === "project" ? <>
+          {row("stage", T.stage[lang], theme.stage ? t(`stage.${theme.stage}`, lang) : "—",
+            <select aria-label={T.stage[lang]} value={theme.stage ? String(theme.stage) : ""} onChange={e => void save({ stage: e.target.value ? Number(e.target.value) : null })}>
+              {!theme.stage ? <option value="">—</option> : null}
+              {STAGES.map(x => <option key={x} value={x}>{t(`stage.${x}`, lang)}</option>)}
+            </select>)}
+          <div data-prop="phase"><dt>{T.phase[lang]}</dt><dd className="props-phase"><PhaseIcon theme={theme} lang={lang} /> {ph ? t(`phase.${ph}`, lang) : "—"}</dd></div>
+        </> : null}
+        <div data-prop="kind"><dt>{T.kind[lang]}</dt><dd>{t(theme.kind, lang)}</dd></div>
+        {row("owner", T.owner[lang], theme.owner ?? "—",
+          <input aria-label={T.owner[lang]} value={owner} maxLength={80} onChange={e => setOwner(e.target.value)}
+            onBlur={() => { if (owner.trim() !== (theme.owner ?? "")) void save({ owner: owner.trim() }).then(ok => { if (!ok) setOwner(theme.owner ?? ""); }); }}
+            onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }} />)}
+        {date("start_date", T.start[lang])}
+        {date("due_date", T.due[lang])}
+        {row("front", T.front[lang], text(fronts.find(f => f.key === theme.front)?.name, lang) || "—",
+          <select aria-label={T.front[lang]} value={theme.front} onChange={e => void save({ front: e.target.value })}>
+            {fronts.map(x => <option key={x.key} value={x.key}>{text(x.name, lang)}</option>)}
+          </select>)}
+        <div data-prop="id"><dt>ID</dt><dd className="id">{theme.id}</dd></div>
+      </dl>
+    </section>
+  );
+}
+
+/* The deliveries as a list: every field changed where it is shown; a delivery is closed by moving it to Done, never deleted. */
+function ItemList({ items, save }: { items: Item[]; save: (i: Item, p: Record<string, unknown>) => Promise<unknown> }) {
+  const { lang, reader } = useApp();
+  if (!items.length) return <p className="empty">{T.none[lang]}</p>;
+  const order = (i: Item) => COLS.indexOf(i.col as (typeof COLS)[number]);
+  const rows = [...items].sort((a, b) => order(a) - order(b) || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+  return (
+    <table className="items-list">
+      <thead><tr><th>{T.deliveryName[lang]}</th><th>{T.column[lang]}</th><th>{T.start[lang]}</th><th>{T.due[lang]}</th><th>{T.owner[lang]}</th><th>{T.milestoneOne[lang]}</th></tr></thead>
+      <tbody>
+        {rows.map(i => reader ? (
+          <tr key={i.id} data-item={i.id} data-col={i.col}>
+            <td>{i.milestone ? "◆ " : ""}{i.title}</td><td>{t(`col.${i.col}`, lang)}</td><td>{dateText(i.start_date ?? null)}</td><td>{dateText(i.due_date)}</td>
+            <td>{i.owner ?? "—"}</td><td>{i.milestone ? "◆" : ""}</td>
+          </tr>
+        ) : (
+          <tr key={`${i.id}${i.title}${i.owner}${i.start_date}${i.due_date}${i.col}${i.milestone}`} data-item={i.id} data-col={i.col}>
+            <td><input aria-label={`${T.deliveryName[lang]}: ${i.title}`} defaultValue={i.title} maxLength={200}
+              onBlur={e => { const v = e.target.value.trim(); if (v && v !== i.title) void save(i, { title: v }); else e.target.value = i.title; }}
+              onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }} /></td>
+            <td><select aria-label={`${T.column[lang]}: ${i.title}`} value={i.col} onChange={e => void save(i, { col: e.target.value })}>
+              {COLS.map(c => <option key={c} value={c}>{t(`col.${c}`, lang)}</option>)}</select></td>
+            <td><input type="date" aria-label={`${T.start[lang]}: ${i.title}`} value={i.start_date?.slice(0, 10) ?? ""} onChange={e => void save(i, { start_date: e.target.value || null })} /></td>
+            <td><input type="date" aria-label={`${T.due[lang]}: ${i.title}`} value={i.due_date?.slice(0, 10) ?? ""} onChange={e => void save(i, { due_date: e.target.value || null })} /></td>
+            <td><input aria-label={`${T.owner[lang]}: ${i.title}`} defaultValue={i.owner ?? ""} maxLength={80}
+              onBlur={e => { const v = e.target.value.trim(); if (v !== (i.owner ?? "")) void save(i, { owner: v }); }}
+              onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }} /></td>
+            <td><input type="checkbox" aria-label={`${T.milestoneOne[lang]}: ${i.title}`} checked={i.milestone} onChange={e => void save(i, { milestone: e.target.checked })} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

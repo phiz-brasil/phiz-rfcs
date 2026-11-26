@@ -212,7 +212,7 @@ function FrontHead({ front, rows, lang, stale, overdue }: { front: Front; rows: 
 }
 
 /* The small icon of the phase (from the PDLC B2B stage), coloured by the theme's status. */
-function PhaseIcon({ theme, lang }: { theme: Theme; lang: Lang }) {
+export function PhaseIcon({ theme, lang }: { theme: Theme; lang: Lang }) {
   const ph = phaseOf(theme.kind === "project" ? theme.stage : null);
   const c = 2 * Math.PI * 3;
   return (
