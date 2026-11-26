@@ -22,19 +22,20 @@ export type Attachment = {
   content_type: string | null; size: number | null; checksum: string | null; body: string | null; url: string | null; stage: number | null; replaces: string | null;
   archive_version: string | null; archive_date: string | null; archive_note: I18n | null; created_at: string; created_by: string;
 };
-export type Item = { id: string; theme_id: string; title: string; owner: string | null; col: string; due_date: string | null; milestone: boolean; created_at: string };
+export type Item = { id: string; theme_id: string; title: string; owner: string | null; col: string; start_date?: string | null; due_date: string | null; milestone: boolean; created_at: string };
+export type Urgency = "urgent" | "important" | "info";
 export type Update = {
   id: string; theme_id: string; week: string; edited_by: string; created_at: string; progress: I18n; advanced: I18n; next_step: I18n;
   status_from: string | null; status_to: string | null; due_from: string | null; due_to: string | null; due_reason: string | null;
   text_meta?: Record<string, string[]> | null;
 };
 export type Blocker = {
-  id: string; theme_id: string; item_id: string | null; what: I18n; owner: string | null; due_date: string | null; needs_leadership: boolean;
+  id: string; theme_id: string; item_id: string | null; what: I18n; owner: string | null; due_date: string | null; needs_leadership: boolean; urgency?: Urgency | null;
   state: "open" | "resolved"; how_resolved: I18n; resolved_at: string | null; resolved_by: string | null; created_at: string; created_by: string;
   text_meta?: Record<string, string[]> | null;
 };
 export type Decision = {
-  id: string; theme_id: string; item_id: string | null; what: I18n; decider: string | null; due_date: string | null; needs_leadership: boolean;
+  id: string; theme_id: string; item_id: string | null; what: I18n; decider: string | null; due_date: string | null; needs_leadership: boolean; urgency?: Urgency | null;
   state: "open" | "decided" | "dropped"; decision: I18n; decided_at: string | null; decided_by: string | null; created_at: string; created_by: string;
   text_meta?: Record<string, string[]> | null;
 };
@@ -155,6 +156,9 @@ export function client({ url, key }: Supabase) {
     openBlockers: () => request<Blocker[]>("theme_blockers?select=*&state=eq.open&order=created_at"),
     openDecisions: () => request<Decision[]>("theme_decisions?select=*&state=eq.open&order=created_at"),
     milestones: () => request<Milestone[]>("theme_items?select=id,theme_id,title,due_date,col&milestone=eq.true&order=due_date"),
+    // the Painel (docs/spec/v2/redesign.md): every delivery with its period, and the latest decisions taken
+    deliveries: () => all<Item>("theme_items?select=*&order=created_at.asc,id.asc"),
+    decided: () => request<Decision[]>("theme_decisions?select=*&state=eq.decided&order=decided_at.desc&limit=40"),
     postUpdate: (theme: string, p: Record<string, unknown>, by: string) => rpc<{ id: string; week: string }>("post_theme_update", { p_theme: theme, p, p_by: by }),
     saveBlocker: (theme: string, id: string | null, p: Record<string, unknown>, by: string) => rpc("save_theme_blocker", { p_theme: theme, p_id: id, p, p_by: by }),
     resolveBlocker: (id: string, how: I18n, by: string) => rpc("resolve_theme_blocker", { p_id: id, p_how: how, p_by: by }),
