@@ -103,7 +103,7 @@ export function Records({ kind, theme, rows, items, onChanged }: { kind: Kind; t
         <article className="row" key={r.id} data-state="open">
           <div className="what"><Said value={r.what} lang={lang} machine={r.text_meta?.what} />{r.needs_leadership ? <span className="flag lead"> {T.needsLeadership[lang]}</span> : null}
             {reader ? <span className="urg" data-u={r.urgency ?? "info"}>{t(`urg.${r.urgency ?? "info"}`, lang)}</span>
-              : <select className="urg" data-u={r.urgency ?? "info"} aria-label={`${T.urgency[lang]}: ${text(r.what, lang)}`} value={r.urgency ?? "info"}
+              : <select key={r.urgency ?? "info"} className="urg" data-u={r.urgency ?? "info"} aria-label={`${T.urgency[lang]}: ${text(r.what, lang)}`} defaultValue={r.urgency ?? "info"}
                   onChange={e => void run(by => (kind === "blocker" ? db.saveBlocker(theme.id, r.id, { urgency: e.target.value }, by) : db.saveDecision(theme.id, r.id, { urgency: e.target.value }, by)))}>
                   {URGENCIES.map(u => <option key={u} value={u}>{t(`urg.${u}`, lang)}</option>)}
                 </select>}</div>

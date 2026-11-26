@@ -400,22 +400,24 @@ function Properties({ data, save }: { data: Data; save: (p: Record<string, unkno
   const { theme, fronts } = data;
   const [owner, setOwner] = useState(theme.owner ?? "");
   const ph = phaseOf(theme.kind === "project" ? theme.stage : null);
+  // a change that was not saved (no name, refused) puts the control back to what is saved
+  const set = (el: HTMLInputElement | HTMLSelectElement, old: string, p: Record<string, unknown>) => void save(p).then(ok => { if (!ok) el.value = old; });
   const row = (k: string, label: string, view: React.ReactNode, edit: React.ReactNode) => (
     <div data-prop={k}><dt>{label}</dt><dd>{reader ? view : edit}</dd></div>
   );
   const date = (k: "start_date" | "due_date", label: string) => row(k, label, dateText(theme[k]),
-    <input type="date" aria-label={label} value={theme[k]?.slice(0, 10) ?? ""} onChange={e => void save({ [k]: e.target.value || null })} />);
+    <input type="date" aria-label={label} defaultValue={theme[k]?.slice(0, 10) ?? ""} onChange={e => set(e.target, theme[k]?.slice(0, 10) ?? "", { [k]: e.target.value || null })} />);
   return (
     <section className="panel props" aria-label={T.properties[lang]} data-block="properties">
       <h2>{T.properties[lang]}</h2>
       <dl className="props-list">
         {row("status", T.status[lang], <StatusBadge status={theme.status} lang={lang} />,
-          <select aria-label={T.status[lang]} value={theme.status} onChange={e => void save({ status: e.target.value })}>
+          <select aria-label={T.status[lang]} defaultValue={theme.status} onChange={e => set(e.target, theme.status, { status: e.target.value })}>
             {STATUSES.map(x => <option key={x} value={x}>{t(`status.${x}`, lang)}</option>)}
           </select>)}
         {theme.kind === "project" ? <>
           {row("stage", T.stage[lang], theme.stage ? t(`stage.${theme.stage}`, lang) : "—",
-            <select aria-label={T.stage[lang]} value={theme.stage ? String(theme.stage) : ""} onChange={e => void save({ stage: e.target.value ? Number(e.target.value) : null })}>
+            <select aria-label={T.stage[lang]} defaultValue={theme.stage ? String(theme.stage) : ""} onChange={e => set(e.target, theme.stage ? String(theme.stage) : "", { stage: e.target.value ? Number(e.target.value) : null })}>
               {!theme.stage ? <option value="">—</option> : null}
               {STAGES.map(x => <option key={x} value={x}>{t(`stage.${x}`, lang)}</option>)}
             </select>)}
@@ -429,7 +431,7 @@ function Properties({ data, save }: { data: Data; save: (p: Record<string, unkno
         {date("start_date", T.start[lang])}
         {date("due_date", T.due[lang])}
         {row("front", T.front[lang], text(fronts.find(f => f.key === theme.front)?.name, lang) || "—",
-          <select aria-label={T.front[lang]} value={theme.front} onChange={e => void save({ front: e.target.value })}>
+          <select aria-label={T.front[lang]} defaultValue={theme.front} onChange={e => set(e.target, theme.front, { front: e.target.value })}>
             {fronts.map(x => <option key={x.key} value={x.key}>{text(x.name, lang)}</option>)}
           </select>)}
         <div data-prop="id"><dt>ID</dt><dd className="id">{theme.id}</dd></div>
@@ -458,14 +460,14 @@ function ItemList({ items, save }: { items: Item[]; save: (i: Item, p: Record<st
             <td><input aria-label={`${T.deliveryName[lang]}: ${i.title}`} defaultValue={i.title} maxLength={200}
               onBlur={e => { const v = e.target.value.trim(); if (v && v !== i.title) void save(i, { title: v }); else e.target.value = i.title; }}
               onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }} /></td>
-            <td><select aria-label={`${T.column[lang]}: ${i.title}`} value={i.col} onChange={e => void save(i, { col: e.target.value })}>
+            <td><select aria-label={`${T.column[lang]}: ${i.title}`} defaultValue={i.col} onChange={e => void save(i, { col: e.target.value })}>
               {COLS.map(c => <option key={c} value={c}>{t(`col.${c}`, lang)}</option>)}</select></td>
-            <td><input type="date" aria-label={`${T.start[lang]}: ${i.title}`} value={i.start_date?.slice(0, 10) ?? ""} onChange={e => void save(i, { start_date: e.target.value || null })} /></td>
-            <td><input type="date" aria-label={`${T.due[lang]}: ${i.title}`} value={i.due_date?.slice(0, 10) ?? ""} onChange={e => void save(i, { due_date: e.target.value || null })} /></td>
+            <td><input type="date" aria-label={`${T.start[lang]}: ${i.title}`} defaultValue={i.start_date?.slice(0, 10) ?? ""} onChange={e => void save(i, { start_date: e.target.value || null })} /></td>
+            <td><input type="date" aria-label={`${T.due[lang]}: ${i.title}`} defaultValue={i.due_date?.slice(0, 10) ?? ""} onChange={e => void save(i, { due_date: e.target.value || null })} /></td>
             <td><input aria-label={`${T.owner[lang]}: ${i.title}`} defaultValue={i.owner ?? ""} maxLength={80}
               onBlur={e => { const v = e.target.value.trim(); if (v !== (i.owner ?? "")) void save(i, { owner: v }); }}
               onKeyDown={e => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }} /></td>
-            <td><input type="checkbox" aria-label={`${T.milestoneOne[lang]}: ${i.title}`} checked={i.milestone} onChange={e => void save(i, { milestone: e.target.checked })} /></td>
+            <td><input type="checkbox" aria-label={`${T.milestoneOne[lang]}: ${i.title}`} defaultChecked={i.milestone} onChange={e => void save(i, { milestone: e.target.checked })} /></td>
           </tr>
         ))}
       </tbody>
