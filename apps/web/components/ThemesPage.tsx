@@ -24,6 +24,7 @@ export function ThemesPage() {
     } catch { setFailed(true); }
   }, [db]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (new URLSearchParams(location.search).get("new") === "1") setCreating(true); }, []);       // "New theme" on the Painel
 
   const shown = useMemo(() => themes.filter(x => (kind === "all" || x.kind === kind) && (status === "all" || x.status === status)), [themes, kind, status]);
 

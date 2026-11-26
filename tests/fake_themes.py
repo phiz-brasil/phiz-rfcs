@@ -8,6 +8,7 @@ from urllib.parse import parse_qs
 
 STATUSES = ("not_started", "on_track", "at_risk", "blocked", "paused", "done", "cancelled")
 COLS = ("todo", "doing", "blocked", "done")
+URGENCIES = ("urgent", "important", "info")
 FRONTS = [("pop", "POP", 1, False), ("api-platform", "API Platform", 2, False), ("mini-apps", "Mini-Apps", 3, False),
           ("payments", "Payments", 4, False), ("product-center", "Product Center", 5, False), ("outros", "Outros", 99, True)]
 TABLES = ("fronts", "themes", "theme_items", "theme_links", "theme_jira", "theme_events", "theme_updates", "theme_blockers", "theme_decisions",
@@ -79,14 +80,14 @@ class ThemesMixin:
 
     def seed_blocker(self, tid, what, leadership=False, state="open", **extra):
         row = {"id": str(uuid.uuid4()), "theme_id": tid, "item_id": None, "what": what, "owner": None, "due_date": None, "needs_leadership": leadership,
-               "state": state, "how_resolved": {}, "resolved_at": None, "resolved_by": None, "created_at": now(), "created_by": "Ana", "text_meta": {}}
+               "urgency": "important" if leadership else "info", "state": state, "how_resolved": {}, "resolved_at": None, "resolved_by": None, "created_at": now(), "created_by": "Ana", "text_meta": {}}
         row.update(extra)
         self.blockers.append(row)
         return row
 
     def seed_decision(self, tid, what, leadership=False, state="open", **extra):
         row = {"id": str(uuid.uuid4()), "theme_id": tid, "item_id": None, "what": what, "decider": None, "due_date": None, "needs_leadership": leadership,
-               "state": state, "decision": {}, "decided_at": None, "decided_by": None, "created_at": now(), "created_by": "Ana", "text_meta": {}}
+               "urgency": "important" if leadership else "info", "state": state, "decision": {}, "decided_at": None, "decided_by": None, "created_at": now(), "created_by": "Ana", "text_meta": {}}
         row.update(extra)
         self.decisions.append(row)
         return row
@@ -186,8 +187,12 @@ class ThemesMixin:
         if "title" in p and not 1 <= len((p.get("title") or "").strip()) <= 200:
             raise Invalid("invalid title")
         if item is None:
+            start, due = p.get("start_date") or None, p.get("due_date") or None
+            if start and due and start > due:
+                raise Invalid("invalid period")
             row = {"id": str(uuid.uuid4()), "theme_id": theme, "title": p["title"].strip(), "owner": (p.get("owner") or "").strip() or None,
-                   "col": col or "todo", "due_date": p.get("due_date"), "milestone": bool(p.get("milestone")), "created_at": now(), "created_by": by.strip(), "updated_at": now()}
+                   "col": col or "todo", "start_date": start, "due_date": due, "milestone": bool(p.get("milestone")), "created_at": now(), "created_by": by.strip(),
+                   "updated_at": now()}
             self.items.append(row)
             self.event(theme, by.strip(), "item_created", None, row["title"], row["id"])
             return {"id": row["id"]}
@@ -195,11 +200,19 @@ class ThemesMixin:
         if not row:
             raise Invalid("unknown item")
         before = row["col"]
-        for k in ("title", "owner", "col", "due_date", "milestone"):
+        period = (row.get("start_date"), row.get("due_date"))
+        start = (p.get("start_date") or None) if "start_date" in p else period[0]
+        due = (p.get("due_date") or None) if "due_date" in p else period[1]
+        if start and due and start > due:
+            raise Invalid("invalid period")
+        for k in ("title", "owner", "col", "milestone"):
             if k in p and p[k] is not None:
                 row[k] = p[k].strip() if isinstance(p[k], str) else p[k]
+        row["start_date"], row["due_date"] = start, due
         if col and col != before:
             self.event(theme, by.strip(), "item_col", before, col, item)
+        if (start, due) != period:
+            self.event(theme, by.strip(), "item_period", {"start_date": period[0], "due_date": period[1]}, {"start_date": start, "due_date": due}, item)
         return {"id": item}
 
     def add_theme_jira(self, theme, item, url, label, by):
@@ -283,19 +296,23 @@ class ThemesMixin:
         if item and not any(i["id"] == item and i["theme_id"] == theme for i in self.items):
             raise Invalid("unknown item")
         who = "owner" if kind == "blocker" else "decider"
+        if "urgency" in p and p["urgency"] not in URGENCIES:
+            raise Invalid("invalid urgency")
         if "what" in p:
             self._i18n(p["what"], 1200, True)
         if rid is None:
             self._i18n(p.get("what") or {}, 1200, True)
-            row = (self.seed_blocker if kind == "blocker" else self.seed_decision)(theme, p["what"], bool(p.get("needs_leadership")),
-                                                                                 item_id=item, due_date=p.get("due_date") or None, created_by=by.strip(), **{who: (p.get(who) or "").strip() or None})
+            lead = bool(p.get("needs_leadership"))
+            row = (self.seed_blocker if kind == "blocker" else self.seed_decision)(theme, p["what"], lead, item_id=item, due_date=p.get("due_date") or None,
+                                                                                 urgency=p.get("urgency") or ("important" if lead else "info"),
+                                                                                 created_by=by.strip(), **{who: (p.get(who) or "").strip() or None})
             self.event(theme, by.strip(), f"{kind}_added", None, p["what"], item)
             return {"id": row["id"]}
         row = next((r for r in table if r["id"] == rid and r["theme_id"] == theme), None)
         if not row:
             raise Invalid(f"unknown {kind}")
         before = dict(row["what"])
-        for k in ("what", who, "due_date", "needs_leadership"):
+        for k in ("what", who, "due_date", "needs_leadership", "urgency"):
             if k in p:
                 row[k] = (p[k] or None) if k in (who, "due_date") else p[k]
         for lg in ("pt", "en", "zh"):
