@@ -143,6 +143,8 @@ Two modes, same options (slide language pt-BR / en-US / zh, *include cover and o
 `tests/test_overview.py` tested the overview of design part 2 (attention list, next four weeks, front table, updated this week). Those parts are
 replaced by the three blocks, the front heads of the List (same numbers and status mix) and the *without update* filter; their tests were rewritten
 against this spec. The tests of the numbers and of the executive view they open are unchanged.
+In `tests/test_weekly.py`, the two tests of the old *Exige a liderança* list now read the **Precisa de vocês** block (same rows: open blockers and
+decisions that need the leadership, earliest deadline first, each line opening its theme; the empty text is *Nada precisa de vocês agora.*).
 
 ## Delivery plan (one pull request each, in this order)
 
