@@ -82,7 +82,7 @@ below), so a migration is the way. The weekly updates they wrote on the test the
 
 The suggested agenda marked PHZ-0015 (*Deeper Link*, a real theme that came from the import) as *Decide* only because it held test data from the
 translation and FUP checks: an open decision and an open blocker made by `Claude (teste)`, and three weekly updates of 2026-W48 (the same author and
-the two written by the FUP tests). The rule of the agenda is right and does not change. The migration `20261208000000_clean_phz_0015.sql` deletes those
+the two written by the FUP tests). The rule of the agenda is right and does not change. The migration `20261208000000_clean_theme_test_data.sql` deletes those
 five rows, scoped by theme **and** author or week, and empties the theme's progress sentence (it was one of those updates) so the next FUP starts with a clean
 agenda. The theme stays; its history of events (an audit log) is not touched.
 
