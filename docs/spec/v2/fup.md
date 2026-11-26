@@ -78,6 +78,14 @@ The two FUPs created to validate writing in production ("TESTE de validação (i
 migration `20261207000000_fup_remove_tests.sql`, by id and only if the title still starts with `TESTE`. There is no screen to delete a FUP (out of scope
 below), so a migration is the way. The weekly updates they wrote on the test theme PHZ-0015 stay (the owner asked only for the FUPs).
 
+### Test data of the theme PHZ-0015 (2026-11-26)
+
+The suggested agenda marked PHZ-0015 (*Deeper Link*, a real theme that came from the import) as *Decide* only because it held test data from the
+translation and FUP checks: an open decision and an open blocker made by `Claude (teste)`, and three weekly updates of 2026-W48 (the same author and
+the two written by the FUP tests). The rule of the agenda is right and does not change. The migration `20261208000000_clean_theme_test_data.sql` deletes those
+five rows, scoped by theme **and** author or week, and empties the theme's progress sentence (it was one of those updates) so the next FUP starts with a clean
+agenda. The theme stays; its history of events (an audit log) is not touched.
+
 ## Out of scope (later)
 
 Recording and transcription; the reader/manager/PM lenses; editing the theme's other fields from the FUP; a FUP per executive with

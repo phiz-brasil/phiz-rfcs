@@ -124,5 +124,25 @@ class FupRemoveTestsMigrationTest(unittest.TestCase):
             self.assertNotIn(word, self.SQL.split("\n", 2)[2])
 
 
+class CleanPhz0015MigrationTest(unittest.TestCase):
+    """The test data left on PHZ-0015 is deleted, scoped by theme and author or week; the theme itself and the audit log stay."""
+    SQL = (ROOT / "supabase" / "migrations" / "20261208000000_clean_theme_test_data.sql").read_text(encoding="utf-8")
+    CODE = "\n".join(l for l in SQL.splitlines() if not l.startswith("--"))
+
+    def test_every_delete_is_scoped_to_the_theme_and_to_the_test_author_or_week(self):
+        deletes = [x for x in self.CODE.split(";") if "delete from" in x]
+        self.assertEqual(len(deletes), 3)
+        for d in deletes:
+            with self.subTest(d.strip()[:40]):
+                self.assertIn("theme_id = 'PHZ-0015'", d)
+                self.assertTrue("created_by = 'Claude (teste)'" in d or "week = '2026-W48'" in d)
+
+    def test_it_empties_only_that_themes_progress_and_never_deletes_the_theme_or_its_events(self):
+        self.assertIn("update public.themes set progress = '{}'::jsonb", self.CODE)
+        self.assertIn("where id = 'PHZ-0015'", self.CODE)
+        for word in ("delete from public.themes", "theme_events", "drop ", "truncate"):
+            self.assertNotIn(word, self.CODE)
+
+
 if __name__ == "__main__":
     unittest.main()
