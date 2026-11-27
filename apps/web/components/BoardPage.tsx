@@ -1,5 +1,5 @@
 "use client";
-/* The B2B board: the project themes of every front on the columns of the board (each column maps to one V4 stage), a swimlane per front.
+/* The B2B board: the project themes of every front on the columns of the board (each column maps to one stage of the PDLC B2B), a swimlane per front.
    A card moves by drag or by its "Move to" menu (keyboard and phone); open gates warn and never block. */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { STAGES, STATUSES, T, t, text } from "../lib/i18n";

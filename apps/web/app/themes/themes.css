@@ -541,3 +541,27 @@ select.urg{border:0;margin-left:8px;cursor:pointer;font:600 .66rem var(--f-body)
 .deck-slides > li[data-kind=decisions]{border-color:var(--amber-soft)}
 .deck-kind{display:inline-block;font:600 .66rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:8px}
 .deck-slides ul{margin:6px 0 0;padding-left:18px;font-size:.86rem}
+
+/* -- look of the remaining pages (redesign, PR 4): one style with the Painel ---------------------------------------------------------------- */
+h1{font:600 clamp(1.35rem,2vw,1.7rem)/1.2 var(--f-display);letter-spacing:-.015em}
+.panel{border-radius:10px;padding:12px 16px}
+.panel > h2:first-child{font:600 .9rem var(--f-body)}
+.card:hover{box-shadow:0 2px 8px rgba(23,32,28,.06)}
+.bhead{background:var(--panel);color:var(--ink);border:1px solid var(--line-soft)}
+.bhead .note{color:var(--muted)}
+.bhead[data-over="1"]{background:var(--red);color:#fff;border-color:var(--red)}
+.bhead[data-over="1"] .note{color:#FFE4E0}
+/* FUP: same parts and order, without the green band and the large type */
+.fup{font:400 .9rem/1.5 var(--f-body);color:var(--ink)}
+.fup h1,.fup h2,.fup h3{font-family:var(--f-display);font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.fup-band{background:transparent;color:var(--ink);margin:0 0 16px;padding:8px 0 0;border-radius:0;border-bottom:1px solid var(--line)}
+.fup-band h1{font-size:clamp(1.35rem,2vw,1.7rem)}
+.fup-band p{color:var(--muted);opacity:1}
+.fup-band a{color:var(--green-ink)}
+.fup-tabs button{font:500 .84rem var(--f-body);color:var(--muted);padding:8px 12px;border-radius:0;min-height:36px;border-bottom:2px solid transparent}
+.fup-tabs button[aria-selected=true]{background:transparent;color:var(--ink);border-bottom-color:var(--green)}
+.fup-card{background:var(--surface);border-color:var(--line-soft);border-radius:10px;padding:16px}
+.fup label span,.fup .lbl{font-size:.76rem;color:var(--muted)}
+.fup input,.fup textarea,.fup select{font:.88rem var(--f-body);padding:7px 9px;border-color:var(--line);border-radius:6px}
+.fup-btn{font:600 .82rem var(--f-body);border-radius:6px;padding:7px 13px;min-height:34px;background:var(--green)}
+.fup-btn.ghost{border-color:var(--line)}

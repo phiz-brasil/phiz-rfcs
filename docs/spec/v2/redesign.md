@@ -165,6 +165,20 @@ Two modes, same options (slide language pt-BR / en-US / zh, *include cover and o
 
 Tests changed on purpose (PR 3): none; new tests in `tests/test_deck_plan.py` (pure) and `tests/test_export_describe.py` (browser).
 
+### What PR 4 delivers (decision of 2026-11-27: the owner asked to go ahead; the data choices below follow the fronts he named on 2026-11-26)
+
+- **Fronts** (migration `20261210000000_fronts_pdlc.sql`, applied by the merge): POP · Payments · Mini-Apps · **Parcerias e POCs** (new) ·
+  **Novos negócios** (new) · Outros, in this order. **API Platform joins POP**: its themes (PHZ-0001 and PHZ-0005 on 2026-11-27) move to POP,
+  each with a `front` event in its history, and POP's scope now covers the APIs. **Product Center leaves** (it had no theme). A front is deleted
+  only when no theme points at it, so the migration can run twice. The themes in *Outros* stay where they are: whoever knows their front moves them
+  with the *Frente* property of the theme page (PR 2). The test fixtures (`tests/fake_themes.py`) keep their fronts: they are data of the tests.
+- **The name.** No text of the interface says "V4": the stages are the **PDLC B2B** (board lead in the three languages).
+- **Look of the remaining pages**, one style with the Painel: titles in a firm weight and a smaller size; the board's column heads light (a
+  column over its limit stays red); the FUP keeps its parts and its order but loses the green band and the large type: a light header, tabs
+  underlined, cards and buttons like the rest of the site. Only `themes.css` changes; no behaviour changes.
+
+Tests changed on purpose (PR 4): none; new tests in `tests/test_fronts_pdlc.py` (the migration and the texts).
+
 ## Data (migration `20261209000000_redesign.sql`; merging to `main` applies it, `migrations.md`, so the merge is the owner's call)
 
 - `theme_items.start_date date` (nullable; `start_date <= due_date` when both, else `invalid period`). `save_theme_item` accepts `start_date`;
