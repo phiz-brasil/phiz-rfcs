@@ -3,11 +3,12 @@
    language (translations are filled in by the webhook). With reader mode on, only the records are shown, with no forms or buttons. */
 import { useState } from "react";
 import { STATUSES, T, t, text, type Lang } from "../lib/i18n";
-import type { Blocker, Decision, I18n, Item, Theme, Update } from "../lib/db";
+import type { Blocker, Decision, I18n, Item, Theme, Update, Urgency } from "../lib/db";
 import { useApp } from "./Shell";
 import { Field, Said, StatusBadge, dateText, message } from "./ui";
 
 const only = (lang: Lang, value: string): I18n => ({ [lang]: value.trim() });
+const URGENCIES: Urgency[] = ["urgent", "important", "info"];
 
 function useRun(onChanged: () => void) {
   const { lang, name } = useApp();
@@ -75,6 +76,7 @@ export function Records({ kind, theme, rows, items, onChanged }: { kind: Kind; t
   const [who, setWho] = useState("");
   const [due, setDue] = useState("");
   const [lead, setLead] = useState(false);
+  const [urgency, setUrgency] = useState<Urgency>("info");
   const [item, setItem] = useState("");
   const [closing, setClosing] = useState<string | null>(null);
   const [closingText, setClosingText] = useState("");
@@ -84,10 +86,10 @@ export function Records({ kind, theme, rows, items, onChanged }: { kind: Kind; t
   const owner = (r: Blocker | Decision) => ("owner" in r ? r.owner : r.decider);
   const add = () => {
     if (!what.trim()) return;
-    const p: Record<string, unknown> = { what: only(lang, what), needs_leadership: lead, item_id: item || null, due_date: due || null };
+    const p: Record<string, unknown> = { what: only(lang, what), needs_leadership: lead, urgency, item_id: item || null, due_date: due || null };
     p[kind === "blocker" ? "owner" : "decider"] = who.trim();
     void run(by => (kind === "blocker" ? db.saveBlocker(theme.id, null, p, by) : db.saveDecision(theme.id, null, p, by)),
-      () => { setWhat(""); setWho(""); setDue(""); setLead(false); setItem(""); });
+      () => { setWhat(""); setWho(""); setDue(""); setLead(false); setUrgency("info"); setItem(""); });
   };
   const close = (r: Blocker | Decision, state: "resolved" | "decided" | "dropped") => {
     const body = closingText.trim() ? only(lang, closingText) : {};
@@ -99,7 +101,12 @@ export function Records({ kind, theme, rows, items, onChanged }: { kind: Kind; t
       <h2>{title}</h2>
       {open.length ? open.map(r => (
         <article className="row" key={r.id} data-state="open">
-          <div className="what"><Said value={r.what} lang={lang} machine={r.text_meta?.what} />{r.needs_leadership ? <span className="flag lead"> {T.needsLeadership[lang]}</span> : null}</div>
+          <div className="what"><Said value={r.what} lang={lang} machine={r.text_meta?.what} />{r.needs_leadership ? <span className="flag lead"> {T.needsLeadership[lang]}</span> : null}
+            {reader ? <span className="urg" data-u={r.urgency ?? "info"}>{t(`urg.${r.urgency ?? "info"}`, lang)}</span>
+              : <select key={r.urgency ?? "info"} className="urg" data-u={r.urgency ?? "info"} aria-label={`${T.urgency[lang]}: ${text(r.what, lang)}`} defaultValue={r.urgency ?? "info"}
+                  onChange={e => void run(by => (kind === "blocker" ? db.saveBlocker(theme.id, r.id, { urgency: e.target.value }, by) : db.saveDecision(theme.id, r.id, { urgency: e.target.value }, by)))}>
+                  {URGENCIES.map(u => <option key={u} value={u}>{t(`urg.${u}`, lang)}</option>)}
+                </select>}</div>
           <div className="meta">{owner(r) ? <span>{owner(r)}</span> : null}{r.due_date ? <span>{T.byWhen[lang]}: {dateText(r.due_date)}</span> : null}
             {r.item_id ? <span>↳ {items.find(i => i.id === r.item_id)?.title}</span> : null}</div>
           {!reader ? (closing === r.id ? (
@@ -132,7 +139,10 @@ export function Records({ kind, theme, rows, items, onChanged }: { kind: Kind; t
               <option value="">{T.relatedItem[lang]}</option>{items.map(i => <option key={i.id} value={i.id}>{i.title}</option>)}
             </select>
           ) : null}
-          <label className="checks"><input type="checkbox" checked={lead} onChange={e => setLead(e.target.checked)} /> {T.needsLeadership[lang]}</label>
+          <label className="checks"><input type="checkbox" checked={lead} onChange={e => { setLead(e.target.checked); if (e.target.checked && urgency === "info") setUrgency("important"); }} /> {T.needsLeadership[lang]}</label>
+          <select aria-label={T.urgency[lang]} value={urgency} onChange={e => setUrgency(e.target.value as Urgency)}>
+            {URGENCIES.map(u => <option key={u} value={u}>{t(`urg.${u}`, lang)}</option>)}
+          </select>
           <button type="submit" className="btn">{T.add[lang]}</button> <span className="note" role="status">{note}</span>
         </form>
       ) : null}

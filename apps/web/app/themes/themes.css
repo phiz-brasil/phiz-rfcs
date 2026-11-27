@@ -487,3 +487,44 @@ button.pn-cell:hover{background:var(--green-soft)}
 .dot[data-col=doing]{background:var(--green)}.dot[data-col=done]{background:var(--blue)}.dot[data-col=blocked]{background:var(--red)}
 .dot.add{background:none;width:auto;height:auto;color:var(--muted)}
 .pn-item-title{font-size:.82rem}
+
+/* -- theme page (redesign, PR 2): two columns, text edited where it is shown -------------------------------------------------------------- */
+.theme-titleline{display:flex;align-items:center;gap:10px}
+.theme-titleline h1{margin:0;flex:1;min-width:0}
+.theme-titleline .phase{flex:none;width:18px;height:18px}
+.theme-what{color:var(--muted);margin:4px 0 12px;max-width:90ch}
+.editable{border-radius:6px;outline:none;cursor:text;padding:1px 4px;margin-left:-4px}
+.editable:hover{background:var(--panel)}
+.editable:focus{background:var(--surface);box-shadow:0 0 0 2px var(--green-soft)}
+.editable:empty::before{content:attr(data-placeholder);color:var(--muted);opacity:.7}
+.theme-hero .theme-titleline + .theme-what,.theme-hero .theme-titleline + .state{margin-top:4px}
+.theme-hero > .theme-what:last-of-type{margin-bottom:12px}
+.theme-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.theme-side{position:sticky;top:104px;display:grid;gap:4px}
+.theme-side .group{margin-top:10px}
+.stack{display:grid;gap:12px}
+.stack > .panel{margin:12px 0 0}
+.props{margin-top:18px}
+.props h2{font:600 .78rem var(--f-body);color:var(--muted);margin:0 0 6px}
+.props-list{display:grid;gap:0;margin:0}
+.props-list > div{display:grid;grid-template-columns:118px minmax(0,1fr);align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line-soft)}
+.props-list dt{font-size:.78rem;color:var(--muted)}
+.props-list dd{margin:0;font-size:.85rem;min-width:0}
+.props-list select,.props-list input{width:100%;font:400 .84rem var(--f-body);border:1px solid transparent;border-radius:6px;background:transparent;padding:4px 6px;color:var(--ink)}
+.props-list select:hover,.props-list input:hover{border-color:var(--line);background:var(--surface)}
+.props-list select:focus,.props-list input:focus{border-color:var(--green);background:var(--surface);outline:none}
+.props-phase{display:flex;align-items:center;gap:6px}
+.items-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.items-head h2{margin:0}
+.items-list{width:100%;border-collapse:collapse;font-size:.85rem}
+.items-list th{font:500 .74rem var(--f-body);color:var(--muted);text-align:left;padding:6px;border-bottom:1px solid var(--line)}
+.items-list td{padding:3px 6px;border-bottom:1px solid var(--line-soft)}
+.items-list tr[data-col=done] td{opacity:.65}
+.items-list input:not([type=checkbox]),.items-list select{width:100%;font:400 .84rem var(--f-body);border:1px solid transparent;border-radius:6px;background:transparent;padding:4px 6px;color:var(--ink)}
+.items-list input:not([type=checkbox]):hover,.items-list select:hover{border-color:var(--line);background:var(--surface)}
+select.urg{border:0;margin-left:8px;cursor:pointer;font:600 .66rem var(--f-body)}
+.panel .what .urg{margin-left:8px}
+@media (max-width:900px){
+  .theme-layout{grid-template-columns:1fr}
+  .theme-side{position:static}
+}

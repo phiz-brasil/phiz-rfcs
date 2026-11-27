@@ -96,6 +96,27 @@ One scroll, two columns (the right one stacks under on a phone). Top bar and bre
 
 Phase from stage: 01–02 *Discovery*, 03–06 *Definition*, 07–08 *Build*, 09–10 *Launched*.
 
+### What PR 2 delivers (decision of 2026-11-26: one step at a time, nothing that works today is taken away)
+
+- **Two columns.** The main column keeps today's sections in today's order (summary, update of the week, blockers and decisions, execution,
+  activity); the right column (`aside.theme-side`, under the main one below 900 px) holds **Properties**, *Jira and dependencies* and
+  *Attachments*. The section menu keeps its seven links and every link still reaches its section.
+- **Header.** Phase icon + title, and *what it is* under it. Out of reader mode both are **edited where they are shown**: click, type, Enter or
+  leaving the text saves through `update_theme` (one event per changed field, as today); Escape gives the old text back; an empty title is not
+  saved. Without a name nothing is saved, the text goes back and the page says *Informe seu nome para salvar.* (`role=alert`). The key facts and
+  the *Edit theme data* form stay as they are (the form remains the place for problem / solution / success and tags).
+- **Properties** (region *Propriedades*): status, stage (projects), phase derived from the stage (read only), kind (read only), owner (saved on
+  Enter or leaving the field), start, estimate, front, id. Each control saves on change. In reader mode the same rows are plain text: no input or
+  select.
+- **Deliveries** (the execution items): a *Lista | Quadro* switch, remembered in the browser (`phiz-theme-items-view`), *Quadro* by default
+  (today's kanban, unchanged). *Lista* shows one row per delivery, open columns first and then by date: name, column, start, estimate, owner,
+  milestone, each changed where it is shown (`save_theme_item`; a start after the estimate is refused with *Não foi possível salvar.*). A
+  delivery is closed by moving it to *Feito*; nothing is deleted.
+- **Urgency of blockers and decisions.** The add form has an *Urgência* select (*Informativo* by default; ticking *Exige a liderança* moves it to
+  *Importante* when it was *Informativo*). Each open row shows its urgency and, out of reader mode, changes it on the spot.
+
+Tests changed on purpose (PR 2): none; the new behaviour has its own tests (`tests/test_theme_layout.py`).
+
 ## Export (`/slides/`)
 
 Two modes, same options (slide language pt-BR / en-US / zh, *include cover and overview*):
