@@ -325,7 +325,7 @@ export const T: Dict = {
   rate: { pt: "Muitas alterações seguidas. Espere um minuto.", en: "Too many changes in a row. Wait a minute.", zh: "更改过于频繁，请稍候。" },
   by: { pt: "por", en: "by", zh: "由" },
   board: { pt: "Quadro B2B", en: "B2B board", zh: "B2B 看板" },
-  boardLead: { pt: "Os projetos de todas as frentes pelas etapas da norma V4. Arraste um card (ou use “Mover para”) para mudar de etapa; gate aberto avisa, não bloqueia.", en: "The projects of every front through the V4 stages. Drag a card (or use “Move to”) to change stage; an open gate warns, it does not block.", zh: "各业务线的项目按 V4 规范阶段流转。拖动卡片（或使用“移动到”）切换阶段；未完成的关卡只提醒，不阻止。" },
+  boardLead: { pt: "Os projetos de todas as frentes pelas etapas do PDLC B2B. Arraste um card (ou use “Mover para”) para mudar de etapa; gate aberto avisa, não bloqueia.", en: "The projects of every front through the PDLC B2B stages. Drag a card (or use “Move to”) to change stage; an open gate warns, it does not block.", zh: "各业务线的项目按 PDLC B2B 阶段流转。拖动卡片（或使用“移动到”）切换阶段；未完成的关卡只提醒，不阻止。" },
   moveTo: { pt: "Mover para", en: "Move to", zh: "移动到" },
   skipReason: { pt: "Motivo (obrigatório: a etapa pula ou sai da rota do tema)", en: "Reason (required: the move skips a stage or leaves the theme's route)", zh: "原因（必填：此次移动跳过阶段或偏离主题路线）" },
   confirmMove: { pt: "Confirmar movimento", en: "Confirm move", zh: "确认移动" },
