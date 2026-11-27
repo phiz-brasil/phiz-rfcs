@@ -134,6 +134,37 @@ Two modes, same options (slide language pt-BR / en-US / zh, *include cover and o
   stored, never sent to Supabase). *Download .pptx* keeps working without Google. Needs an OAuth client id of the company's Google Cloud
   (the owner creates it; the id is public, the secret is not used).
 
+### What PR 3 delivers (decision of 2026-11-27: Export first; the restyle of the FUP moves to PR 4 with the look of the other pages)
+
+- **Two modes on `/slides/`**, a *Escolher temas | Descrever o material* switch; *Escolher temas* is the default and is today's page, unchanged
+  (filters, select all, the three answers of each theme, *Include cover and overview*, *Exportar .pptx*).
+- **Describe the material.** A text box (*Descreva o material*) and *Montar prévia*. An empty box sends nothing and says *Descreva o que você quer
+  no material.* The page posts `{"request", "lang", "by"}` to the Edge Function **`plan-deck`** (`by` is the name in the top bar, may be empty).
+  The function reads the active themes itself (not hidden, not done or cancelled: id, front, title, what it is, progress, status, start and
+  estimate, owner; their open blockers and decisions with urgency and deadline; their open milestones), asks the same Workers AI model as
+  `suggest-summary` (`CF_SUGGEST_MODEL`) for a **deck plan** and answers `{"plan": …}`. It writes nothing.
+- **The deck plan** (JSON): `{"title", "slides": [...]}`, each slide one of six kinds:
+  `cover` (title, subtitle) · `numbers` (title, theme ids) · `decisions` (title, items `{theme, text}`) · `theme` (one theme id) ·
+  `roadmap` (title, theme ids) · `dates` (title, items `{theme, text}`).
+  The page cleans it before showing anything (`apps/web/lib/deck-plan.ts`, pure, Node-tested): unknown kinds are dropped; an id that is not an
+  active theme is dropped; **a sentence (item) without a known source theme is dropped**; texts are trimmed (title 120, item 280 characters); a
+  slide left empty is dropped (the cover excepted); at most 30 slides. The page says how many sentences were dropped.
+- **Nothing is invented on the slides.** The `theme` slide is today's theme slide built from the database (the three answers as they are: confirmed,
+  suggested and marked, or *Not explained yet*). `numbers` and `roadmap` are computed from the themes' own status and dates; the model only chooses
+  which themes. The model writes only the titles and the short sentences of `decisions` and `dates`, and each sentence names its theme.
+- **Preview**: one card per slide, in order, with its kind and what it will carry; then *Baixar .pptx* (same look as `slides.md`, file
+  `PHIZ-material-<date>.pptx`) and, when Google is set up, *Criar no Google Slides*.
+- **Google Slides.** `site.config.json` → `google.clientId` (empty until the owner creates the OAuth client in the company's Google Cloud; the
+  browser key `phiz-google-client-id` overrides it, for tests and previews). With no id the button is not shown. With an id, the button signs the
+  person in with Google Identity Services (scope `https://www.googleapis.com/auth/drive.file` only), uploads the same .pptx to their Drive with
+  conversion (`mimeType application/vnd.google-apps.presentation`) and opens the new deck in a new tab. The token lives only in that tab's
+  memory. The button exists in both modes.
+- **`plan-deck` is deployed only when the owner says**, like `suggest-summary`: secrets `CF_ACCOUNT_ID`, `CF_API_TOKEN`, optional
+  `CF_SUGGEST_MODEL`, `REQUIRE_MEMBER`; "Verify JWT" off. Limits: 20 plans an hour per running instance; a request longer than 600 characters is
+  refused (400). Until it is deployed, *Montar prévia* answers *Não foi possível montar o material agora.* and the rest of the page works.
+
+Tests changed on purpose (PR 3): none; new tests in `tests/test_deck_plan.py` (pure) and `tests/test_export_describe.py` (browser).
+
 ## Data (migration `20261209000000_redesign.sql`; merging to `main` applies it, `migrations.md`, so the merge is the owner's call)
 
 - `theme_items.start_date date` (nullable; `start_date <= due_date` when both, else `invalid period`). `save_theme_item` accepts `start_date`;
@@ -172,8 +203,8 @@ decisions that need the leadership, earliest deadline first, each line opening i
 1. **Painel** — spec (this file), migration (start date of items, urgency), `/overview/` rebuilt (blocks, filters, List, Timeline with
    deliveries, inline edit), tests.
 2. **Theme page** — one scroll, right column, inline edit, deliveries list|kanban, tests.
-3. **FUP and Export** — restyle FUP; Export with the two modes and the `plan-deck` function (deployed only when the owner says), tests.
-4. **Look of the remaining pages and the name** — board (*PDLC B2B*), metrics, attachments, comments, RFC pages; "V4" removed from the texts;
+3. **Export** — the two modes and the `plan-deck` function (deployed only when the owner says), Google Slides behind the client id, tests.
+4. **Look of the remaining pages and the name** — FUP, board (*PDLC B2B*), metrics, attachments, comments, RFC pages; "V4" removed from the texts;
    fronts data file, tests.
 
 ## Open (owner)

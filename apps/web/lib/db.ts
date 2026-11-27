@@ -108,6 +108,15 @@ export function client({ url, key }: Supabase) {
       if (!r.ok) throw new DbError(`HTTP ${r.status}`, "http");
       return (await r.json()) as { suggestions: Record<"problem" | "solution" | "success", Suggestion>; sources: { id: string; label: string }[] };
     },
+    // export: "Describe the material" is the Edge Function plan-deck, which only reads and answers with a deck plan (the page cleans it, lib/deck-plan.ts)
+    planDeck: async (request: string, lang: string, by: string) => {
+      let r: Response;
+      try { r = await fetch(`${url.replace(/\/+$/, "")}/functions/v1/plan-deck`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ request, lang, by }) }); }
+      catch { throw new DbError("network", "network"); }
+      if (r.status === 429) throw new DbError("rate limit", "rate");
+      if (!r.ok) throw new DbError(`HTTP ${r.status}`, "http");
+      return ((await r.json()) as { plan?: unknown }).plan;
+    },
     saveSuggestions: (theme: string, p: Record<string, Suggestion>, by: string) => rpc<{ applied: string[] }>("suggest_theme_answers", { p_theme: theme, p, p_by: by }),
     confirmAnswers: (theme: string, fields: string[], by: string) => rpc("confirm_theme_answers", { p_theme: theme, p_fields: fields, p_by: by }),
     themeSlideData: async (ids: string[]) => {
