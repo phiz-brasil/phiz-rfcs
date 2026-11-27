@@ -216,6 +216,8 @@ class FakeSupabase(ThemesMixin):
             return self.storage_handle(route, req, url)
         if path.endswith("/functions/v1/suggest-summary"):
             return self.suggest_function(route, json.loads(req.post_data) if req.post_data else {}, CORS)
+        if path.endswith("/functions/v1/plan-deck"):
+            return self.plan_function(route, json.loads(req.post_data) if req.post_data else {}, CORS)
         body = json.loads(req.post_data) if req.post_data else None
 
         def ok(data, status=200):

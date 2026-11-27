@@ -72,13 +72,13 @@ export function slideOf(theme: SlideTheme, jira: SlideJira[], fronts: SlideFront
 export const DECK: Record<Lang, Record<string, string>> = {
   pt: { cover: "PORTFÓLIO", coverTitle: "Acompanhamento de temas", themes: "temas", overview: "Onde estamos", risky: "em risco ou bloqueados", gaps: "O que falta",
     gapsNone: "Todas as respostas estão explicadas e confirmadas.", theme: "Tema", answers: "Respostas", asOf: "Em", problem: "problema", solution: "solução", success: "sucesso",
-    missing: "não explicado", unconfirmed: "não confirmado" },
+    missing: "não explicado", unconfirmed: "não confirmado", start: "Início", numbers: "Números", decisions: "Precisa de decisão", roadmap: "Roadmap", dates: "Próximas datas" },
   en: { cover: "PORTFOLIO", coverTitle: "Theme tracking", themes: "themes", overview: "Where we are", risky: "at risk or blocked", gaps: "What is missing",
     gapsNone: "Every answer is explained and confirmed.", theme: "Theme", answers: "Answers", asOf: "As of", problem: "problem", solution: "solution", success: "success",
-    missing: "not explained", unconfirmed: "not confirmed" },
+    missing: "not explained", unconfirmed: "not confirmed", start: "Start", numbers: "Numbers", decisions: "Needs a decision", roadmap: "Roadmap", dates: "Next dates" },
   zh: { cover: "项目组合", coverTitle: "主题跟踪", themes: "个主题", overview: "当前进展", risky: "有风险或受阻", gaps: "还缺什么",
     gapsNone: "所有回答都已说明并确认。", theme: "主题", answers: "回答", asOf: "截至", problem: "问题", solution: "方案", success: "成功标准",
-    missing: "尚未说明", unconfirmed: "尚未确认" },
+    missing: "尚未说明", unconfirmed: "尚未确认", start: "开始", numbers: "数据", decisions: "待决策", roadmap: "路线图", dates: "近期日期" },
 };
 const FIELDS = ["problem", "solution", "success"] as const;
 const STATUS_ORDER = ["not_started", "on_track", "at_risk", "blocked", "paused", "done", "cancelled"];

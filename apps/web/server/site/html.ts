@@ -21,10 +21,12 @@ function findRoot(from: string): string | null {
    bundle there is none, and that is fine for the routes rendered on demand (they never read it): so it does not throw. */
 export const REPO_ROOT = findRoot(process.cwd()) ?? process.cwd();
 
-type Config = { title: string; repo: string; giscus: Record<string, string>; comments?: Record<string, string> };
+type Config = { title: string; repo: string; giscus: Record<string, string>; comments?: Record<string, string>; google?: { clientId?: string } };
 export const CFG: Config = siteConfig as Config;
 
 export const liveConfig = () => ({ repo: CFG.repo, giscus: CFG.giscus, comments: CFG.comments ?? {} });
+// the Google OAuth client of the export (docs/spec/v2/redesign.md, What PR 3 delivers); kept out of liveConfig, which the old pages carry byte for byte
+export const googleClientId = () => CFG.google?.clientId ?? "";
 
 // the same escaping as Python's html.escape
 export const esc = (s: string) =>

@@ -44,6 +44,7 @@ class ThemesMixin:
                          "wip_limit": None, "created_at": now()} for n in range(1, 11)]
         self.gate_checks = []
         self.suggest_calls, self.suggest_response, self.suggest_status = [], None, 200          # the Edge Function suggest-summary
+        self.plan_calls, self.plan_response, self.plan_status = [], None, 200                   # the Edge Function plan-deck
         self.attachments = []
         self.storage_calls, self.downloads = [], []
         self.storage = {}                                 # path -> {"size", "mimetype", "data"}: the private bucket 'attachments'
@@ -686,6 +687,13 @@ class ThemesMixin:
         if self.suggest_status != 200:
             return route.fulfill(status=self.suggest_status, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"error": "failed"}))
         return route.fulfill(status=200, headers={**H, "Content-Type": "application/json"}, body=json.dumps(self.suggest_response or {"suggestions": {}, "sources": []}))
+
+    def plan_function(self, route, body, H):
+        """The Edge Function plan-deck: answers {"plan": plan_response} (set by the test) or an error status."""
+        self.plan_calls.append(body)
+        if self.plan_status != 200:
+            return route.fulfill(status=self.plan_status, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"error": "failed"}))
+        return route.fulfill(status=200, headers={**H, "Content-Type": "application/json"}, body=json.dumps({"plan": self.plan_response}))
 
     # -- the HTTP side ----------------------------------------------------------
     def themes_handle(self, path, q, body, ok):

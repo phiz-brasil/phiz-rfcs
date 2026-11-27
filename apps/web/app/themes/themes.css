@@ -528,3 +528,16 @@ select.urg{border:0;margin-left:8px;cursor:pointer;font:600 .66rem var(--f-body)
   .theme-layout{grid-template-columns:1fr}
   .theme-side{position:static}
 }
+
+/* -- export (redesign, PR 3): two modes and the preview of a described deck ------------------------------------------------------------------- */
+.export-modes{margin:4px 0 10px}
+.bar.describe textarea{width:100%;font:400 .9rem var(--f-body);border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);color:var(--ink);resize:vertical}
+.bar.describe .field.wide{display:grid;gap:4px;width:100%}
+.deck-preview{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-md);padding:12px 16px;margin:14px 0}
+.deck-preview h2{font:600 .9rem var(--f-body);margin:0 0 8px}
+.deck-slides{margin:0 0 12px;padding-left:22px;display:grid;gap:8px}
+.deck-slides > li{padding:8px 10px;border:1px solid var(--line-soft);border-radius:8px;background:var(--bg)}
+.deck-slides > li[data-kind=cover]{background:var(--green-soft)}
+.deck-slides > li[data-kind=decisions]{border-color:var(--amber-soft)}
+.deck-kind{display:inline-block;font:600 .66rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:8px}
+.deck-slides ul{margin:6px 0 0;padding-left:18px;font-size:.86rem}
