@@ -156,6 +156,9 @@ class ThemeLayoutTest(SiteCase):
         self.until(lambda: self.db.items[0]["due_date"] == "2027-02-15")
         box.get_by_label("Marco: Mensagens para grupo").check()
         self.until(lambda: self.db.items[0]["milestone"] is True)
+        self.theme()                                                                       # the chosen view is remembered after a reload
+        box = self.page.get_by_role("region", name="Itens de execução")
+        expect(box.locator("table.items-list")).to_be_visible()
         expect(box.get_by_label("Marco: Mensagens para grupo")).to_be_checked()
         name = box.get_by_label("Nome da entrega: Mensagens para grupo")
         name.fill("Mensagens para grupos")
